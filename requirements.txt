@@ -1,0 +1,6 @@
+streamlit
+streamlit-mic-recorder
+google-generativeai>=0.8.5
+plotly
+librosa
+pandas
