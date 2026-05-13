@@ -1,0 +1,842 @@
+[
+  {
+    "pattern_id": "RTN_T01",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "On weekdays, I usually ~",
+    "meaning": "평일에는 보통 ~합니다.",
+    "examples": [
+      {
+        "en": "On weekdays, I usually start work around nine.",
+        "ko": "평일에는 보통 아홉 시쯤 일을 시작합니다."
+      },
+      {
+        "en": "On weekdays, I usually grab coffee on the way.",
+        "ko": "평일에는 보통 출근길에 커피를 사 갑니다."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T02",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "In the morning, I like to ~",
+    "meaning": "아침에는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "In the morning, I like to stretch for five minutes.",
+        "ko": "아침에는 5분 정도 스트레칭하는 편이에요."
+      },
+      {
+        "en": "In the morning, I like to read the news briefly.",
+        "ko": "아침에는 뉴스를 잠깐 읽는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T03",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "After work, I tend to ~",
+    "meaning": "퇴근 후에는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "After work, I tend to take a short walk.",
+        "ko": "퇴근 후에는 짧게 산책하는 편이에요."
+      },
+      {
+        "en": "After work, I tend to cook a simple dinner.",
+        "ko": "퇴근 후에는 간단히 저녁을 해 먹는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T04",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "Before bed, I always ~",
+    "meaning": "잠들기 전에는 항상 ~해요.",
+    "examples": [
+      {
+        "en": "Before bed, I always turn off my phone.",
+        "ko": "잠들기 전에는 항상 휴대폰을 꺼요."
+      },
+      {
+        "en": "Before bed, I always drink warm tea.",
+        "ko": "잠들기 전에는 항상 따뜻한 차를 마셔요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T05",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "On busy days, I barely have time to ~",
+    "meaning": "바쁜 날에는 ~할 시간이 거의 없어요.",
+    "examples": [
+      {
+        "en": "On busy days, I barely have time to cook.",
+        "ko": "바쁜 날에는 요리할 시간이 거의 없어요."
+      },
+      {
+        "en": "On busy days, I barely have time to exercise.",
+        "ko": "바쁜 날에는 운동할 시간이 거의 없어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T06",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "Right after I wake up, I ~",
+    "meaning": "일어나자마자 ~해요.",
+    "examples": [
+      {
+        "en": "Right after I wake up, I drink a glass of water.",
+        "ko": "일어나자마자 물 한 잔을 마셔요."
+      },
+      {
+        "en": "Right after I wake up, I check my calendar.",
+        "ko": "일어나자마자 일정을 확인해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H01",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I've gotten into the habit of ~ing",
+    "meaning": "~하는 습관이 들었어요.",
+    "examples": [
+      {
+        "en": "I've gotten into the habit of journaling at night.",
+        "ko": "밤에 짧게 일기 쓰는 습관이 들었어요."
+      },
+      {
+        "en": "I've gotten into the habit of taking the stairs.",
+        "ko": "계단 이용하는 습관이 들었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H02",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I try to make it a rule to ~",
+    "meaning": "원칙적으로 ~하려고 해요.",
+    "examples": [
+      {
+        "en": "I try to make it a rule to stop working after ten.",
+        "ko": "열 시 이후에는 일을 멈추려고 해요."
+      },
+      {
+        "en": "I try to make it a rule to reply within a day.",
+        "ko": "하루 안에 답장하려고 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H03",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I usually avoid ~ing",
+    "meaning": "보통은 ~하는 걸 피해요.",
+    "examples": [
+      {
+        "en": "I usually avoid scrolling late at night.",
+        "ko": "보통은 늦은 밤에 스크롤하는 걸 피해요."
+      },
+      {
+        "en": "I usually avoid skipping breakfast.",
+        "ko": "보통은 아침을 거르는 걸 피해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H04",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I can't help ~ing when ~",
+    "meaning": "~할 때는 ~하게 돼요.",
+    "examples": [
+      {
+        "en": "I can't help snacking when I'm stressed.",
+        "ko": "스트레스 받을 때는 간식을 먹게 돼요."
+      },
+      {
+        "en": "I can't help yawning when I'm tired.",
+        "ko": "피곤할 때는 하품하게 돼요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H05",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "Rather than ~, I prefer to ~",
+    "meaning": "~보다는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "Rather than driving, I prefer to take the subway.",
+        "ko": "운전보다는 지하철 타는 편이에요."
+      },
+      {
+        "en": "Rather than eating out, I prefer to cook at home.",
+        "ko": "외식보다는 집에서 요리하는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H06",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "Lately I've been trying to ~ more",
+    "meaning": "요즘은 ~을/를 더 하려고 해요.",
+    "examples": [
+      {
+        "en": "Lately I've been trying to walk more.",
+        "ko": "요즘은 걷기를 더 하려고 해요."
+      },
+      {
+        "en": "Lately I've been trying to save a little money.",
+        "ko": "요즘은 조금이라도 저축하려고 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P01",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "I plan my week by ~ing",
+    "meaning": "일주일 계획은 ~하면서 세워요.",
+    "examples": [
+      {
+        "en": "I plan my week by blocking time on my calendar.",
+        "ko": "캘린더에 시간을 비우면서 일주일 계획을 세워요."
+      },
+      {
+        "en": "I plan my week by listing top three tasks.",
+        "ko": "가장 중요한 일 세 가지를 적으면서 계획을 세워요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P02",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "To stay on track, I ~",
+    "meaning": "일정을 지키려면 ~해요.",
+    "examples": [
+      {
+        "en": "To stay on track, I set reminders on my phone.",
+        "ko": "일정을 지키려면 휴대폰에 알람을 맞춰요."
+      },
+      {
+        "en": "To stay on track, I break big tasks into small steps.",
+        "ko": "큰 일을 작은 단계로 나눠요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P03",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "I set aside time every week to ~",
+    "meaning": "매주 ~할 시간을 비워둬요.",
+    "examples": [
+      {
+        "en": "I set aside time every week to clean my room.",
+        "ko": "매주 방 정리할 시간을 비워둬요."
+      },
+      {
+        "en": "I set aside time every week to call my parents.",
+        "ko": "매주 부모님께 전화할 시간을 비워둬요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P04",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "When deadlines pile up, I ~",
+    "meaning": "마감이 몰리면 ~해요.",
+    "examples": [
+      {
+        "en": "When deadlines pile up, I ask for help early.",
+        "ko": "마감이 몰리면 미리 도움을 요청해요."
+      },
+      {
+        "en": "When deadlines pile up, I cut non-urgent tasks first.",
+        "ko": "급하지 않은 일부터 줄여요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P05",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "If something slips my mind, I ~",
+    "meaning": "깜빡할 뻔하면 ~해요.",
+    "examples": [
+      {
+        "en": "If something slips my mind, I write it down immediately.",
+        "ko": "깜빡할 뻔하면 바로 메모해요."
+      },
+      {
+        "en": "If something slips my mind, I pin it on my desk.",
+        "ko": "책상에 메모를 붙여둬요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S01",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "To stay in shape, I ~",
+    "meaning": "컨디션을 위해 ~해요.",
+    "examples": [
+      {
+        "en": "To stay in shape, I walk at least thirty minutes a day.",
+        "ko": "컨디션을 위해 하루 30분은 걸어요."
+      },
+      {
+        "en": "To stay in shape, I stretch during breaks.",
+        "ko": "쉬는 시간에 스트레칭해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S02",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "When I feel run down, I ~",
+    "meaning": "몸이 축 처질 때는 ~해요.",
+    "examples": [
+      {
+        "en": "When I feel run down, I sleep earlier.",
+        "ko": "몸이 축 처질 때는 일찍 자요."
+      },
+      {
+        "en": "When I feel run down, I drink more water.",
+        "ko": "물을 더 마셔요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S03",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "I try to sleep at least ~ hours a night",
+    "meaning": "밤에는 되도록 ~시간은 자려고 해요.",
+    "examples": [
+      {
+        "en": "I try to sleep at least seven hours a night.",
+        "ko": "밤에는 되도록 7시간은 자려고 해요."
+      },
+      {
+        "en": "I try to sleep at least six hours on busy weeks.",
+        "ko": "바쁜 주에는 6시간은 자려고 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S04",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "I've cut back on ~ for my health",
+    "meaning": "건강 때문에 ~은/는 줄였어요.",
+    "examples": [
+      {
+        "en": "I've cut back on sugary drinks for my health.",
+        "ko": "건강 때문에 단 음료는 줄였어요."
+      },
+      {
+        "en": "I've cut back on late-night snacks for my health.",
+        "ko": "건강 때문에 야식은 줄였어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S05",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "If my neck hurts, I ~",
+    "meaning": "목이 아프면 ~해요.",
+    "examples": [
+      {
+        "en": "If my neck hurts, I fix my posture.",
+        "ko": "목이 아프면 자세를 바로잡아요."
+      },
+      {
+        "en": "If my neck hurts, I take short breaks from the screen.",
+        "ko": "화면에서 잠깐 떨어져 쉬어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L01",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "On weekends, I usually ~",
+    "meaning": "주말에는 보통 ~해요.",
+    "examples": [
+      {
+        "en": "On weekends, I usually meet friends downtown.",
+        "ko": "주말에는 보통 친구들과 시내에서 만나요."
+      },
+      {
+        "en": "On weekends, I usually binge a good series.",
+        "ko": "주말에는 보통 드라마를 몰아봐요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L02",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "When I have a day off, I love to ~",
+    "meaning": "쉬는 날이면 ~하고 싶어요.",
+    "examples": [
+      {
+        "en": "When I have a day off, I love to sleep in.",
+        "ko": "쉬는 날이면 늦잠 자고 싶어요."
+      },
+      {
+        "en": "When I have a day off, I love to explore a new cafe.",
+        "ko": "새 카페를 찾아가고 싶어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L03",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "To unwind, I often ~",
+    "meaning": "스트레스 풀려고 자주 ~해요.",
+    "examples": [
+      {
+        "en": "To unwind, I often listen to podcasts.",
+        "ko": "스트레스 풀려고 팟캐스트를 자주 들어요."
+      },
+      {
+        "en": "To unwind, I often take a hot shower.",
+        "ko": "뜨거운 샤워를 자주 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L04",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "I'd rather ~ than stay home all day",
+    "meaning": "하루 종일 집에 있는 것보다는 ~하고 싶어요.",
+    "examples": [
+      {
+        "en": "I'd rather take a short trip than stay home all day.",
+        "ko": "하루 종일 집에 있는 것보다는 짧게라도 여행 가고 싶어요."
+      },
+      {
+        "en": "I'd rather go hiking than stay home all day.",
+        "ko": "등산 가고 싶어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L05",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "Once in a while, I treat myself by ~ing",
+    "meaning": "가끔은 ~해서 나 자신에게 상을 줘요.",
+    "examples": [
+      {
+        "en": "Once in a while, I treat myself by buying dessert.",
+        "ko": "가끔은 디저트를 사서 나 자신에게 상을 줘요."
+      },
+      {
+        "en": "Once in a while, I treat myself by booking a massage.",
+        "ko": "마사지 예약해서 상을 줘요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M01",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "Honestly, I've been feeling ~ lately",
+    "meaning": "솔직히 요즘은 ~한 기분이에요.",
+    "examples": [
+      {
+        "en": "Honestly, I've been feeling a bit burnt out lately.",
+        "ko": "솔직히 요즘은 조금 번아웃 난 기분이에요."
+      },
+      {
+        "en": "Honestly, I've been feeling more optimistic lately.",
+        "ko": "솔직히 요즘은 더 긍정적인 기분이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M02",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "What stresses me out the most is ~",
+    "meaning": "가장 스트레스 받는 건 ~예요.",
+    "examples": [
+      {
+        "en": "What stresses me out the most is tight deadlines.",
+        "ko": "가장 스트레스 받는 건 촉박한 마감이에요."
+      },
+      {
+        "en": "What stresses me out the most is noisy neighbors.",
+        "ko": "시끄러운 이웃이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M03",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "To clear my head, I ~",
+    "meaning": "머리를 비우려고 ~해요.",
+    "examples": [
+      {
+        "en": "To clear my head, I go for a run.",
+        "ko": "머리를 비우려고 달리기를 해요."
+      },
+      {
+        "en": "To clear my head, I write everything down.",
+        "ko": "생각을 다 적어내려요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M04",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "I'm trying not to worry too much about ~",
+    "meaning": "~에 너무 신경 쓰이지 않으려 해요.",
+    "examples": [
+      {
+        "en": "I'm trying not to worry too much about small mistakes.",
+        "ko": "사소한 실수에 너무 신경 쓰이지 않으려 해요."
+      },
+      {
+        "en": "I'm trying not to worry too much about what others think.",
+        "ko": "남의 시선에 너무 신경 쓰이지 않으려 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M05",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "I'm grateful that I can ~",
+    "meaning": "~할 수 있어서 감사해요.",
+    "examples": [
+      {
+        "en": "I'm grateful that I can work from home sometimes.",
+        "ko": "가끔 재택근무할 수 있어서 감사해요."
+      },
+      {
+        "en": "I'm grateful that I can spend time with my family.",
+        "ko": "가족과 시간을 보낼 수 있어서 감사해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T07",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "I usually wrap up my day by ~ing",
+    "meaning": "하루를 ~하면서 마무리해요.",
+    "examples": [
+      {
+        "en": "I usually wrap up my day by tidying my desk.",
+        "ko": "책상 정리하면서 하루를 마무리해요."
+      },
+      {
+        "en": "I usually wrap up my day by planning tomorrow.",
+        "ko": "내일 일정을 정리하며 마무리해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H07",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I'm working on ~ing more consistently",
+    "meaning": "~을/를 더 꾸준히 하려고 노력 중이에요.",
+    "examples": [
+      {
+        "en": "I'm working on exercising more consistently.",
+        "ko": "운동을 더 꾸준히 하려고 노력 중이에요."
+      },
+      {
+        "en": "I'm working on saving money more consistently.",
+        "ko": "저축을 더 꾸준히 하려고 노력 중이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M06",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "When I'm overwhelmed, I ~",
+    "meaning": "압박이 클 때는 ~해요.",
+    "examples": [
+      {
+        "en": "When I'm overwhelmed, I pause and breathe.",
+        "ko": "압박이 클 때는 잠깐 멈추고 숨을 쉬어요."
+      },
+      {
+        "en": "When I'm overwhelmed, I talk to someone I trust.",
+        "ko": "믿는 사람에게 이야기해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  }
+]

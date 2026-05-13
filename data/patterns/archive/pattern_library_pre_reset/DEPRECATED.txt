@@ -1,0 +1,4 @@
+Flat batch JSON (reference only). Merge target for offline tooling:
+  data/patterns/archive/description_patterns_pre_reset.json
+Canonical production DB: ../../master_patterns.json
+Rebuild master from archived legacy nested JSON: python scripts/build_master_patterns.py

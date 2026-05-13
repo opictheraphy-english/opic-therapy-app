@@ -1,0 +1,3 @@
+Archived copies of pre-master flat inputs and legacy nested JSON (reference only).
+Canonical production DB: ../master_patterns.json only (UI + audio order).
+Rebuild master from archived legacy nested JSON: python scripts/build_master_patterns.py (reads archive/description_patterns_pre_reset.json when present).

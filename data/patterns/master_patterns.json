@@ -1,0 +1,2612 @@
+[
+  {
+    "pattern_id": "DES_001",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "meaning": "제 동네에 대해 말씀드릴게요.",
+    "examples": [
+      {
+        "en": "Let me tell you about my neighborhood.",
+        "ko": "제 동네에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0001.mp3"
+      },
+      {
+        "en": "Let me tell you about my favorite furniture.",
+        "ko": "제가 가장 좋아하는 가구에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0002.mp3"
+      },
+      {
+        "en": "Let me tell you about how we celebrate holidays.",
+        "ko": "저희가 휴일을 어떻게 보내는지 말씀드릴게요.",
+        "audio_file": "pattern_0003.mp3"
+      },
+      {
+        "en": "Let me tell you about a recent gathering I attended.",
+        "ko": "제가 최근에 참석했던 모임에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0004.mp3"
+      },
+      {
+        "en": "Let me tell you about our recycling habits.",
+        "ko": "저희의 재활용 습관에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0005.mp3"
+      },
+      {
+        "en": "Let me tell you about the local terrain.",
+        "ko": "지역 지형에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0006.mp3"
+      },
+      {
+        "en": "Let me tell you about how I spend my free time.",
+        "ko": "제가 자유시간을 어떻게 보내는지 말씀드릴게요.",
+        "audio_file": "pattern_0007.mp3"
+      },
+      {
+        "en": "Let me tell you about my stay at a hotel.",
+        "ko": "제가 호텔에서 묵었던 경험에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0008.mp3"
+      },
+      {
+        "en": "Let me tell you about the technology I use daily.",
+        "ko": "제가 매일 사용하는 기술에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0009.mp3"
+      },
+      {
+        "en": "Let me tell you about my smartphone.",
+        "ko": "제 휴대폰에 대해 말씀드릴게요.",
+        "audio_file": "pattern_0010.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "narration"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_002",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "meaning": "밖에서 보면 아늑한 오두막처럼 보입니다.",
+    "examples": [
+      {
+        "en": "From the outside, it looks like a cozy cottage.",
+        "ko": "밖에서 보면 아늑한 오두막처럼 보입니다.",
+        "audio_file": "pattern_0011.mp3"
+      },
+      {
+        "en": "From the outside, the restaurant looks very modern.",
+        "ko": "밖에서 보면 그 식당은 매우 현대적으로 보입니다.",
+        "audio_file": "pattern_0012.mp3"
+      },
+      {
+        "en": "From the outside, the gym looks quite large.",
+        "ko": "밖에서 보면 헬스장은 상당히 커 보입니다.",
+        "audio_file": "pattern_0013.mp3"
+      },
+      {
+        "en": "From the outside, the park looks very green and peaceful.",
+        "ko": "밖에서 보면 공원은 매우 푸르고 평화로워 보입니다.",
+        "audio_file": "pattern_0014.mp3"
+      },
+      {
+        "en": "From the outside, the beach looks incredibly inviting.",
+        "ko": "밖에서 보면 해변은 믿을 수 없을 정도로 매력적으로 보입니다.",
+        "audio_file": "pattern_0015.mp3"
+      },
+      {
+        "en": "From the outside, the building looks like a traditional bank.",
+        "ko": "밖에서 보면 그 건물은 전통적인 은행처럼 보입니다.",
+        "audio_file": "pattern_0016.mp3"
+      },
+      {
+        "en": "From the outside, the store looks very fashionable.",
+        "ko": "밖에서 보면 그 가게는 매우 패셔너블해 보입니다.",
+        "audio_file": "pattern_0017.mp3"
+      },
+      {
+        "en": "From the outside, the hair salon looks chic and stylish.",
+        "ko": "밖에서 보면 그 미용실은 세련되고 스타일리시해 보입니다.",
+        "audio_file": "pattern_0018.mp3"
+      },
+      {
+        "en": "From the outside, the hotel looks luxurious and grand.",
+        "ko": "밖에서 보면 호텔은 고급스럽고 웅장해 보입니다.",
+        "audio_file": "pattern_0019.mp3"
+      },
+      {
+        "en": "From the outside, the recycling center looks organized.",
+        "ko": "밖에서 보면 재활용 센터는 정리정돈이 잘 되어 있는 것처럼 보입니다.",
+        "audio_file": "pattern_0020.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_003",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "meaning": "안에는 매우 넓고 조명이 밝습니다.",
+    "examples": [
+      {
+        "en": "Inside, it's very spacious and well-lit.",
+        "ko": "안에는 매우 넓고 조명이 밝습니다.",
+        "audio_file": "pattern_0021.mp3"
+      },
+      {
+        "en": "Inside, the atmosphere is cozy and warm.",
+        "ko": "안에는 분위기가 아늑하고 따뜻합니다.",
+        "audio_file": "pattern_0022.mp3"
+      },
+      {
+        "en": "Inside, the restaurant is decorated with modern art.",
+        "ko": "안에는 현대 미술로 장식되어 있습니다.",
+        "audio_file": "pattern_0023.mp3"
+      },
+      {
+        "en": "Inside, the bank is clean and efficient.",
+        "ko": "안에는 깨끗하고 효율적입니다.",
+        "audio_file": "pattern_0024.mp3"
+      },
+      {
+        "en": "Inside, the gym is equipped with the latest machines.",
+        "ko": "안에는 최신 기계들이 갖춰져 있습니다.",
+        "audio_file": "pattern_0025.mp3"
+      },
+      {
+        "en": "Inside, the park has a large playground and many trees.",
+        "ko": "안에는 큰 놀이터와 많은 나무가 있습니다.",
+        "audio_file": "pattern_0026.mp3"
+      },
+      {
+        "en": "Inside, the beach is full of soft sand and clear water.",
+        "ko": "안에는 부드러운 모래와 맑은 물이 가득합니다.",
+        "audio_file": "pattern_0027.mp3"
+      },
+      {
+        "en": "Inside, the hotel rooms are luxurious and comfortable.",
+        "ko": "안에는 호텔 객실이 고급스럽고 편안합니다.",
+        "audio_file": "pattern_0028.mp3"
+      },
+      {
+        "en": "Inside, my house is filled with comfortable furniture.",
+        "ko": "저희 집 내부는 편안한 가구로 가득 차 있습니다.",
+        "audio_file": "pattern_0029.mp3"
+      },
+      {
+        "en": "Inside, the hair salon has a modern and trendy design.",
+        "ko": "안에는 현대적이고 트렌디한 디자인의 미용실입니다.",
+        "audio_file": "pattern_0030.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_004",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "meaning": "구조는 매우 개방적이고 넓습니다.",
+    "examples": [
+      {
+        "en": "The layout is very open and spacious.",
+        "ko": "구조는 매우 개방적이고 넓습니다.",
+        "audio_file": "pattern_0031.mp3"
+      },
+      {
+        "en": "The layout of the restaurant is designed for comfort.",
+        "ko": "그 식당의 구조는 편안함을 위해 디자인되었습니다.",
+        "audio_file": "pattern_0032.mp3"
+      },
+      {
+        "en": "The layout of the gym is very functional.",
+        "ko": "헬스장의 구조는 매우 기능적입니다.",
+        "audio_file": "pattern_0033.mp3"
+      },
+      {
+        "en": "The layout of the park includes several trails and picnic areas.",
+        "ko": "공원의 구조에는 여러 산책로와 피크닉 구역이 포함되어 있습니다.",
+        "audio_file": "pattern_0034.mp3"
+      },
+      {
+        "en": "The layout of the beach is simple, with plenty of open space.",
+        "ko": "해변의 구조는 단순하며 넓은 공간이 많습니다.",
+        "audio_file": "pattern_0035.mp3"
+      },
+      {
+        "en": "The layout of my house is perfect for a family.",
+        "ko": "저희 집의 구조는 가족에게 완벽합니다.",
+        "audio_file": "pattern_0036.mp3"
+      },
+      {
+        "en": "The layout of the bank is designed to make customers feel secure.",
+        "ko": "은행의 구조는 고객이 안전하다고 느끼도록 디자인되었습니다.",
+        "audio_file": "pattern_0037.mp3"
+      },
+      {
+        "en": "The layout of the recycling center is well-organized.",
+        "ko": "재활용 센터의 구조는 잘 정리되어 있습니다.",
+        "audio_file": "pattern_0038.mp3"
+      },
+      {
+        "en": "The layout of the hair salon is customer friendly.",
+        "ko": "헤어샵의 구조는 고객 친화적입니다.",
+        "audio_file": "pattern_0039.mp3"
+      },
+      {
+        "en": "The layout of the hotel is designed for convenience.",
+        "ko": "호텔의 구조는 편의를 위해 설계되었습니다.",
+        "audio_file": "pattern_0040.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_005",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "meaning": "제가 가장 좋아하는 공간은 휴식을 취하는 거실입니다.",
+    "examples": [
+      {
+        "en": "My favorite space is the living room, where I relax.",
+        "ko": "제가 가장 좋아하는 공간은 휴식을 취하는 거실입니다.",
+        "audio_file": "pattern_0041.mp3"
+      },
+      {
+        "en": "My favorite space is the kitchen, where I cook.",
+        "ko": "제가 가장 좋아하는 공간은 요리하는 부엌입니다.",
+        "audio_file": "pattern_0042.mp3"
+      },
+      {
+        "en": "My favorite space is the balcony, with a great view.",
+        "ko": "제가 가장 좋아하는 공간은 전망이 좋은 발코니입니다.",
+        "audio_file": "pattern_0043.mp3"
+      },
+      {
+        "en": "My favorite space is the park, where I enjoy nature.",
+        "ko": "제가 가장 좋아하는 공간은 자연을 즐기는 공원입니다.",
+        "audio_file": "pattern_0044.mp3"
+      },
+      {
+        "en": "My favorite space is the beach, where I can relax.",
+        "ko": "제가 가장 좋아하는 공간은 휴식을 취할 수 있는 해변입니다.",
+        "audio_file": "pattern_0045.mp3"
+      },
+      {
+        "en": "My favorite space is my room, where I have my personal space.",
+        "ko": "제가 가장 좋아하는 공간은 개인적인 공간인 제 방입니다.",
+        "audio_file": "pattern_0046.mp3"
+      },
+      {
+        "en": "My favorite space is the library, where I can concentrate on my studies.",
+        "ko": "제가 가장 좋아하는 공간은 공부에 집중할 수 있는 도서관입니다.",
+        "audio_file": "pattern_0047.mp3"
+      },
+      {
+        "en": "My favorite space is the gym, where I can exercise.",
+        "ko": "제가 가장 좋아하는 공간은 운동할 수 있는 헬스장입니다.",
+        "audio_file": "pattern_0048.mp3"
+      },
+      {
+        "en": "My favorite space is the cafe, where I can meet friends.",
+        "ko": "제가 가장 좋아하는 공간은 친구를 만날 수 있는 카페입니다.",
+        "audio_file": "pattern_0049.mp3"
+      },
+      {
+        "en": "My favorite space is the restaurant near my house.",
+        "ko": "제가 가장 좋아하는 공간은 집 근처에 있는 식당입니다.",
+        "audio_file": "pattern_0050.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "description",
+      "hobbies"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_006",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "I usually spend my time ~",
+    "meaning": "저는 보통 영화를 보면서 시간을 보냅니다.",
+    "examples": [
+      {
+        "en": "I usually spend my time watching movies.",
+        "ko": "저는 보통 영화를 보면서 시간을 보냅니다.",
+        "audio_file": "pattern_0051.mp3"
+      },
+      {
+        "en": "I usually spend my time cooking and baking.",
+        "ko": "저는 보통 요리와 베이킹을 하면서 시간을 보냅니다.",
+        "audio_file": "pattern_0052.mp3"
+      },
+      {
+        "en": "I usually spend my time reading books or magazines.",
+        "ko": "저는 보통 책이나 잡지를 읽으면서 시간을 보냅니다.",
+        "audio_file": "pattern_0053.mp3"
+      },
+      {
+        "en": "I usually spend my time taking walks in the park.",
+        "ko": "저는 보통 공원에서 산책을 하면서 시간을 보냅니다.",
+        "audio_file": "pattern_0054.mp3"
+      },
+      {
+        "en": "I usually spend my time relaxing on the beach.",
+        "ko": "저는 보통 해변에서 휴식을 취하면서 시간을 보냅니다.",
+        "audio_file": "pattern_0055.mp3"
+      },
+      {
+        "en": "I usually spend my time working out at the gym.",
+        "ko": "저는 보통 헬스장에서 운동하면서 시간을 보냅니다.",
+        "audio_file": "pattern_0056.mp3"
+      },
+      {
+        "en": "I usually spend my time surfing the internet.",
+        "ko": "저는 보통 인터넷을 하면서 시간을 보냅니다.",
+        "audio_file": "pattern_0057.mp3"
+      },
+      {
+        "en": "I usually spend my time calling friends or family.",
+        "ko": "저는 보통 친구나 가족에게 전화하면서 시간을 보냅니다.",
+        "audio_file": "pattern_0058.mp3"
+      },
+      {
+        "en": "I usually spend my time listening to music.",
+        "ko": "저는 보통 음악을 들으면서 시간을 보냅니다.",
+        "audio_file": "pattern_0059.mp3"
+      },
+      {
+        "en": "I usually spend my time learning new things online.",
+        "ko": "저는 보통 온라인에서 새로운 것을 배우면서 시간을 보냅니다.",
+        "audio_file": "pattern_0060.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "narration"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_007",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "We share responsibilities by ~",
+    "meaning": "우리는 돌아가면서 요리하여 책임을 분담합니다.",
+    "examples": [
+      {
+        "en": "We share responsibilities by taking turns cooking.",
+        "ko": "우리는 돌아가면서 요리하여 책임을 분담합니다.",
+        "audio_file": "pattern_0061.mp3"
+      },
+      {
+        "en": "We share responsibilities by cleaning the house together.",
+        "ko": "우리는 함께 집을 청소하여 책임을 분담합니다.",
+        "audio_file": "pattern_0062.mp3"
+      },
+      {
+        "en": "We share responsibilities by doing laundry on weekends.",
+        "ko": "우리는 주말에 빨래를 하여 책임을 분담합니다.",
+        "audio_file": "pattern_0063.mp3"
+      },
+      {
+        "en": "We share responsibilities by dividing household chores.",
+        "ko": "우리는 집안일을 분담하여 책임을 분담합니다.",
+        "audio_file": "pattern_0064.mp3"
+      },
+      {
+        "en": "We share responsibilities by taking care of the pets.",
+        "ko": "우리는 애완동물을 돌보며 책임을 분담합니다.",
+        "audio_file": "pattern_0065.mp3"
+      },
+      {
+        "en": "We share responsibilities by grocery shopping together.",
+        "ko": "우리는 함께 장을 보며 책임을 분담합니다.",
+        "audio_file": "pattern_0066.mp3"
+      },
+      {
+        "en": "We share responsibilities by organizing family events.",
+        "ko": "우리는 가족 행사를 조직하며 책임을 분담합니다.",
+        "audio_file": "pattern_0067.mp3"
+      },
+      {
+        "en": "We share responsibilities by paying bills on time.",
+        "ko": "우리는 제때 공과금을 납부하며 책임을 분담합니다.",
+        "audio_file": "pattern_0068.mp3"
+      },
+      {
+        "en": "We share responsibilities by maintaining the garden.",
+        "ko": "우리는 정원을 관리하며 책임을 분담합니다.",
+        "audio_file": "pattern_0069.mp3"
+      },
+      {
+        "en": "We share responsibilities by educating our children.",
+        "ko": "우리는 자녀를 교육하며 책임을 분담합니다.",
+        "audio_file": "pattern_0070.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_008",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I enjoy ~ because ~",
+    "meaning": "저는 웃게 해주기 때문에 코미디를 즐깁니다.",
+    "examples": [
+      {
+        "en": "I enjoy comedies because they make me laugh.",
+        "ko": "저는 웃게 해주기 때문에 코미디를 즐깁니다.",
+        "audio_file": "pattern_0071.mp3"
+      },
+      {
+        "en": "I enjoy classical music because it relaxes me.",
+        "ko": "저는 저를 편안하게 해주기 때문에 클래식 음악을 즐깁니다.",
+        "audio_file": "pattern_0072.mp3"
+      },
+      {
+        "en": "I enjoy cooking Italian food because it's delicious.",
+        "ko": "저는 맛있기 때문에 이탈리아 음식을 요리하는 것을 즐깁니다.",
+        "audio_file": "pattern_0073.mp3"
+      },
+      {
+        "en": "I enjoy shopping for clothes because it's fun.",
+        "ko": "저는 재미있기 때문에 옷 쇼핑을 즐깁니다.",
+        "audio_file": "pattern_0074.mp3"
+      },
+      {
+        "en": "I enjoy going to the beach because I love the ocean.",
+        "ko": "저는 바다를 사랑하기 때문에 해변에 가는 것을 즐깁니다.",
+        "audio_file": "pattern_0075.mp3"
+      },
+      {
+        "en": "I enjoy reading science fiction because it's imaginative.",
+        "ko": "저는 상상력이 풍부하기 때문에 과학 소설을 읽는 것을 즐깁니다.",
+        "audio_file": "pattern_0076.mp3"
+      },
+      {
+        "en": "I enjoy watching sports because it's exciting.",
+        "ko": "저는 흥미진진하기 때문에 스포츠를 보는 것을 즐깁니다.",
+        "audio_file": "pattern_0077.mp3"
+      },
+      {
+        "en": "I enjoy visiting museums because I like learning about history.",
+        "ko": "저는 역사를 배우는 것을 좋아하기 때문에 박물관을 방문하는 것을 즐깁니다.",
+        "audio_file": "pattern_0078.mp3"
+      },
+      {
+        "en": "I enjoy taking photos because it captures memories.",
+        "ko": "저는 추억을 담아주기 때문에 사진 찍는 것을 즐깁니다.",
+        "audio_file": "pattern_0079.mp3"
+      },
+      {
+        "en": "I enjoy going to concerts because I love live music.",
+        "ko": "저는 라이브 음악을 좋아하기 때문에 콘서트에 가는 것을 즐깁니다.",
+        "audio_file": "pattern_0080.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_009",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "The reason I like it is ~",
+    "meaning": "제가 그것을 좋아하는 이유는 편리하기 때문입니다.",
+    "examples": [
+      {
+        "en": "The reason I like it is because it's convenient.",
+        "ko": "제가 그것을 좋아하는 이유는 편리하기 때문입니다.",
+        "audio_file": "pattern_0081.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's healthy.",
+        "ko": "제가 그것을 좋아하는 이유는 건강하기 때문입니다.",
+        "audio_file": "pattern_0082.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's beautiful.",
+        "ko": "제가 그것을 좋아하는 이유는 아름답기 때문입니다.",
+        "audio_file": "pattern_0083.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's relaxing.",
+        "ko": "제가 그것을 좋아하는 이유는 편안하기 때문입니다.",
+        "audio_file": "pattern_0084.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's exciting.",
+        "ko": "제가 그것을 좋아하는 이유는 흥미진진하기 때문입니다.",
+        "audio_file": "pattern_0085.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's educational.",
+        "ko": "제가 그것을 좋아하는 이유는 교육적이기 때문입니다.",
+        "audio_file": "pattern_0086.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's delicious.",
+        "ko": "제가 그것을 좋아하는 이유는 맛있기 때문입니다.",
+        "audio_file": "pattern_0087.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's fun.",
+        "ko": "제가 그것을 좋아하는 이유는 재미있기 때문입니다.",
+        "audio_file": "pattern_0088.mp3"
+      },
+      {
+        "en": "The reason I like it is because it's affordable.",
+        "ko": "제가 그것을 좋아하는 이유는 가격이 저렴하기 때문입니다.",
+        "audio_file": "pattern_0089.mp3"
+      },
+      {
+        "en": "The reason I like it is because it brings back good memories.",
+        "ko": "제가 그것을 좋아하는 이유는 좋은 추억을 떠올리게 하기 때문입니다.",
+        "audio_file": "pattern_0090.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_010",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "I like to go with ~",
+    "meaning": "저는 친구들과 함께 가는 것을 좋아합니다.",
+    "examples": [
+      {
+        "en": "I like to go with my friends.",
+        "ko": "저는 친구들과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0091.mp3"
+      },
+      {
+        "en": "I like to go with my family.",
+        "ko": "저는 가족과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0092.mp3"
+      },
+      {
+        "en": "I like to go with my partner.",
+        "ko": "저는 파트너와 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0093.mp3"
+      },
+      {
+        "en": "I like to go with my colleagues.",
+        "ko": "저는 동료들과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0094.mp3"
+      },
+      {
+        "en": "I like to go alone.",
+        "ko": "저는 혼자 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0095.mp3"
+      },
+      {
+        "en": "I like to go with my neighbors.",
+        "ko": "저는 이웃들과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0096.mp3"
+      },
+      {
+        "en": "I like to go with my classmates.",
+        "ko": "저는 반 친구들과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0097.mp3"
+      },
+      {
+        "en": "I like to go with my hiking club.",
+        "ko": "저는 등산 동호회와 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0098.mp3"
+      },
+      {
+        "en": "I like to go with my study group.",
+        "ko": "저는 스터디 그룹과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0099.mp3"
+      },
+      {
+        "en": "I like to go with people who share my interests.",
+        "ko": "저는 저와 관심사를 공유하는 사람들과 함께 가는 것을 좋아합니다.",
+        "audio_file": "pattern_0100.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_011",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "meaning": "그것은 도시의 중심부에 위치해 있습니다.",
+    "examples": [
+      {
+        "en": "It's located in the heart of the city.",
+        "ko": "그것은 도시의 중심부에 위치해 있습니다.",
+        "audio_file": "pattern_0101.mp3"
+      },
+      {
+        "en": "It's located near the beach.",
+        "ko": "그것은 해변 근처에 위치해 있습니다.",
+        "audio_file": "pattern_0102.mp3"
+      },
+      {
+        "en": "It's located in a quiet neighborhood.",
+        "ko": "그것은 조용한 동네에 위치해 있습니다.",
+        "audio_file": "pattern_0103.mp3"
+      },
+      {
+        "en": "It's located on the outskirts of town.",
+        "ko": "그것은 도시 외곽에 위치해 있습니다.",
+        "audio_file": "pattern_0104.mp3"
+      },
+      {
+        "en": "It's located inside a shopping mall.",
+        "ko": "그것은 쇼핑몰 안에 위치해 있습니다.",
+        "audio_file": "pattern_0105.mp3"
+      },
+      {
+        "en": "It's located across from the park.",
+        "ko": "그것은 공원 맞은편에 위치해 있습니다.",
+        "audio_file": "pattern_0106.mp3"
+      },
+      {
+        "en": "It's located next to the subway station.",
+        "ko": "그것은 지하철역 옆에 위치해 있습니다.",
+        "audio_file": "pattern_0107.mp3"
+      },
+      {
+        "en": "It's located on the top floor of the building.",
+        "ko": "그것은 건물 최상층에 위치해 있습니다.",
+        "audio_file": "pattern_0108.mp3"
+      },
+      {
+        "en": "It's located in the downtown area.",
+        "ko": "그것은 시내 지역에 위치해 있습니다.",
+        "audio_file": "pattern_0109.mp3"
+      },
+      {
+        "en": "It's located a few blocks from my house.",
+        "ko": "그것은 저희 집에서 몇 블록 떨어진 곳에 위치해 있습니다.",
+        "audio_file": "pattern_0110.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_012",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "meaning": "분위기는 매우 편안합니다.",
+    "examples": [
+      {
+        "en": "The atmosphere is very relaxing.",
+        "ko": "분위기는 매우 편안합니다.",
+        "audio_file": "pattern_0111.mp3"
+      },
+      {
+        "en": "The atmosphere is lively and energetic.",
+        "ko": "분위기는 활기차고 역동적입니다.",
+        "audio_file": "pattern_0112.mp3"
+      },
+      {
+        "en": "The atmosphere is cozy and warm.",
+        "ko": "분위기는 아늑하고 따뜻합니다.",
+        "audio_file": "pattern_0113.mp3"
+      },
+      {
+        "en": "The atmosphere is peaceful and quiet.",
+        "ko": "분위기는 평화롭고 조용합니다.",
+        "audio_file": "pattern_0114.mp3"
+      },
+      {
+        "en": "The atmosphere is modern and stylish.",
+        "ko": "분위기는 현대적이고 세련되었습니다.",
+        "audio_file": "pattern_0115.mp3"
+      },
+      {
+        "en": "The atmosphere is friendly and welcoming.",
+        "ko": "분위기는 친절하고 환영하는 분위기입니다.",
+        "audio_file": "pattern_0116.mp3"
+      },
+      {
+        "en": "The atmosphere is romantic and intimate.",
+        "ko": "분위기는 낭만적이고 친밀합니다.",
+        "audio_file": "pattern_0117.mp3"
+      },
+      {
+        "en": "The atmosphere is educational and informative.",
+        "ko": "분위기는 교육적이고 유익합니다.",
+        "audio_file": "pattern_0118.mp3"
+      },
+      {
+        "en": "The atmosphere is festive and joyful.",
+        "ko": "분위기는 축제 분위기이고 즐겁습니다.",
+        "audio_file": "pattern_0119.mp3"
+      },
+      {
+        "en": "The atmosphere is calm and soothing.",
+        "ko": "분위기는 차분하고 평온합니다.",
+        "audio_file": "pattern_0120.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "description",
+      "hobbies"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_013",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "meaning": "제가 그것에 대해 좋아하는 것은 전망입니다.",
+    "examples": [
+      {
+        "en": "What I love about it is the view.",
+        "ko": "제가 그것에 대해 좋아하는 것은 전망입니다.",
+        "audio_file": "pattern_0121.mp3"
+      },
+      {
+        "en": "What I love about it is the food.",
+        "ko": "제가 그것에 대해 좋아하는 것은 음식입니다.",
+        "audio_file": "pattern_0122.mp3"
+      },
+      {
+        "en": "What I love about it is the convenience.",
+        "ko": "제가 그것에 대해 좋아하는 것은 편리함입니다.",
+        "audio_file": "pattern_0123.mp3"
+      },
+      {
+        "en": "What I love about it is the atmosphere.",
+        "ko": "제가 그것에 대해 좋아하는 것은 분위기입니다.",
+        "audio_file": "pattern_0124.mp3"
+      },
+      {
+        "en": "What I love about it is the location.",
+        "ko": "제가 그것에 대해 좋아하는 것은 위치입니다.",
+        "audio_file": "pattern_0125.mp3"
+      },
+      {
+        "en": "What I love about it is the people.",
+        "ko": "제가 그것에 대해 좋아하는 것은 사람들입니다.",
+        "audio_file": "pattern_0126.mp3"
+      },
+      {
+        "en": "What I love about it is the variety.",
+        "ko": "제가 그것에 대해 좋아하는 것은 다양성입니다.",
+        "audio_file": "pattern_0127.mp3"
+      },
+      {
+        "en": "What I love about it is the cleanliness.",
+        "ko": "제가 그것에 대해 좋아하는 것은 청결함입니다.",
+        "audio_file": "pattern_0128.mp3"
+      },
+      {
+        "en": "What I love about it is the affordability.",
+        "ko": "제가 그것에 대해 좋아하는 것은 가격이 저렴하다는 것입니다.",
+        "audio_file": "pattern_0129.mp3"
+      },
+      {
+        "en": "What I love about it is the quality of service.",
+        "ko": "제가 그것에 대해 좋아하는 것은 서비스의 질입니다.",
+        "audio_file": "pattern_0130.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "description",
+      "hobbies"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_014",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "meaning": "그것은 저에게 휴식을 취할 기회를 제공합니다.",
+    "examples": [
+      {
+        "en": "It offers me a chance to relax.",
+        "ko": "그것은 저에게 휴식을 취할 기회를 제공합니다.",
+        "audio_file": "pattern_0131.mp3"
+      },
+      {
+        "en": "It offers me a chance to learn new things.",
+        "ko": "그것은 저에게 새로운 것을 배울 기회를 제공합니다.",
+        "audio_file": "pattern_0132.mp3"
+      },
+      {
+        "en": "It offers me a chance to meet new people.",
+        "ko": "그것은 저에게 새로운 사람들을 만날 기회를 제공합니다.",
+        "audio_file": "pattern_0133.mp3"
+      },
+      {
+        "en": "It offers me a chance to exercise.",
+        "ko": "그것은 저에게 운동할 기회를 제공합니다.",
+        "audio_file": "pattern_0134.mp3"
+      },
+      {
+        "en": "It offers me a chance to enjoy nature.",
+        "ko": "그것은 저에게 자연을 즐길 기회를 제공합니다.",
+        "audio_file": "pattern_0135.mp3"
+      },
+      {
+        "en": "It offers me a chance to try new foods.",
+        "ko": "그것은 저에게 새로운 음식을 시도할 기회를 제공합니다.",
+        "audio_file": "pattern_0136.mp3"
+      },
+      {
+        "en": "It offers me a chance to escape from daily stress.",
+        "ko": "그것은 저에게 일상적인 스트레스에서 벗어날 기회를 제공합니다.",
+        "audio_file": "pattern_0137.mp3"
+      },
+      {
+        "en": "It offers me a chance to improve my skills.",
+        "ko": "그것은 저에게 제 기술을 향상시킬 기회를 제공합니다.",
+        "audio_file": "pattern_0138.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_015",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "meaning": "저는 휴식을 취하기에 좋은 곳이기 때문에 그것을 추천합니다.",
+    "examples": [
+      {
+        "en": "I would recommend it because it's a great place to relax.",
+        "ko": "저는 휴식을 취하기에 좋은 곳이기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0139.mp3"
+      },
+      {
+        "en": "I would recommend it because it has delicious food.",
+        "ko": "저는 맛있는 음식이 있기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0140.mp3"
+      },
+      {
+        "en": "I would recommend it because it's very affordable.",
+        "ko": "저는 가격이 매우 저렴하기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0141.mp3"
+      },
+      {
+        "en": "I would recommend it because the service is excellent.",
+        "ko": "저는 서비스가 훌륭하기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0142.mp3"
+      },
+      {
+        "en": "I would recommend it because it's a unique experience.",
+        "ko": "저는 독특한 경험이기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0143.mp3"
+      },
+      {
+        "en": "I would recommend it because it's educational.",
+        "ko": "저는 교육적이기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0144.mp3"
+      },
+      {
+        "en": "I would recommend it because it's fun for the whole family.",
+        "ko": "저는 온 가족이 즐길 수 있기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0145.mp3"
+      },
+      {
+        "en": "I would recommend it because it has a beautiful view.",
+        "ko": "저는 아름다운 전망을 가지고 있기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0146.mp3"
+      },
+      {
+        "en": "I would recommend it because it's conveniently located.",
+        "ko": "저는 편리하게 위치해 있기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0147.mp3"
+      },
+      {
+        "en": "I would recommend it because it's perfect for a getaway.",
+        "ko": "저는 휴가를 보내기에 완벽하기 때문에 그것을 추천합니다.",
+        "audio_file": "pattern_0148.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "description",
+      "restaurants"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_016",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "meaning": "그것은 꽤 넓습니다.",
+    "examples": [
+      {
+        "en": "It's quite spacious.",
+        "ko": "그것은 꽤 넓습니다.",
+        "audio_file": "pattern_0149.mp3"
+      },
+      {
+        "en": "It's quite cozy.",
+        "ko": "그것은 꽤 아늑합니다.",
+        "audio_file": "pattern_0150.mp3"
+      },
+      {
+        "en": "It's quite modern.",
+        "ko": "그것은 꽤 현대적입니다.",
+        "audio_file": "pattern_0151.mp3"
+      },
+      {
+        "en": "It's quite noisy.",
+        "ko": "그것은 꽤 시끄럽습니다.",
+        "audio_file": "pattern_0152.mp3"
+      },
+      {
+        "en": "It's quite peaceful.",
+        "ko": "그것은 꽤 평화롭습니다.",
+        "audio_file": "pattern_0153.mp3"
+      },
+      {
+        "en": "It's quite delicious.",
+        "ko": "그것은 꽤 맛있습니다.",
+        "audio_file": "pattern_0154.mp3"
+      },
+      {
+        "en": "It's quite impressive.",
+        "ko": "그것은 꽤 인상적입니다.",
+        "audio_file": "pattern_0155.mp3"
+      },
+      {
+        "en": "It's quite challenging.",
+        "ko": "그것은 꽤 도전적입니다.",
+        "audio_file": "pattern_0156.mp3"
+      },
+      {
+        "en": "It's quite relaxing.",
+        "ko": "그것은 꽤 편안합니다.",
+        "audio_file": "pattern_0157.mp3"
+      },
+      {
+        "en": "It's quite convenient.",
+        "ko": "그것은 꽤 편리합니다.",
+        "audio_file": "pattern_0158.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_017",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "meaning": "그것의 가장 좋은 점은 위치입니다.",
+    "examples": [
+      {
+        "en": "The best thing about it is the location.",
+        "ko": "그것의 가장 좋은 점은 위치입니다.",
+        "audio_file": "pattern_0159.mp3"
+      },
+      {
+        "en": "The best thing about it is the food.",
+        "ko": "그것의 가장 좋은 점은 음식입니다.",
+        "audio_file": "pattern_0160.mp3"
+      },
+      {
+        "en": "The best thing about it is the atmosphere.",
+        "ko": "그것의 가장 좋은 점은 분위기입니다.",
+        "audio_file": "pattern_0161.mp3"
+      },
+      {
+        "en": "The best thing about it is the price.",
+        "ko": "그것의 가장 좋은 점은 가격입니다.",
+        "audio_file": "pattern_0162.mp3"
+      },
+      {
+        "en": "The best thing about it is the service.",
+        "ko": "그것의 가장 좋은 점은 서비스입니다.",
+        "audio_file": "pattern_0163.mp3"
+      },
+      {
+        "en": "The best thing about it is the view.",
+        "ko": "그것의 가장 좋은 점은 전망입니다.",
+        "audio_file": "pattern_0164.mp3"
+      },
+      {
+        "en": "The best thing about it is the convenience.",
+        "ko": "그것의 가장 좋은 점은 편리함입니다.",
+        "audio_file": "pattern_0165.mp3"
+      },
+      {
+        "en": "The best thing about it is the variety.",
+        "ko": "그것의 가장 좋은 점은 다양성입니다.",
+        "audio_file": "pattern_0166.mp3"
+      },
+      {
+        "en": "The best thing about it is the cleanliness.",
+        "ko": "그것의 가장 좋은 점은 청결함입니다.",
+        "audio_file": "pattern_0167.mp3"
+      },
+      {
+        "en": "The best thing about it is the friendly staff.",
+        "ko": "그것의 가장 좋은 점은 친절한 직원입니다.",
+        "audio_file": "pattern_0168.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "comparison",
+      "description"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_018",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "meaning": "다른 공원과 비교했을 때, 그것은 훨씬 조용합니다.",
+    "examples": [
+      {
+        "en": "Compared to other parks, it's much quieter.",
+        "ko": "다른 공원과 비교했을 때, 그것은 훨씬 조용합니다.",
+        "audio_file": "pattern_0169.mp3"
+      },
+      {
+        "en": "Compared to other restaurants, it's more affordable.",
+        "ko": "다른 식당과 비교했을 때, 그것은 더 저렴합니다.",
+        "audio_file": "pattern_0170.mp3"
+      },
+      {
+        "en": "Compared to other gyms, it's better equipped.",
+        "ko": "다른 헬스장과 비교했을 때, 그것은 시설이 더 좋습니다.",
+        "audio_file": "pattern_0171.mp3"
+      },
+      {
+        "en": "Compared to other beaches, it's less crowded.",
+        "ko": "다른 해변과 비교했을 때, 그것은 덜 붐빕니다.",
+        "audio_file": "pattern_0172.mp3"
+      },
+      {
+        "en": "Compared to other hotels, it's more luxurious.",
+        "ko": "다른 호텔과 비교했을 때, 그것은 더 고급스럽습니다.",
+        "audio_file": "pattern_0173.mp3"
+      },
+      {
+        "en": "Compared to other coffee shops, it has better coffee.",
+        "ko": "다른 커피숍과 비교했을 때, 커피가 더 좋습니다.",
+        "audio_file": "pattern_0174.mp3"
+      },
+      {
+        "en": "Compared to other stores, it has a wider selection.",
+        "ko": "다른 가게와 비교했을 때, 선택의 폭이 더 넓습니다.",
+        "audio_file": "pattern_0175.mp3"
+      },
+      {
+        "en": "Compared to other methods, it's more efficient.",
+        "ko": "다른 방법과 비교했을 때, 그것은 더 효율적입니다.",
+        "audio_file": "pattern_0176.mp3"
+      },
+      {
+        "en": "Compared to other days, today is more sunny.",
+        "ko": "다른 날과 비교했을 때, 오늘은 더 화창합니다.",
+        "audio_file": "pattern_0177.mp3"
+      },
+      {
+        "en": "Compared to other styles, this one is more comfortable.",
+        "ko": "다른 스타일과 비교했을 때, 이 스타일이 더 편안합니다.",
+        "audio_file": "pattern_0178.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "comparison",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_019",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "meaning": "개인적으로 저는 그곳이 휴식을 취하기에 최고의 장소라고 생각합니다.",
+    "examples": [
+      {
+        "en": "Personally, I think it's the best place to relax.",
+        "ko": "개인적으로 저는 그곳이 휴식을 취하기에 최고의 장소라고 생각합니다.",
+        "audio_file": "pattern_0179.mp3"
+      },
+      {
+        "en": "Personally, I think the food is delicious.",
+        "ko": "개인적으로 저는 음식이 맛있다고 생각합니다.",
+        "audio_file": "pattern_0180.mp3"
+      },
+      {
+        "en": "Personally, I think the service is excellent.",
+        "ko": "개인적으로 저는 서비스가 훌륭하다고 생각합니다.",
+        "audio_file": "pattern_0181.mp3"
+      },
+      {
+        "en": "Personally, I think it's worth the price.",
+        "ko": "개인적으로 저는 가격 대비 가치가 있다고 생각합니다.",
+        "audio_file": "pattern_0182.mp3"
+      },
+      {
+        "en": "Personally, I think it's a great way to spend time.",
+        "ko": "개인적으로 저는 시간을 보내기에 좋은 방법이라고 생각합니다.",
+        "audio_file": "pattern_0183.mp3"
+      },
+      {
+        "en": "Personally, I think it's very convenient.",
+        "ko": "개인적으로 저는 매우 편리하다고 생각합니다.",
+        "audio_file": "pattern_0184.mp3"
+      },
+      {
+        "en": "Personally, I think it's a beautiful place.",
+        "ko": "개인적으로 저는 아름다운 장소라고 생각합니다.",
+        "audio_file": "pattern_0185.mp3"
+      },
+      {
+        "en": "Personally, I think it's a unique experience.",
+        "ko": "개인적으로 저는 독특한 경험이라고 생각합니다.",
+        "audio_file": "pattern_0186.mp3"
+      },
+      {
+        "en": "Personally, I think it's very helpful.",
+        "ko": "개인적으로 저는 매우 유용하다고 생각합니다.",
+        "audio_file": "pattern_0187.mp3"
+      },
+      {
+        "en": "Personally, I think it's very important.",
+        "ko": "개인적으로 저는 매우 중요하다고 생각합니다.",
+        "audio_file": "pattern_0188.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_020",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "meaning": "그렇기 때문에 저는 이 공원을 좋아합니다.",
+    "examples": [
+      {
+        "en": "That's why I like this park.",
+        "ko": "그렇기 때문에 저는 이 공원을 좋아합니다.",
+        "audio_file": "pattern_0189.mp3"
+      },
+      {
+        "en": "That's why I like this restaurant.",
+        "ko": "그렇기 때문에 저는 이 식당을 좋아합니다.",
+        "audio_file": "pattern_0190.mp3"
+      },
+      {
+        "en": "That's why I like this gym.",
+        "ko": "그렇기 때문에 저는 이 헬스장을 좋아합니다.",
+        "audio_file": "pattern_0191.mp3"
+      },
+      {
+        "en": "That's why I like this beach.",
+        "ko": "그렇기 때문에 저는 이 해변을 좋아합니다.",
+        "audio_file": "pattern_0192.mp3"
+      },
+      {
+        "en": "That's why I like this hotel.",
+        "ko": "그렇기 때문에 저는 이 호텔을 좋아합니다.",
+        "audio_file": "pattern_0193.mp3"
+      },
+      {
+        "en": "That's why I like this coffee shop.",
+        "ko": "그렇기 때문에 저는 이 커피숍을 좋아합니다.",
+        "audio_file": "pattern_0194.mp3"
+      },
+      {
+        "en": "That's why I like this store.",
+        "ko": "그렇기 때문에 저는 이 가게를 좋아합니다.",
+        "audio_file": "pattern_0195.mp3"
+      },
+      {
+        "en": "That's why I like this method.",
+        "ko": "그렇기 때문에 저는 이 방법을 좋아합니다.",
+        "audio_file": "pattern_0196.mp3"
+      },
+      {
+        "en": "That's why I like today's weather.",
+        "ko": "그렇기 때문에 저는 오늘 날씨를 좋아합니다.",
+        "audio_file": "pattern_0197.mp3"
+      },
+      {
+        "en": "That's why I like this style.",
+        "ko": "그렇기 때문에 저는 이 스타일을 좋아합니다.",
+        "audio_file": "pattern_0198.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "narration"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_021",
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "One of the first things I noticed was ~",
+    "meaning": "제가 가장 먼저 눈에 띈 것 중 하나는 ~였어요.",
+    "examples": [
+      {
+        "en": "One of the first things I noticed was the cozy atmosphere.",
+        "ko": "제가 가장 먼저 눈에 띈 것 중 하나는 아늑한 분위기였어요.",
+        "audio_file": "pattern_0199.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "appearance",
+      "daily",
+      "description",
+      "ih"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_022",
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "It is surrounded by ~",
+    "meaning": "그곳은 ~로 둘러싸여 있어요.",
+    "examples": [
+      {
+        "en": "It is surrounded by tall buildings and trees.",
+        "ko": "그곳은 높은 건물과 나무들로 둘러싸여 있어요.",
+        "audio_file": "pattern_0200.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "appearance",
+      "daily",
+      "description",
+      "im"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_023",
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "The first impression I got was ~",
+    "meaning": "제가 처음 받은 인상은 ~였어요.",
+    "examples": [
+      {
+        "en": "The first impression I got was that it looked modern.",
+        "ko": "제가 처음 받은 인상은 현대적으로 보인다는 것이었어요.",
+        "audio_file": "pattern_0201.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "appearance",
+      "daily",
+      "description",
+      "ih"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_024",
+    "category": "describe",
+    "subcategory": "interior",
+    "pattern_en": "The interior is decorated with ~",
+    "meaning": "내부는 ~로 꾸며져 있어요.",
+    "examples": [
+      {
+        "en": "The interior is decorated with wooden furniture.",
+        "ko": "내부는 나무 가구로 꾸며져 있어요.",
+        "audio_file": "pattern_0202.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "ih",
+      "interior"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_025",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "What I like most about this place is ~",
+    "meaning": "제가 이곳에서 가장 좋아하는 점은 ~예요.",
+    "examples": [
+      {
+        "en": "What I like most about this place is the peaceful atmosphere.",
+        "ko": "제가 이곳에서 가장 좋아하는 점은 평화로운 분위기예요.",
+        "audio_file": "pattern_0203.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "atmosphere",
+      "description",
+      "hobbies",
+      "im"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_026",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere feels ~",
+    "meaning": "분위기가 ~하게 느껴져요.",
+    "examples": [
+      {
+        "en": "The atmosphere feels lively and energetic.",
+        "ko": "분위기가 활기차고 에너지 넘치게 느껴져요.",
+        "audio_file": "pattern_0204.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "atmosphere",
+      "description",
+      "hobbies",
+      "im"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_027",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The place is divided into ~",
+    "meaning": "그곳은 ~로 나누어져 있어요.",
+    "examples": [
+      {
+        "en": "The place is divided into several sections.",
+        "ko": "그곳은 여러 구역으로 나누어져 있어요.",
+        "audio_file": "pattern_0205.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "ih",
+      "layout"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_028",
+    "category": "describe",
+    "subcategory": "size",
+    "pattern_en": "The size is ~",
+    "meaning": "생각했던 것보다 훨씬 더 커요.",
+    "examples": [
+      {
+        "en": "The park is much bigger than I expected.",
+        "ko": "그 공원은 생각보다 훨씬 더 커요.",
+        "audio_file": "pattern_0206.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "daily",
+      "description",
+      "im",
+      "size"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_029",
+    "category": "describe",
+    "subcategory": "features",
+    "pattern_en": "One of its unique features is ~",
+    "meaning": "그곳의 독특한 특징 중 하나는 ~예요.",
+    "examples": [
+      {
+        "en": "One of its unique features is the rooftop garden.",
+        "ko": "그곳의 독특한 특징 중 하나는 옥상 정원이에요.",
+        "audio_file": "pattern_0207.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "features",
+      "ih"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_030",
+    "category": "describe",
+    "subcategory": "condition",
+    "pattern_en": "The conditions are ~",
+    "meaning": "깔끔하고 관리가 잘 되어 보여요.",
+    "examples": [
+      {
+        "en": "The building looks clean and well-maintained.",
+        "ko": "그 건물은 깔끔하고 관리가 잘 되어 보여요.",
+        "audio_file": "pattern_0208.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "condition",
+      "daily",
+      "description",
+      "im"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_031",
+    "category": "describe",
+    "subcategory": "lighting",
+    "pattern_en": "The lighting makes the place feel ~",
+    "meaning": "조명 때문에 그곳이 ~하게 느껴져요.",
+    "examples": [
+      {
+        "en": "The lighting makes the place feel warm and cozy.",
+        "ko": "조명 때문에 그곳이 따뜻하고 아늑하게 느껴져요.",
+        "audio_file": "pattern_0209.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "ih",
+      "lighting"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_032",
+    "category": "describe",
+    "subcategory": "overall_impression",
+    "pattern_en": "Overall, I would describe it as ~",
+    "meaning": "전반적으로 저는 그곳을 ~라고 표현하고 싶어요.",
+    "examples": [
+      {
+        "en": "Overall, I would describe it as calm and relaxing.",
+        "ko": "전반적으로 저는 그곳을 차분하고 편안하다고 표현하고 싶어요.",
+        "audio_file": "pattern_0210.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "ih",
+      "overall"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_033",
+    "category": "describe",
+    "subcategory": "details",
+    "pattern_en": "What stands out the most is ~",
+    "meaning": "가장 눈에 띄는 것은 ~예요.",
+    "examples": [
+      {
+        "en": "What stands out the most is the colorful decoration.",
+        "ko": "가장 눈에 띄는 것은 화려한 장식이에요.",
+        "audio_file": "pattern_0211.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "details",
+      "ih"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_034",
+    "category": "describe",
+    "subcategory": "space",
+    "pattern_en": "There is plenty of space for ~",
+    "meaning": "~하기에 충분한 공간이 있어요.",
+    "examples": [
+      {
+        "en": "There is plenty of space for people to relax.",
+        "ko": "사람들이 쉬기에 충분한 공간이 있어요.",
+        "audio_file": "pattern_0212.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "daily",
+      "description",
+      "im",
+      "space"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_035",
+    "category": "describe",
+    "subcategory": "environment",
+    "pattern_en": "The area around it is filled with ~",
+    "meaning": "그 주변은 ~로 가득 차 있어요.",
+    "examples": [
+      {
+        "en": "The area around it is filled with restaurants and cafes.",
+        "ko": "그 주변은 식당과 카페들로 가득 차 있어요.",
+        "audio_file": "pattern_0213.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "environment",
+      "ih"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_036",
+    "category": "describe",
+    "subcategory": "sound",
+    "pattern_en": "You can often hear ~",
+    "meaning": "종종 ~ 소리를 들을 수 있어요.",
+    "examples": [
+      {
+        "en": "You can often hear soft music in the background.",
+        "ko": "배경에서 잔잔한 음악 소리를 자주 들을 수 있어요.",
+        "audio_file": "pattern_0214.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "daily",
+      "description",
+      "im",
+      "sound"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_037",
+    "category": "describe",
+    "subcategory": "crowd",
+    "pattern_en": "It tends to get crowded during ~",
+    "meaning": "~ 동안에는 사람이 많아지는 편이에요.",
+    "examples": [
+      {
+        "en": "It tends to get crowded during weekends.",
+        "ko": "주말에는 사람이 많아지는 편이에요.",
+        "audio_file": "pattern_0215.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "crowd",
+      "daily",
+      "description",
+      "ih"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_038",
+    "category": "describe",
+    "subcategory": "weather",
+    "pattern_en": "The weather makes the place feel ~",
+    "meaning": "날씨 때문에 그곳이 ~하게 느껴져요.",
+    "examples": [
+      {
+        "en": "The weather makes the place feel refreshing.",
+        "ko": "날씨 때문에 그곳이 상쾌하게 느껴져요.",
+        "audio_file": "pattern_0216.mp3"
+      }
+    ],
+    "difficulty": 2,
+    "tags": [
+      "IH",
+      "daily",
+      "description",
+      "ih",
+      "weather"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_039",
+    "category": "describe",
+    "subcategory": "comfort",
+    "pattern_en": "I feel comfortable because ~",
+    "meaning": "~해서 편안함을 느껴요.",
+    "examples": [
+      {
+        "en": "I feel comfortable because the place is quiet.",
+        "ko": "그곳이 조용해서 편안함을 느껴요.",
+        "audio_file": "pattern_0217.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "comfort",
+      "daily",
+      "description",
+      "im"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_040",
+    "category": "describe",
+    "subcategory": "visuals",
+    "pattern_en": "The view from there is ~",
+    "meaning": "거기서 보는 풍경은 ~해요.",
+    "examples": [
+      {
+        "en": "The view from there is absolutely beautiful.",
+        "ko": "거기서 보는 풍경은 정말 아름다워요.",
+        "audio_file": "pattern_0218.mp3"
+      }
+    ],
+    "difficulty": 1,
+    "tags": [
+      "IM",
+      "daily",
+      "description",
+      "im",
+      "visuals"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T01",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "On weekdays, I usually ~",
+    "meaning": "평일에는 보통 ~합니다.",
+    "examples": [
+      {
+        "en": "On weekdays, I usually start work around nine.",
+        "ko": "평일에는 보통 아홉 시쯤 일을 시작합니다."
+      },
+      {
+        "en": "On weekdays, I usually grab coffee on the way.",
+        "ko": "평일에는 보통 출근길에 커피를 사 갑니다."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T02",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "In the morning, I like to ~",
+    "meaning": "아침에는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "In the morning, I like to stretch for five minutes.",
+        "ko": "아침에는 5분 정도 스트레칭하는 편이에요."
+      },
+      {
+        "en": "In the morning, I like to read the news briefly.",
+        "ko": "아침에는 뉴스를 잠깐 읽는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T03",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "After work, I tend to ~",
+    "meaning": "퇴근 후에는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "After work, I tend to take a short walk.",
+        "ko": "퇴근 후에는 짧게 산책하는 편이에요."
+      },
+      {
+        "en": "After work, I tend to cook a simple dinner.",
+        "ko": "퇴근 후에는 간단히 저녁을 해 먹는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T04",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "Before bed, I always ~",
+    "meaning": "잠들기 전에는 항상 ~해요.",
+    "examples": [
+      {
+        "en": "Before bed, I always turn off my phone.",
+        "ko": "잠들기 전에는 항상 휴대폰을 꺼요."
+      },
+      {
+        "en": "Before bed, I always drink warm tea.",
+        "ko": "잠들기 전에는 항상 따뜻한 차를 마셔요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T05",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "On busy days, I barely have time to ~",
+    "meaning": "바쁜 날에는 ~할 시간이 거의 없어요.",
+    "examples": [
+      {
+        "en": "On busy days, I barely have time to cook.",
+        "ko": "바쁜 날에는 요리할 시간이 거의 없어요."
+      },
+      {
+        "en": "On busy days, I barely have time to exercise.",
+        "ko": "바쁜 날에는 운동할 시간이 거의 없어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T06",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "Right after I wake up, I ~",
+    "meaning": "일어나자마자 ~해요.",
+    "examples": [
+      {
+        "en": "Right after I wake up, I drink a glass of water.",
+        "ko": "일어나자마자 물 한 잔을 마셔요."
+      },
+      {
+        "en": "Right after I wake up, I check my calendar.",
+        "ko": "일어나자마자 일정을 확인해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H01",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I've gotten into the habit of ~ing",
+    "meaning": "~하는 습관이 들었어요.",
+    "examples": [
+      {
+        "en": "I've gotten into the habit of journaling at night.",
+        "ko": "밤에 짧게 일기 쓰는 습관이 들었어요."
+      },
+      {
+        "en": "I've gotten into the habit of taking the stairs.",
+        "ko": "계단 이용하는 습관이 들었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H02",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I try to make it a rule to ~",
+    "meaning": "원칙적으로 ~하려고 해요.",
+    "examples": [
+      {
+        "en": "I try to make it a rule to stop working after ten.",
+        "ko": "열 시 이후에는 일을 멈추려고 해요."
+      },
+      {
+        "en": "I try to make it a rule to reply within a day.",
+        "ko": "하루 안에 답장하려고 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H03",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I usually avoid ~ing",
+    "meaning": "보통은 ~하는 걸 피해요.",
+    "examples": [
+      {
+        "en": "I usually avoid scrolling late at night.",
+        "ko": "보통은 늦은 밤에 스크롤하는 걸 피해요."
+      },
+      {
+        "en": "I usually avoid skipping breakfast.",
+        "ko": "보통은 아침을 거르는 걸 피해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H04",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I can't help ~ing when ~",
+    "meaning": "~할 때는 ~하게 돼요.",
+    "examples": [
+      {
+        "en": "I can't help snacking when I'm stressed.",
+        "ko": "스트레스 받을 때는 간식을 먹게 돼요."
+      },
+      {
+        "en": "I can't help yawning when I'm tired.",
+        "ko": "피곤할 때는 하품하게 돼요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H05",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "Rather than ~, I prefer to ~",
+    "meaning": "~보다는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "Rather than driving, I prefer to take the subway.",
+        "ko": "운전보다는 지하철 타는 편이에요."
+      },
+      {
+        "en": "Rather than eating out, I prefer to cook at home.",
+        "ko": "외식보다는 집에서 요리하는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H06",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "Lately I've been trying to ~ more",
+    "meaning": "요즘은 ~을/를 더 하려고 해요.",
+    "examples": [
+      {
+        "en": "Lately I've been trying to walk more.",
+        "ko": "요즘은 걷기를 더 하려고 해요."
+      },
+      {
+        "en": "Lately I've been trying to save a little money.",
+        "ko": "요즘은 조금이라도 저축하려고 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P01",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "I plan my week by ~ing",
+    "meaning": "일주일 계획은 ~하면서 세워요.",
+    "examples": [
+      {
+        "en": "I plan my week by blocking time on my calendar.",
+        "ko": "캘린더에 시간을 비우면서 일주일 계획을 세워요."
+      },
+      {
+        "en": "I plan my week by listing top three tasks.",
+        "ko": "가장 중요한 일 세 가지를 적으면서 계획을 세워요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P02",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "To stay on track, I ~",
+    "meaning": "일정을 지키려면 ~해요.",
+    "examples": [
+      {
+        "en": "To stay on track, I set reminders on my phone.",
+        "ko": "일정을 지키려면 휴대폰에 알람을 맞춰요."
+      },
+      {
+        "en": "To stay on track, I break big tasks into small steps.",
+        "ko": "큰 일을 작은 단계로 나눠요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P03",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "I set aside time every week to ~",
+    "meaning": "매주 ~할 시간을 비워둬요.",
+    "examples": [
+      {
+        "en": "I set aside time every week to clean my room.",
+        "ko": "매주 방 정리할 시간을 비워둬요."
+      },
+      {
+        "en": "I set aside time every week to call my parents.",
+        "ko": "매주 부모님께 전화할 시간을 비워둬요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P04",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "When deadlines pile up, I ~",
+    "meaning": "마감이 몰리면 ~해요.",
+    "examples": [
+      {
+        "en": "When deadlines pile up, I ask for help early.",
+        "ko": "마감이 몰리면 미리 도움을 요청해요."
+      },
+      {
+        "en": "When deadlines pile up, I cut non-urgent tasks first.",
+        "ko": "급하지 않은 일부터 줄여요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_P05",
+    "category": "routine",
+    "subcategory": "planning_routine",
+    "pattern_en": "If something slips my mind, I ~",
+    "meaning": "깜빡할 뻔하면 ~해요.",
+    "examples": [
+      {
+        "en": "If something slips my mind, I write it down immediately.",
+        "ko": "깜빡할 뻔하면 바로 메모해요."
+      },
+      {
+        "en": "If something slips my mind, I pin it on my desk.",
+        "ko": "책상에 메모를 붙여둬요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S01",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "To stay in shape, I ~",
+    "meaning": "컨디션을 위해 ~해요.",
+    "examples": [
+      {
+        "en": "To stay in shape, I walk at least thirty minutes a day.",
+        "ko": "컨디션을 위해 하루 30분은 걸어요."
+      },
+      {
+        "en": "To stay in shape, I stretch during breaks.",
+        "ko": "쉬는 시간에 스트레칭해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S02",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "When I feel run down, I ~",
+    "meaning": "몸이 축 처질 때는 ~해요.",
+    "examples": [
+      {
+        "en": "When I feel run down, I sleep earlier.",
+        "ko": "몸이 축 처질 때는 일찍 자요."
+      },
+      {
+        "en": "When I feel run down, I drink more water.",
+        "ko": "물을 더 마셔요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S03",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "I try to sleep at least ~ hours a night",
+    "meaning": "밤에는 되도록 ~시간은 자려고 해요.",
+    "examples": [
+      {
+        "en": "I try to sleep at least seven hours a night.",
+        "ko": "밤에는 되도록 7시간은 자려고 해요."
+      },
+      {
+        "en": "I try to sleep at least six hours on busy weeks.",
+        "ko": "바쁜 주에는 6시간은 자려고 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S04",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "I've cut back on ~ for my health",
+    "meaning": "건강 때문에 ~은/는 줄였어요.",
+    "examples": [
+      {
+        "en": "I've cut back on sugary drinks for my health.",
+        "ko": "건강 때문에 단 음료는 줄였어요."
+      },
+      {
+        "en": "I've cut back on late-night snacks for my health.",
+        "ko": "건강 때문에 야식은 줄였어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_S05",
+    "category": "routine",
+    "subcategory": "self_care_routine",
+    "pattern_en": "If my neck hurts, I ~",
+    "meaning": "목이 아프면 ~해요.",
+    "examples": [
+      {
+        "en": "If my neck hurts, I fix my posture.",
+        "ko": "목이 아프면 자세를 바로잡아요."
+      },
+      {
+        "en": "If my neck hurts, I take short breaks from the screen.",
+        "ko": "화면에서 잠깐 떨어져 쉬어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L01",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "On weekends, I usually ~",
+    "meaning": "주말에는 보통 ~해요.",
+    "examples": [
+      {
+        "en": "On weekends, I usually meet friends downtown.",
+        "ko": "주말에는 보통 친구들과 시내에서 만나요."
+      },
+      {
+        "en": "On weekends, I usually binge a good series.",
+        "ko": "주말에는 보통 드라마를 몰아봐요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L02",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "When I have a day off, I love to ~",
+    "meaning": "쉬는 날이면 ~하고 싶어요.",
+    "examples": [
+      {
+        "en": "When I have a day off, I love to sleep in.",
+        "ko": "쉬는 날이면 늦잠 자고 싶어요."
+      },
+      {
+        "en": "When I have a day off, I love to explore a new cafe.",
+        "ko": "새 카페를 찾아가고 싶어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L03",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "To unwind, I often ~",
+    "meaning": "스트레스 풀려고 자주 ~해요.",
+    "examples": [
+      {
+        "en": "To unwind, I often listen to podcasts.",
+        "ko": "스트레스 풀려고 팟캐스트를 자주 들어요."
+      },
+      {
+        "en": "To unwind, I often take a hot shower.",
+        "ko": "뜨거운 샤워를 자주 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L04",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "I'd rather ~ than stay home all day",
+    "meaning": "하루 종일 집에 있는 것보다는 ~하고 싶어요.",
+    "examples": [
+      {
+        "en": "I'd rather take a short trip than stay home all day.",
+        "ko": "하루 종일 집에 있는 것보다는 짧게라도 여행 가고 싶어요."
+      },
+      {
+        "en": "I'd rather go hiking than stay home all day.",
+        "ko": "등산 가고 싶어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_L05",
+    "category": "routine",
+    "subcategory": "leisure_routine",
+    "pattern_en": "Once in a while, I treat myself by ~ing",
+    "meaning": "가끔은 ~해서 나 자신에게 상을 줘요.",
+    "examples": [
+      {
+        "en": "Once in a while, I treat myself by buying dessert.",
+        "ko": "가끔은 디저트를 사서 나 자신에게 상을 줘요."
+      },
+      {
+        "en": "Once in a while, I treat myself by booking a massage.",
+        "ko": "마사지 예약해서 상을 줘요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M01",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "Honestly, I've been feeling ~ lately",
+    "meaning": "솔직히 요즘은 ~한 기분이에요.",
+    "examples": [
+      {
+        "en": "Honestly, I've been feeling a bit burnt out lately.",
+        "ko": "솔직히 요즘은 조금 번아웃 난 기분이에요."
+      },
+      {
+        "en": "Honestly, I've been feeling more optimistic lately.",
+        "ko": "솔직히 요즘은 더 긍정적인 기분이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M02",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "What stresses me out the most is ~",
+    "meaning": "가장 스트레스 받는 건 ~예요.",
+    "examples": [
+      {
+        "en": "What stresses me out the most is tight deadlines.",
+        "ko": "가장 스트레스 받는 건 촉박한 마감이에요."
+      },
+      {
+        "en": "What stresses me out the most is noisy neighbors.",
+        "ko": "시끄러운 이웃이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M03",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "To clear my head, I ~",
+    "meaning": "머리를 비우려고 ~해요.",
+    "examples": [
+      {
+        "en": "To clear my head, I go for a run.",
+        "ko": "머리를 비우려고 달리기를 해요."
+      },
+      {
+        "en": "To clear my head, I write everything down.",
+        "ko": "생각을 다 적어내려요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M04",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "I'm trying not to worry too much about ~",
+    "meaning": "~에 너무 신경 쓰이지 않으려 해요.",
+    "examples": [
+      {
+        "en": "I'm trying not to worry too much about small mistakes.",
+        "ko": "사소한 실수에 너무 신경 쓰이지 않으려 해요."
+      },
+      {
+        "en": "I'm trying not to worry too much about what others think.",
+        "ko": "남의 시선에 너무 신경 쓰이지 않으려 해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M05",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "I'm grateful that I can ~",
+    "meaning": "~할 수 있어서 감사해요.",
+    "examples": [
+      {
+        "en": "I'm grateful that I can work from home sometimes.",
+        "ko": "가끔 재택근무할 수 있어서 감사해요."
+      },
+      {
+        "en": "I'm grateful that I can spend time with my family.",
+        "ko": "가족과 시간을 보낼 수 있어서 감사해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_T07",
+    "category": "routine",
+    "subcategory": "time_routine",
+    "pattern_en": "I usually wrap up my day by ~ing",
+    "meaning": "하루를 ~하면서 마무리해요.",
+    "examples": [
+      {
+        "en": "I usually wrap up my day by tidying my desk.",
+        "ko": "책상 정리하면서 하루를 마무리해요."
+      },
+      {
+        "en": "I usually wrap up my day by planning tomorrow.",
+        "ko": "내일 일정을 정리하며 마무리해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_H07",
+    "category": "routine",
+    "subcategory": "habits_expr",
+    "pattern_en": "I'm working on ~ing more consistently",
+    "meaning": "~을/를 더 꾸준히 하려고 노력 중이에요.",
+    "examples": [
+      {
+        "en": "I'm working on exercising more consistently.",
+        "ko": "운동을 더 꾸준히 하려고 노력 중이에요."
+      },
+      {
+        "en": "I'm working on saving money more consistently.",
+        "ko": "저축을 더 꾸준히 하려고 노력 중이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "RTN_M06",
+    "category": "routine",
+    "subcategory": "mind_routine",
+    "pattern_en": "When I'm overwhelmed, I ~",
+    "meaning": "압박이 클 때는 ~해요.",
+    "examples": [
+      {
+        "en": "When I'm overwhelmed, I pause and breathe.",
+        "ko": "압박이 클 때는 잠깐 멈추고 숨을 쉬어요."
+      },
+      {
+        "en": "When I'm overwhelmed, I talk to someone I trust.",
+        "ko": "믿는 사람에게 이야기해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "routine",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  }
+]

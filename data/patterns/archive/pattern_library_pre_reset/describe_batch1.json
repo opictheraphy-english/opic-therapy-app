@@ -1,0 +1,242 @@
+[
+  {
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "One of the first things I noticed was ~",
+    "pattern_ko": "제가 가장 먼저 눈에 띈 것 중 하나는 ~였어요.",
+    "example": {
+      "en": "One of the first things I noticed was the cozy atmosphere.",
+      "ko": "제가 가장 먼저 눈에 띈 것 중 하나는 아늑한 분위기였어요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "appearance", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "It is surrounded by ~",
+    "pattern_ko": "그곳은 ~로 둘러싸여 있어요.",
+    "example": {
+      "en": "It is surrounded by tall buildings and trees.",
+      "ko": "그곳은 높은 건물과 나무들로 둘러싸여 있어요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "appearance", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "interior",
+    "pattern_en": "The interior is decorated with ~",
+    "pattern_ko": "내부는 ~로 꾸며져 있어요.",
+    "example": {
+      "en": "The interior is decorated with wooden furniture.",
+      "ko": "내부는 나무 가구로 꾸며져 있어요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "interior", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "What I like most about this place is ~",
+    "pattern_ko": "제가 이곳에서 가장 좋아하는 점은 ~예요.",
+    "example": {
+      "en": "What I like most about this place is the peaceful atmosphere.",
+      "ko": "제가 이곳에서 가장 좋아하는 점은 평화로운 분위기예요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "atmosphere", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The place is divided into ~",
+    "pattern_ko": "그곳은 ~로 나누어져 있어요.",
+    "example": {
+      "en": "The place is divided into several sections.",
+      "ko": "그곳은 여러 구역으로 나누어져 있어요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "layout", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "size",
+    "pattern_en": "It is much bigger than I expected.",
+    "pattern_ko": "생각했던 것보다 훨씬 더 커요.",
+    "example": {
+      "en": "The park is much bigger than I expected.",
+      "ko": "그 공원은 생각보다 훨씬 더 커요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "size", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "features",
+    "pattern_en": "One of its unique features is ~",
+    "pattern_ko": "그곳의 독특한 특징 중 하나는 ~예요.",
+    "example": {
+      "en": "One of its unique features is the rooftop garden.",
+      "ko": "그곳의 독특한 특징 중 하나는 옥상 정원이에요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "features", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "condition",
+    "pattern_en": "It looks clean and well-maintained.",
+    "pattern_ko": "깔끔하고 관리가 잘 되어 보여요.",
+    "example": {
+      "en": "The building looks clean and well-maintained.",
+      "ko": "그 건물은 깔끔하고 관리가 잘 되어 보여요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "condition", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "lighting",
+    "pattern_en": "The lighting makes the place feel ~",
+    "pattern_ko": "조명 때문에 그곳이 ~하게 느껴져요.",
+    "example": {
+      "en": "The lighting makes the place feel warm and cozy.",
+      "ko": "조명 때문에 그곳이 따뜻하고 아늑하게 느껴져요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "lighting", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "overall_impression",
+    "pattern_en": "Overall, I would describe it as ~",
+    "pattern_ko": "전반적으로 저는 그곳을 ~라고 표현하고 싶어요.",
+    "example": {
+      "en": "Overall, I would describe it as calm and relaxing.",
+      "ko": "전반적으로 저는 그곳을 차분하고 편안하다고 표현하고 싶어요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "overall", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "The first impression I got was ~",
+    "pattern_ko": "제가 처음 받은 인상은 ~였어요.",
+    "example": {
+      "en": "The first impression I got was that it looked modern.",
+      "ko": "제가 처음 받은 인상은 현대적으로 보인다는 것이었어요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "appearance", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere feels ~",
+    "pattern_ko": "분위기가 ~하게 느껴져요.",
+    "example": {
+      "en": "The atmosphere feels lively and energetic.",
+      "ko": "분위기가 활기차고 에너지 넘치게 느껴져요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "atmosphere", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "details",
+    "pattern_en": "What stands out the most is ~",
+    "pattern_ko": "가장 눈에 띄는 것은 ~예요.",
+    "example": {
+      "en": "What stands out the most is the colorful decoration.",
+      "ko": "가장 눈에 띄는 것은 화려한 장식이에요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "details", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "space",
+    "pattern_en": "There is plenty of space for ~",
+    "pattern_ko": "~하기에 충분한 공간이 있어요.",
+    "example": {
+      "en": "There is plenty of space for people to relax.",
+      "ko": "사람들이 쉬기에 충분한 공간이 있어요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "space", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "environment",
+    "pattern_en": "The area around it is filled with ~",
+    "pattern_ko": "그 주변은 ~로 가득 차 있어요.",
+    "example": {
+      "en": "The area around it is filled with restaurants and cafes.",
+      "ko": "그 주변은 식당과 카페들로 가득 차 있어요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "environment", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "sound",
+    "pattern_en": "You can often hear ~",
+    "pattern_ko": "종종 ~ 소리를 들을 수 있어요.",
+    "example": {
+      "en": "You can often hear soft music in the background.",
+      "ko": "배경에서 잔잔한 음악 소리를 자주 들을 수 있어요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "sound", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "crowd",
+    "pattern_en": "It tends to get crowded during ~",
+    "pattern_ko": "~ 동안에는 사람이 많아지는 편이에요.",
+    "example": {
+      "en": "It tends to get crowded during weekends.",
+      "ko": "주말에는 사람이 많아지는 편이에요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "crowd", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "weather",
+    "pattern_en": "The weather makes the place feel ~",
+    "pattern_ko": "날씨 때문에 그곳이 ~하게 느껴져요.",
+    "example": {
+      "en": "The weather makes the place feel refreshing.",
+      "ko": "날씨 때문에 그곳이 상쾌하게 느껴져요."
+    },
+    "difficulty": 2,
+    "tags": ["describe", "weather", "IH"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "comfort",
+    "pattern_en": "I feel comfortable because ~",
+    "pattern_ko": "~해서 편안함을 느껴요.",
+    "example": {
+      "en": "I feel comfortable because the place is quiet.",
+      "ko": "그곳이 조용해서 편안함을 느껴요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "comfort", "IM"]
+  },
+  {
+    "category": "describe",
+    "subcategory": "visuals",
+    "pattern_en": "The view from there is ~",
+    "pattern_ko": "거기서 보는 풍경은 ~해요.",
+    "example": {
+      "en": "The view from there is absolutely beautiful.",
+      "ko": "거기서 보는 풍경은 정말 아름다워요."
+    },
+    "difficulty": 1,
+    "tags": ["describe", "visuals", "IM"]
+  }
+]

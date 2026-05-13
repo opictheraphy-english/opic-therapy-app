@@ -1,3 +1,9 @@
 .streamlit/secrets.toml
 __pycache__/
 *.pyc
+
+# Pre-built pattern audio (run: python generate_pattern_audio.py)
+assets/pattern_audio/*.mp3
+
+# Local guest profile & progress (device-local JSON)
+local_data/*.json

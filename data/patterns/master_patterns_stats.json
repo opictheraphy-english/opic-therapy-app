@@ -1,0 +1,75 @@
+{
+  "total_patterns": 218,
+  "source_file": "data/patterns/archive/description_patterns_pre_reset.json",
+  "duplicate_examples_removed": 0,
+  "by_category": {
+    "describe": 218
+  },
+  "by_difficulty": {
+    "1": 9,
+    "2": 209
+  },
+  "subcategory_count": 35,
+  "top_subcategories": [
+    [
+      "atmosphere",
+      12
+    ],
+    [
+      "layout",
+      11
+    ],
+    [
+      "opening_intro",
+      10
+    ],
+    [
+      "exterior",
+      10
+    ],
+    [
+      "interior_space",
+      10
+    ],
+    [
+      "favorite_space",
+      10
+    ],
+    [
+      "daily_routine",
+      10
+    ],
+    [
+      "responsibilities",
+      10
+    ],
+    [
+      "preference_type",
+      10
+    ],
+    [
+      "preference_reason",
+      10
+    ],
+    [
+      "companions",
+      10
+    ],
+    [
+      "location",
+      10
+    ],
+    [
+      "features_love",
+      10
+    ],
+    [
+      "recommendation",
+      10
+    ],
+    [
+      "emphasis",
+      10
+    ]
+  ]
+}

@@ -1,6 +1,17 @@
+# UI
 streamlit
 streamlit-mic-recorder
-google-generativeai>=0.8.5
-plotly
-librosa
+
+# AI / speech APIs
+google-genai
+google-cloud-texttospeech
+gTTS
+
+# Data & visualization
 pandas
+plotly
+matplotlib
+
+# PDF export (optional runtime; app runs without these — see services/pdf_report.py)
+pillow
+reportlab

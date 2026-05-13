@@ -1,0 +1,3966 @@
+[
+  {
+    "pattern_id": "DES_001",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제 동네에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about my neighborhood.",
+      "ko": "제 동네에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_002",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제가 가장 좋아하는 가구에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about my favorite furniture.",
+      "ko": "제가 가장 좋아하는 가구에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_003",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "저희가 휴일을 어떻게 보내는지 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about how we celebrate holidays.",
+      "ko": "저희가 휴일을 어떻게 보내는지 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_004",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제가 최근에 참석했던 모임에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about a recent gathering I attended.",
+      "ko": "제가 최근에 참석했던 모임에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_005",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "저희의 재활용 습관에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about our recycling habits.",
+      "ko": "저희의 재활용 습관에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_006",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "지역 지형에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about the local terrain.",
+      "ko": "지역 지형에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_007",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제가 자유시간을 어떻게 보내는지 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about how I spend my free time.",
+      "ko": "제가 자유시간을 어떻게 보내는지 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_008",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제가 호텔에서 묵었던 경험에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about my stay at a hotel.",
+      "ko": "제가 호텔에서 묵었던 경험에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_009",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제가 매일 사용하는 기술에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about the technology I use daily.",
+      "ko": "제가 매일 사용하는 기술에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_010",
+    "category": "describe",
+    "subcategory": "opening_intro",
+    "pattern_en": "Let me tell you about ~",
+    "pattern_ko": "제 휴대폰에 대해 말씀드릴게요.",
+    "example": {
+      "en": "Let me tell you about my smartphone.",
+      "ko": "제 휴대폰에 대해 말씀드릴게요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "starter"
+  },
+  {
+    "pattern_id": "DES_011",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 아늑한 오두막처럼 보입니다.",
+    "example": {
+      "en": "From the outside, it looks like a cozy cottage.",
+      "ko": "밖에서 보면 아늑한 오두막처럼 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_012",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 그 식당은 매우 현대적으로 보입니다.",
+    "example": {
+      "en": "From the outside, the restaurant looks very modern.",
+      "ko": "밖에서 보면 그 식당은 매우 현대적으로 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_013",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 헬스장은 상당히 커 보입니다.",
+    "example": {
+      "en": "From the outside, the gym looks quite large.",
+      "ko": "밖에서 보면 헬스장은 상당히 커 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_014",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 공원은 매우 푸르고 평화로워 보입니다.",
+    "example": {
+      "en": "From the outside, the park looks very green and peaceful.",
+      "ko": "밖에서 보면 공원은 매우 푸르고 평화로워 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_015",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 해변은 믿을 수 없을 정도로 매력적으로 보입니다.",
+    "example": {
+      "en": "From the outside, the beach looks incredibly inviting.",
+      "ko": "밖에서 보면 해변은 믿을 수 없을 정도로 매력적으로 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_016",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 그 건물은 전통적인 은행처럼 보입니다.",
+    "example": {
+      "en": "From the outside, the building looks like a traditional bank.",
+      "ko": "밖에서 보면 그 건물은 전통적인 은행처럼 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_017",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 그 가게는 매우 패셔너블해 보입니다.",
+    "example": {
+      "en": "From the outside, the store looks very fashionable.",
+      "ko": "밖에서 보면 그 가게는 매우 패셔너블해 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_018",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 그 미용실은 세련되고 스타일리시해 보입니다.",
+    "example": {
+      "en": "From the outside, the hair salon looks chic and stylish.",
+      "ko": "밖에서 보면 그 미용실은 세련되고 스타일리시해 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_019",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 호텔은 고급스럽고 웅장해 보입니다.",
+    "example": {
+      "en": "From the outside, the hotel looks luxurious and grand.",
+      "ko": "밖에서 보면 호텔은 고급스럽고 웅장해 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_020",
+    "category": "describe",
+    "subcategory": "exterior",
+    "pattern_en": "From the outside, it looks ~",
+    "pattern_ko": "밖에서 보면 재활용 센터는 정리정돈이 잘 되어 있는 것처럼 보입니다.",
+    "example": {
+      "en": "From the outside, the recycling center looks organized.",
+      "ko": "밖에서 보면 재활용 센터는 정리정돈이 잘 되어 있는 것처럼 보입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_021",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 매우 넓고 조명이 밝습니다.",
+    "example": {
+      "en": "Inside, it's very spacious and well-lit.",
+      "ko": "안에는 매우 넓고 조명이 밝습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_022",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 분위기가 아늑하고 따뜻합니다.",
+    "example": {
+      "en": "Inside, the atmosphere is cozy and warm.",
+      "ko": "안에는 분위기가 아늑하고 따뜻합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_023",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 현대 미술로 장식되어 있습니다.",
+    "example": {
+      "en": "Inside, the restaurant is decorated with modern art.",
+      "ko": "안에는 현대 미술로 장식되어 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_024",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 깨끗하고 효율적입니다.",
+    "example": {
+      "en": "Inside, the bank is clean and efficient.",
+      "ko": "안에는 깨끗하고 효율적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_025",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 최신 기계들이 갖춰져 있습니다.",
+    "example": {
+      "en": "Inside, the gym is equipped with the latest machines.",
+      "ko": "안에는 최신 기계들이 갖춰져 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_026",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 큰 놀이터와 많은 나무가 있습니다.",
+    "example": {
+      "en": "Inside, the park has a large playground and many trees.",
+      "ko": "안에는 큰 놀이터와 많은 나무가 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_027",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 부드러운 모래와 맑은 물이 가득합니다.",
+    "example": {
+      "en": "Inside, the beach is full of soft sand and clear water.",
+      "ko": "안에는 부드러운 모래와 맑은 물이 가득합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_028",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 호텔 객실이 고급스럽고 편안합니다.",
+    "example": {
+      "en": "Inside, the hotel rooms are luxurious and comfortable.",
+      "ko": "안에는 호텔 객실이 고급스럽고 편안합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_029",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "저희 집 내부는 편안한 가구로 가득 차 있습니다.",
+    "example": {
+      "en": "Inside, my house is filled with comfortable furniture.",
+      "ko": "저희 집 내부는 편안한 가구로 가득 차 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_030",
+    "category": "describe",
+    "subcategory": "interior_space",
+    "pattern_en": "Inside, it’s ~",
+    "pattern_ko": "안에는 현대적이고 트렌디한 디자인의 미용실입니다.",
+    "example": {
+      "en": "Inside, the hair salon has a modern and trendy design.",
+      "ko": "안에는 현대적이고 트렌디한 디자인의 미용실입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_031",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "구조는 매우 개방적이고 넓습니다.",
+    "example": {
+      "en": "The layout is very open and spacious.",
+      "ko": "구조는 매우 개방적이고 넓습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_032",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "그 식당의 구조는 편안함을 위해 디자인되었습니다.",
+    "example": {
+      "en": "The layout of the restaurant is designed for comfort.",
+      "ko": "그 식당의 구조는 편안함을 위해 디자인되었습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_033",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "헬스장의 구조는 매우 기능적입니다.",
+    "example": {
+      "en": "The layout of the gym is very functional.",
+      "ko": "헬스장의 구조는 매우 기능적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_034",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "공원의 구조에는 여러 산책로와 피크닉 구역이 포함되어 있습니다.",
+    "example": {
+      "en": "The layout of the park includes several trails and picnic areas.",
+      "ko": "공원의 구조에는 여러 산책로와 피크닉 구역이 포함되어 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_035",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "해변의 구조는 단순하며 넓은 공간이 많습니다.",
+    "example": {
+      "en": "The layout of the beach is simple, with plenty of open space.",
+      "ko": "해변의 구조는 단순하며 넓은 공간이 많습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_036",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "저희 집의 구조는 가족에게 완벽합니다.",
+    "example": {
+      "en": "The layout of my house is perfect for a family.",
+      "ko": "저희 집의 구조는 가족에게 완벽합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_037",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "은행의 구조는 고객이 안전하다고 느끼도록 디자인되었습니다.",
+    "example": {
+      "en": "The layout of the bank is designed to make customers feel secure.",
+      "ko": "은행의 구조는 고객이 안전하다고 느끼도록 디자인되었습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_038",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "재활용 센터의 구조는 잘 정리되어 있습니다.",
+    "example": {
+      "en": "The layout of the recycling center is well-organized.",
+      "ko": "재활용 센터의 구조는 잘 정리되어 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_039",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "헤어샵의 구조는 고객 친화적입니다.",
+    "example": {
+      "en": "The layout of the hair salon is customer friendly.",
+      "ko": "헤어샵의 구조는 고객 친화적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_040",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The layout is ~",
+    "pattern_ko": "호텔의 구조는 편의를 위해 설계되었습니다.",
+    "example": {
+      "en": "The layout of the hotel is designed for convenience.",
+      "ko": "호텔의 구조는 편의를 위해 설계되었습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_041",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 휴식을 취하는 거실입니다.",
+    "example": {
+      "en": "My favorite space is the living room, where I relax.",
+      "ko": "제가 가장 좋아하는 공간은 휴식을 취하는 거실입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_042",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 요리하는 부엌입니다.",
+    "example": {
+      "en": "My favorite space is the kitchen, where I cook.",
+      "ko": "제가 가장 좋아하는 공간은 요리하는 부엌입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_043",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 전망이 좋은 발코니입니다.",
+    "example": {
+      "en": "My favorite space is the balcony, with a great view.",
+      "ko": "제가 가장 좋아하는 공간은 전망이 좋은 발코니입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_044",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 자연을 즐기는 공원입니다.",
+    "example": {
+      "en": "My favorite space is the park, where I enjoy nature.",
+      "ko": "제가 가장 좋아하는 공간은 자연을 즐기는 공원입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_045",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 휴식을 취할 수 있는 해변입니다.",
+    "example": {
+      "en": "My favorite space is the beach, where I can relax.",
+      "ko": "제가 가장 좋아하는 공간은 휴식을 취할 수 있는 해변입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_046",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 개인적인 공간인 제 방입니다.",
+    "example": {
+      "en": "My favorite space is my room, where I have my personal space.",
+      "ko": "제가 가장 좋아하는 공간은 개인적인 공간인 제 방입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_047",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 공부에 집중할 수 있는 도서관입니다.",
+    "example": {
+      "en": "My favorite space is the library, where I can concentrate on my studies.",
+      "ko": "제가 가장 좋아하는 공간은 공부에 집중할 수 있는 도서관입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_048",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 운동할 수 있는 헬스장입니다.",
+    "example": {
+      "en": "My favorite space is the gym, where I can exercise.",
+      "ko": "제가 가장 좋아하는 공간은 운동할 수 있는 헬스장입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_049",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 친구를 만날 수 있는 카페입니다.",
+    "example": {
+      "en": "My favorite space is the cafe, where I can meet friends.",
+      "ko": "제가 가장 좋아하는 공간은 친구를 만날 수 있는 카페입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_050",
+    "category": "describe",
+    "subcategory": "favorite_space",
+    "pattern_en": "My favorite space is ~",
+    "pattern_ko": "제가 가장 좋아하는 공간은 집 근처에 있는 식당입니다.",
+    "example": {
+      "en": "My favorite space is the restaurant near my house.",
+      "ko": "제가 가장 좋아하는 공간은 집 근처에 있는 식당입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_051",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 영화를 보면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time watching movies.",
+      "ko": "저는 보통 영화를 보면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_052",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 요리와 베이킹을 하면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time cooking and baking.",
+      "ko": "저는 보통 요리와 베이킹을 하면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_053",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 책이나 잡지를 읽으면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time reading books or magazines.",
+      "ko": "저는 보통 책이나 잡지를 읽으면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_054",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 공원에서 산책을 하면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time taking walks in the park.",
+      "ko": "저는 보통 공원에서 산책을 하면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_055",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 해변에서 휴식을 취하면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time relaxing on the beach.",
+      "ko": "저는 보통 해변에서 휴식을 취하면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_056",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 헬스장에서 운동하면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time working out at the gym.",
+      "ko": "저는 보통 헬스장에서 운동하면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_057",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 인터넷을 하면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time surfing the internet.",
+      "ko": "저는 보통 인터넷을 하면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_058",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 친구나 가족에게 전화하면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time calling friends or family.",
+      "ko": "저는 보통 친구나 가족에게 전화하면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_059",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 음악을 들으면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time listening to music.",
+      "ko": "저는 보통 음악을 들으면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_060",
+    "category": "describe",
+    "subcategory": "daily_routine",
+    "pattern_en": "I usually spend my time ~",
+    "pattern_ko": "저는 보통 온라인에서 새로운 것을 배우면서 시간을 보냅니다.",
+    "example": {
+      "en": "I usually spend my time learning new things online.",
+      "ko": "저는 보통 온라인에서 새로운 것을 배우면서 시간을 보냅니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_061",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 돌아가면서 요리하여 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by taking turns cooking.",
+      "ko": "우리는 돌아가면서 요리하여 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_062",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 함께 집을 청소하여 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by cleaning the house together.",
+      "ko": "우리는 함께 집을 청소하여 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_063",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 주말에 빨래를 하여 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by doing laundry on weekends.",
+      "ko": "우리는 주말에 빨래를 하여 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_064",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 집안일을 분담하여 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by dividing household chores.",
+      "ko": "우리는 집안일을 분담하여 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_065",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 애완동물을 돌보며 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by taking care of the pets.",
+      "ko": "우리는 애완동물을 돌보며 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_066",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 함께 장을 보며 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by grocery shopping together.",
+      "ko": "우리는 함께 장을 보며 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_067",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 가족 행사를 조직하며 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by organizing family events.",
+      "ko": "우리는 가족 행사를 조직하며 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_068",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 제때 공과금을 납부하며 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by paying bills on time.",
+      "ko": "우리는 제때 공과금을 납부하며 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_069",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 정원을 관리하며 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by maintaining the garden.",
+      "ko": "우리는 정원을 관리하며 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_070",
+    "category": "describe",
+    "subcategory": "responsibilities",
+    "pattern_en": "We share responsibilities by ~",
+    "pattern_ko": "우리는 자녀를 교육하며 책임을 분담합니다.",
+    "example": {
+      "en": "We share responsibilities by educating our children.",
+      "ko": "우리는 자녀를 교육하며 책임을 분담합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_071",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 웃게 해주기 때문에 코미디를 즐깁니다.",
+    "example": {
+      "en": "I enjoy comedies because they make me laugh.",
+      "ko": "저는 웃게 해주기 때문에 코미디를 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_072",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 저를 편안하게 해주기 때문에 클래식 음악을 즐깁니다.",
+    "example": {
+      "en": "I enjoy classical music because it relaxes me.",
+      "ko": "저는 저를 편안하게 해주기 때문에 클래식 음악을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_073",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 맛있기 때문에 이탈리아 음식을 요리하는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy cooking Italian food because it's delicious.",
+      "ko": "저는 맛있기 때문에 이탈리아 음식을 요리하는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_074",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 재미있기 때문에 옷 쇼핑을 즐깁니다.",
+    "example": {
+      "en": "I enjoy shopping for clothes because it's fun.",
+      "ko": "저는 재미있기 때문에 옷 쇼핑을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_075",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 바다를 사랑하기 때문에 해변에 가는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy going to the beach because I love the ocean.",
+      "ko": "저는 바다를 사랑하기 때문에 해변에 가는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_076",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 상상력이 풍부하기 때문에 과학 소설을 읽는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy reading science fiction because it's imaginative.",
+      "ko": "저는 상상력이 풍부하기 때문에 과학 소설을 읽는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_077",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 흥미진진하기 때문에 스포츠를 보는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy watching sports because it's exciting.",
+      "ko": "저는 흥미진진하기 때문에 스포츠를 보는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_078",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 역사를 배우는 것을 좋아하기 때문에 박물관을 방문하는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy visiting museums because I like learning about history.",
+      "ko": "저는 역사를 배우는 것을 좋아하기 때문에 박물관을 방문하는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_079",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 추억을 담아주기 때문에 사진 찍는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy taking photos because it captures memories.",
+      "ko": "저는 추억을 담아주기 때문에 사진 찍는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_080",
+    "category": "describe",
+    "subcategory": "preference_type",
+    "pattern_en": "I enjoy ~ because ~",
+    "pattern_ko": "저는 라이브 음악을 좋아하기 때문에 콘서트에 가는 것을 즐깁니다.",
+    "example": {
+      "en": "I enjoy going to concerts because I love live music.",
+      "ko": "저는 라이브 음악을 좋아하기 때문에 콘서트에 가는 것을 즐깁니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_081",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 편리하기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's convenient.",
+      "ko": "제가 그것을 좋아하는 이유는 편리하기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_082",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 건강하기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's healthy.",
+      "ko": "제가 그것을 좋아하는 이유는 건강하기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_083",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 아름답기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's beautiful.",
+      "ko": "제가 그것을 좋아하는 이유는 아름답기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_084",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 편안하기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's relaxing.",
+      "ko": "제가 그것을 좋아하는 이유는 편안하기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_085",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 흥미진진하기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's exciting.",
+      "ko": "제가 그것을 좋아하는 이유는 흥미진진하기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_086",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 교육적이기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's educational.",
+      "ko": "제가 그것을 좋아하는 이유는 교육적이기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_087",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 맛있기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's delicious.",
+      "ko": "제가 그것을 좋아하는 이유는 맛있기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_088",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 재미있기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's fun.",
+      "ko": "제가 그것을 좋아하는 이유는 재미있기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_089",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 가격이 저렴하기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it's affordable.",
+      "ko": "제가 그것을 좋아하는 이유는 가격이 저렴하기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_090",
+    "category": "describe",
+    "subcategory": "preference_reason",
+    "pattern_en": "The reason I like it is ~",
+    "pattern_ko": "제가 그것을 좋아하는 이유는 좋은 추억을 떠올리게 하기 때문입니다.",
+    "example": {
+      "en": "The reason I like it is because it brings back good memories.",
+      "ko": "제가 그것을 좋아하는 이유는 좋은 추억을 떠올리게 하기 때문입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_091",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 친구들과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my friends.",
+      "ko": "저는 친구들과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_092",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 가족과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my family.",
+      "ko": "저는 가족과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_093",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 파트너와 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my partner.",
+      "ko": "저는 파트너와 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_094",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 동료들과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my colleagues.",
+      "ko": "저는 동료들과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_095",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 혼자 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go alone.",
+      "ko": "저는 혼자 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_096",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 이웃들과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my neighbors.",
+      "ko": "저는 이웃들과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_097",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 반 친구들과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my classmates.",
+      "ko": "저는 반 친구들과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_098",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 등산 동호회와 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my hiking club.",
+      "ko": "저는 등산 동호회와 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_099",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 스터디 그룹과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with my study group.",
+      "ko": "저는 스터디 그룹과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_100",
+    "category": "describe",
+    "subcategory": "companions",
+    "pattern_en": "I like to go with ~",
+    "pattern_ko": "저는 저와 관심사를 공유하는 사람들과 함께 가는 것을 좋아합니다.",
+    "example": {
+      "en": "I like to go with people who share my interests.",
+      "ko": "저는 저와 관심사를 공유하는 사람들과 함께 가는 것을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "transition"
+  },
+  {
+    "pattern_id": "DES_101",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 도시의 중심부에 위치해 있습니다.",
+    "example": {
+      "en": "It's located in the heart of the city.",
+      "ko": "그것은 도시의 중심부에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_102",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 해변 근처에 위치해 있습니다.",
+    "example": {
+      "en": "It's located near the beach.",
+      "ko": "그것은 해변 근처에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_103",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 조용한 동네에 위치해 있습니다.",
+    "example": {
+      "en": "It's located in a quiet neighborhood.",
+      "ko": "그것은 조용한 동네에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_104",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 도시 외곽에 위치해 있습니다.",
+    "example": {
+      "en": "It's located on the outskirts of town.",
+      "ko": "그것은 도시 외곽에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_105",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 쇼핑몰 안에 위치해 있습니다.",
+    "example": {
+      "en": "It's located inside a shopping mall.",
+      "ko": "그것은 쇼핑몰 안에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_106",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 공원 맞은편에 위치해 있습니다.",
+    "example": {
+      "en": "It's located across from the park.",
+      "ko": "그것은 공원 맞은편에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_107",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 지하철역 옆에 위치해 있습니다.",
+    "example": {
+      "en": "It's located next to the subway station.",
+      "ko": "그것은 지하철역 옆에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_108",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 건물 최상층에 위치해 있습니다.",
+    "example": {
+      "en": "It's located on the top floor of the building.",
+      "ko": "그것은 건물 최상층에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_109",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 시내 지역에 위치해 있습니다.",
+    "example": {
+      "en": "It's located in the downtown area.",
+      "ko": "그것은 시내 지역에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_110",
+    "category": "describe",
+    "subcategory": "location",
+    "pattern_en": "It’s located in ~",
+    "pattern_ko": "그것은 저희 집에서 몇 블록 떨어진 곳에 위치해 있습니다.",
+    "example": {
+      "en": "It's located a few blocks from my house.",
+      "ko": "그것은 저희 집에서 몇 블록 떨어진 곳에 위치해 있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_111",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 매우 편안합니다.",
+    "example": {
+      "en": "The atmosphere is very relaxing.",
+      "ko": "분위기는 매우 편안합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_112",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 활기차고 역동적입니다.",
+    "example": {
+      "en": "The atmosphere is lively and energetic.",
+      "ko": "분위기는 활기차고 역동적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_113",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 아늑하고 따뜻합니다.",
+    "example": {
+      "en": "The atmosphere is cozy and warm.",
+      "ko": "분위기는 아늑하고 따뜻합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_114",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 평화롭고 조용합니다.",
+    "example": {
+      "en": "The atmosphere is peaceful and quiet.",
+      "ko": "분위기는 평화롭고 조용합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_115",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 현대적이고 세련되었습니다.",
+    "example": {
+      "en": "The atmosphere is modern and stylish.",
+      "ko": "분위기는 현대적이고 세련되었습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_116",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 친절하고 환영하는 분위기입니다.",
+    "example": {
+      "en": "The atmosphere is friendly and welcoming.",
+      "ko": "분위기는 친절하고 환영하는 분위기입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_117",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 낭만적이고 친밀합니다.",
+    "example": {
+      "en": "The atmosphere is romantic and intimate.",
+      "ko": "분위기는 낭만적이고 친밀합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_118",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 교육적이고 유익합니다.",
+    "example": {
+      "en": "The atmosphere is educational and informative.",
+      "ko": "분위기는 교육적이고 유익합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_119",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 축제 분위기이고 즐겁습니다.",
+    "example": {
+      "en": "The atmosphere is festive and joyful.",
+      "ko": "분위기는 축제 분위기이고 즐겁습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_120",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere is ~",
+    "pattern_ko": "분위기는 차분하고 평온합니다.",
+    "example": {
+      "en": "The atmosphere is calm and soothing.",
+      "ko": "분위기는 차분하고 평온합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_121",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 전망입니다.",
+    "example": {
+      "en": "What I love about it is the view.",
+      "ko": "제가 그것에 대해 좋아하는 것은 전망입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_122",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 음식입니다.",
+    "example": {
+      "en": "What I love about it is the food.",
+      "ko": "제가 그것에 대해 좋아하는 것은 음식입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_123",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 편리함입니다.",
+    "example": {
+      "en": "What I love about it is the convenience.",
+      "ko": "제가 그것에 대해 좋아하는 것은 편리함입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_124",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 분위기입니다.",
+    "example": {
+      "en": "What I love about it is the atmosphere.",
+      "ko": "제가 그것에 대해 좋아하는 것은 분위기입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_125",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 위치입니다.",
+    "example": {
+      "en": "What I love about it is the location.",
+      "ko": "제가 그것에 대해 좋아하는 것은 위치입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_126",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 사람들입니다.",
+    "example": {
+      "en": "What I love about it is the people.",
+      "ko": "제가 그것에 대해 좋아하는 것은 사람들입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_127",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 다양성입니다.",
+    "example": {
+      "en": "What I love about it is the variety.",
+      "ko": "제가 그것에 대해 좋아하는 것은 다양성입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_128",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 청결함입니다.",
+    "example": {
+      "en": "What I love about it is the cleanliness.",
+      "ko": "제가 그것에 대해 좋아하는 것은 청결함입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_129",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 가격이 저렴하다는 것입니다.",
+    "example": {
+      "en": "What I love about it is the affordability.",
+      "ko": "제가 그것에 대해 좋아하는 것은 가격이 저렴하다는 것입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_130",
+    "category": "describe",
+    "subcategory": "features_love",
+    "pattern_en": "What I love about it is ~",
+    "pattern_ko": "제가 그것에 대해 좋아하는 것은 서비스의 질입니다.",
+    "example": {
+      "en": "What I love about it is the quality of service.",
+      "ko": "제가 그것에 대해 좋아하는 것은 서비스의 질입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "hobbies",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_131",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 휴식을 취할 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to relax.",
+      "ko": "그것은 저에게 휴식을 취할 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_132",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 새로운 것을 배울 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to learn new things.",
+      "ko": "그것은 저에게 새로운 것을 배울 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_133",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 새로운 사람들을 만날 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to meet new people.",
+      "ko": "그것은 저에게 새로운 사람들을 만날 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_134",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 운동할 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to exercise.",
+      "ko": "그것은 저에게 운동할 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_135",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 자연을 즐길 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to enjoy nature.",
+      "ko": "그것은 저에게 자연을 즐길 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_136",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 새로운 음식을 시도할 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to try new foods.",
+      "ko": "그것은 저에게 새로운 음식을 시도할 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_137",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 일상적인 스트레스에서 벗어날 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to escape from daily stress.",
+      "ko": "그것은 저에게 일상적인 스트레스에서 벗어날 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_138",
+    "category": "describe",
+    "subcategory": "benefits",
+    "pattern_en": "It offers me ~",
+    "pattern_ko": "그것은 저에게 제 기술을 향상시킬 기회를 제공합니다.",
+    "example": {
+      "en": "It offers me a chance to improve my skills.",
+      "ko": "그것은 저에게 제 기술을 향상시킬 기회를 제공합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_139",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 휴식을 취하기에 좋은 곳이기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's a great place to relax.",
+      "ko": "저는 휴식을 취하기에 좋은 곳이기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_140",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 맛있는 음식이 있기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it has delicious food.",
+      "ko": "저는 맛있는 음식이 있기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_141",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 가격이 매우 저렴하기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's very affordable.",
+      "ko": "저는 가격이 매우 저렴하기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_142",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 서비스가 훌륭하기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because the service is excellent.",
+      "ko": "저는 서비스가 훌륭하기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_143",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 독특한 경험이기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's a unique experience.",
+      "ko": "저는 독특한 경험이기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_144",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 교육적이기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's educational.",
+      "ko": "저는 교육적이기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_145",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 온 가족이 즐길 수 있기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's fun for the whole family.",
+      "ko": "저는 온 가족이 즐길 수 있기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_146",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 아름다운 전망을 가지고 있기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it has a beautiful view.",
+      "ko": "저는 아름다운 전망을 가지고 있기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_147",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 편리하게 위치해 있기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's conveniently located.",
+      "ko": "저는 편리하게 위치해 있기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_148",
+    "category": "describe",
+    "subcategory": "recommendation",
+    "pattern_en": "I would recommend it because ~",
+    "pattern_ko": "저는 휴가를 보내기에 완벽하기 때문에 그것을 추천합니다.",
+    "example": {
+      "en": "I would recommend it because it's perfect for a getaway.",
+      "ko": "저는 휴가를 보내기에 완벽하기 때문에 그것을 추천합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "restaurants",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_149",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 넓습니다.",
+    "example": {
+      "en": "It's quite spacious.",
+      "ko": "그것은 꽤 넓습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_150",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 아늑합니다.",
+    "example": {
+      "en": "It's quite cozy.",
+      "ko": "그것은 꽤 아늑합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_151",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 현대적입니다.",
+    "example": {
+      "en": "It's quite modern.",
+      "ko": "그것은 꽤 현대적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_152",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 시끄럽습니다.",
+    "example": {
+      "en": "It's quite noisy.",
+      "ko": "그것은 꽤 시끄럽습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_153",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 평화롭습니다.",
+    "example": {
+      "en": "It's quite peaceful.",
+      "ko": "그것은 꽤 평화롭습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_154",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 맛있습니다.",
+    "example": {
+      "en": "It's quite delicious.",
+      "ko": "그것은 꽤 맛있습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_155",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 인상적입니다.",
+    "example": {
+      "en": "It's quite impressive.",
+      "ko": "그것은 꽤 인상적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_156",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 도전적입니다.",
+    "example": {
+      "en": "It's quite challenging.",
+      "ko": "그것은 꽤 도전적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_157",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 편안합니다.",
+    "example": {
+      "en": "It's quite relaxing.",
+      "ko": "그것은 꽤 편안합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_158",
+    "category": "describe",
+    "subcategory": "emphasis",
+    "pattern_en": "It’s quite ~",
+    "pattern_ko": "그것은 꽤 편리합니다.",
+    "example": {
+      "en": "It's quite convenient.",
+      "ko": "그것은 꽤 편리합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "emotion"
+  },
+  {
+    "pattern_id": "DES_159",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 위치입니다.",
+    "example": {
+      "en": "The best thing about it is the location.",
+      "ko": "그것의 가장 좋은 점은 위치입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_160",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 음식입니다.",
+    "example": {
+      "en": "The best thing about it is the food.",
+      "ko": "그것의 가장 좋은 점은 음식입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_161",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 분위기입니다.",
+    "example": {
+      "en": "The best thing about it is the atmosphere.",
+      "ko": "그것의 가장 좋은 점은 분위기입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_162",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 가격입니다.",
+    "example": {
+      "en": "The best thing about it is the price.",
+      "ko": "그것의 가장 좋은 점은 가격입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_163",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 서비스입니다.",
+    "example": {
+      "en": "The best thing about it is the service.",
+      "ko": "그것의 가장 좋은 점은 서비스입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_164",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 전망입니다.",
+    "example": {
+      "en": "The best thing about it is the view.",
+      "ko": "그것의 가장 좋은 점은 전망입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_165",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 편리함입니다.",
+    "example": {
+      "en": "The best thing about it is the convenience.",
+      "ko": "그것의 가장 좋은 점은 편리함입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_166",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 다양성입니다.",
+    "example": {
+      "en": "The best thing about it is the variety.",
+      "ko": "그것의 가장 좋은 점은 다양성입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_167",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 청결함입니다.",
+    "example": {
+      "en": "The best thing about it is the cleanliness.",
+      "ko": "그것의 가장 좋은 점은 청결함입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_168",
+    "category": "describe",
+    "subcategory": "strengths",
+    "pattern_en": "The best thing about it is ~",
+    "pattern_ko": "그것의 가장 좋은 점은 친절한 직원입니다.",
+    "example": {
+      "en": "The best thing about it is the friendly staff.",
+      "ko": "그것의 가장 좋은 점은 친절한 직원입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_169",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 공원과 비교했을 때, 그것은 훨씬 조용합니다.",
+    "example": {
+      "en": "Compared to other parks, it's much quieter.",
+      "ko": "다른 공원과 비교했을 때, 그것은 훨씬 조용합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_170",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 식당과 비교했을 때, 그것은 더 저렴합니다.",
+    "example": {
+      "en": "Compared to other restaurants, it's more affordable.",
+      "ko": "다른 식당과 비교했을 때, 그것은 더 저렴합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_171",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 헬스장과 비교했을 때, 그것은 시설이 더 좋습니다.",
+    "example": {
+      "en": "Compared to other gyms, it's better equipped.",
+      "ko": "다른 헬스장과 비교했을 때, 그것은 시설이 더 좋습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_172",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 해변과 비교했을 때, 그것은 덜 붐빕니다.",
+    "example": {
+      "en": "Compared to other beaches, it's less crowded.",
+      "ko": "다른 해변과 비교했을 때, 그것은 덜 붐빕니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_173",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 호텔과 비교했을 때, 그것은 더 고급스럽습니다.",
+    "example": {
+      "en": "Compared to other hotels, it's more luxurious.",
+      "ko": "다른 호텔과 비교했을 때, 그것은 더 고급스럽습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_174",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 커피숍과 비교했을 때, 커피가 더 좋습니다.",
+    "example": {
+      "en": "Compared to other coffee shops, it has better coffee.",
+      "ko": "다른 커피숍과 비교했을 때, 커피가 더 좋습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_175",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 가게와 비교했을 때, 선택의 폭이 더 넓습니다.",
+    "example": {
+      "en": "Compared to other stores, it has a wider selection.",
+      "ko": "다른 가게와 비교했을 때, 선택의 폭이 더 넓습니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_176",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 방법과 비교했을 때, 그것은 더 효율적입니다.",
+    "example": {
+      "en": "Compared to other methods, it's more efficient.",
+      "ko": "다른 방법과 비교했을 때, 그것은 더 효율적입니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_177",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 날과 비교했을 때, 오늘은 더 화창합니다.",
+    "example": {
+      "en": "Compared to other days, today is more sunny.",
+      "ko": "다른 날과 비교했을 때, 오늘은 더 화창합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_178",
+    "category": "describe",
+    "subcategory": "comparison_phrase",
+    "pattern_en": "Compared to ~, it’s ~",
+    "pattern_ko": "다른 스타일과 비교했을 때, 이 스타일이 더 편안합니다.",
+    "example": {
+      "en": "Compared to other styles, this one is more comfortable.",
+      "ko": "다른 스타일과 비교했을 때, 이 스타일이 더 편안합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "comparison",
+      "IH",
+      "description"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "DES_179",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 그곳이 휴식을 취하기에 최고의 장소라고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's the best place to relax.",
+      "ko": "개인적으로 저는 그곳이 휴식을 취하기에 최고의 장소라고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_180",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 음식이 맛있다고 생각합니다.",
+    "example": {
+      "en": "Personally, I think the food is delicious.",
+      "ko": "개인적으로 저는 음식이 맛있다고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_181",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 서비스가 훌륭하다고 생각합니다.",
+    "example": {
+      "en": "Personally, I think the service is excellent.",
+      "ko": "개인적으로 저는 서비스가 훌륭하다고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_182",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 가격 대비 가치가 있다고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's worth the price.",
+      "ko": "개인적으로 저는 가격 대비 가치가 있다고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_183",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 시간을 보내기에 좋은 방법이라고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's a great way to spend time.",
+      "ko": "개인적으로 저는 시간을 보내기에 좋은 방법이라고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_184",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 매우 편리하다고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's very convenient.",
+      "ko": "개인적으로 저는 매우 편리하다고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_185",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 아름다운 장소라고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's a beautiful place.",
+      "ko": "개인적으로 저는 아름다운 장소라고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_186",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 독특한 경험이라고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's a unique experience.",
+      "ko": "개인적으로 저는 독특한 경험이라고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_187",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 매우 유용하다고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's very helpful.",
+      "ko": "개인적으로 저는 매우 유용하다고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_188",
+    "category": "describe",
+    "subcategory": "personal_view",
+    "pattern_en": "Personally, I think ~",
+    "pattern_ko": "개인적으로 저는 매우 중요하다고 생각합니다.",
+    "example": {
+      "en": "Personally, I think it's very important.",
+      "ko": "개인적으로 저는 매우 중요하다고 생각합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "description",
+      "IH"
+    ],
+    "pattern_role": "opinion"
+  },
+  {
+    "pattern_id": "DES_189",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 공원을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this park.",
+      "ko": "그렇기 때문에 저는 이 공원을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_190",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 식당을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this restaurant.",
+      "ko": "그렇기 때문에 저는 이 식당을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_191",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 헬스장을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this gym.",
+      "ko": "그렇기 때문에 저는 이 헬스장을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_192",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 해변을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this beach.",
+      "ko": "그렇기 때문에 저는 이 해변을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_193",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 호텔을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this hotel.",
+      "ko": "그렇기 때문에 저는 이 호텔을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_194",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 커피숍을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this coffee shop.",
+      "ko": "그렇기 때문에 저는 이 커피숍을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_195",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 가게를 좋아합니다.",
+    "example": {
+      "en": "That's why I like this store.",
+      "ko": "그렇기 때문에 저는 이 가게를 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_196",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 방법을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this method.",
+      "ko": "그렇기 때문에 저는 이 방법을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_197",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 오늘 날씨를 좋아합니다.",
+    "example": {
+      "en": "That's why I like today's weather.",
+      "ko": "그렇기 때문에 저는 오늘 날씨를 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_198",
+    "category": "describe",
+    "subcategory": "conclusion",
+    "pattern_en": "Overall, ~",
+    "pattern_ko": "그렇기 때문에 저는 이 스타일을 좋아합니다.",
+    "example": {
+      "en": "That's why I like this style.",
+      "ko": "그렇기 때문에 저는 이 스타일을 좋아합니다."
+    },
+    "difficulty": 2,
+    "tags": [
+      "daily",
+      "narration",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_199",
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "One of the first things I noticed was ~",
+    "pattern_ko": "제가 가장 먼저 눈에 띈 것 중 하나는 ~였어요.",
+    "example": {
+      "en": "One of the first things I noticed was the cozy atmosphere.",
+      "ko": "제가 가장 먼저 눈에 띈 것 중 하나는 아늑한 분위기였어요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "appearance",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_200",
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "It is surrounded by ~",
+    "pattern_ko": "그곳은 ~로 둘러싸여 있어요.",
+    "example": {
+      "en": "It is surrounded by tall buildings and trees.",
+      "ko": "그곳은 높은 건물과 나무들로 둘러싸여 있어요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "appearance",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_201",
+    "category": "describe",
+    "subcategory": "appearance",
+    "pattern_en": "The first impression I got was ~",
+    "pattern_ko": "제가 처음 받은 인상은 ~였어요.",
+    "example": {
+      "en": "The first impression I got was that it looked modern.",
+      "ko": "제가 처음 받은 인상은 현대적으로 보인다는 것이었어요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "appearance",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_202",
+    "category": "describe",
+    "subcategory": "interior",
+    "pattern_en": "The interior is decorated with ~",
+    "pattern_ko": "내부는 ~로 꾸며져 있어요.",
+    "example": {
+      "en": "The interior is decorated with wooden furniture.",
+      "ko": "내부는 나무 가구로 꾸며져 있어요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "interior",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_203",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "What I like most about this place is ~",
+    "pattern_ko": "제가 이곳에서 가장 좋아하는 점은 ~예요.",
+    "example": {
+      "en": "What I like most about this place is the peaceful atmosphere.",
+      "ko": "제가 이곳에서 가장 좋아하는 점은 평화로운 분위기예요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "atmosphere",
+      "im",
+      "hobbies",
+      "IM"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_204",
+    "category": "describe",
+    "subcategory": "atmosphere",
+    "pattern_en": "The atmosphere feels ~",
+    "pattern_ko": "분위기가 ~하게 느껴져요.",
+    "example": {
+      "en": "The atmosphere feels lively and energetic.",
+      "ko": "분위기가 활기차고 에너지 넘치게 느껴져요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "atmosphere",
+      "im",
+      "hobbies",
+      "IM"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_205",
+    "category": "describe",
+    "subcategory": "layout",
+    "pattern_en": "The place is divided into ~",
+    "pattern_ko": "그곳은 ~로 나누어져 있어요.",
+    "example": {
+      "en": "The place is divided into several sections.",
+      "ko": "그곳은 여러 구역으로 나누어져 있어요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "layout",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_206",
+    "category": "describe",
+    "subcategory": "size",
+    "pattern_en": "The size is ~",
+    "pattern_ko": "생각했던 것보다 훨씬 더 커요.",
+    "example": {
+      "en": "The park is much bigger than I expected.",
+      "ko": "그 공원은 생각보다 훨씬 더 커요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "size",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_207",
+    "category": "describe",
+    "subcategory": "features",
+    "pattern_en": "One of its unique features is ~",
+    "pattern_ko": "그곳의 독특한 특징 중 하나는 ~예요.",
+    "example": {
+      "en": "One of its unique features is the rooftop garden.",
+      "ko": "그곳의 독특한 특징 중 하나는 옥상 정원이에요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "features",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_208",
+    "category": "describe",
+    "subcategory": "condition",
+    "pattern_en": "The conditions are ~",
+    "pattern_ko": "깔끔하고 관리가 잘 되어 보여요.",
+    "example": {
+      "en": "The building looks clean and well-maintained.",
+      "ko": "그 건물은 깔끔하고 관리가 잘 되어 보여요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "condition",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_209",
+    "category": "describe",
+    "subcategory": "lighting",
+    "pattern_en": "The lighting makes the place feel ~",
+    "pattern_ko": "조명 때문에 그곳이 ~하게 느껴져요.",
+    "example": {
+      "en": "The lighting makes the place feel warm and cozy.",
+      "ko": "조명 때문에 그곳이 따뜻하고 아늑하게 느껴져요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "lighting",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_210",
+    "category": "describe",
+    "subcategory": "overall_impression",
+    "pattern_en": "Overall, I would describe it as ~",
+    "pattern_ko": "전반적으로 저는 그곳을 ~라고 표현하고 싶어요.",
+    "example": {
+      "en": "Overall, I would describe it as calm and relaxing.",
+      "ko": "전반적으로 저는 그곳을 차분하고 편안하다고 표현하고 싶어요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "overall",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "closing"
+  },
+  {
+    "pattern_id": "DES_211",
+    "category": "describe",
+    "subcategory": "details",
+    "pattern_en": "What stands out the most is ~",
+    "pattern_ko": "가장 눈에 띄는 것은 ~예요.",
+    "example": {
+      "en": "What stands out the most is the colorful decoration.",
+      "ko": "가장 눈에 띄는 것은 화려한 장식이에요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "details",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_212",
+    "category": "describe",
+    "subcategory": "space",
+    "pattern_en": "There is plenty of space for ~",
+    "pattern_ko": "~하기에 충분한 공간이 있어요.",
+    "example": {
+      "en": "There is plenty of space for people to relax.",
+      "ko": "사람들이 쉬기에 충분한 공간이 있어요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "space",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_213",
+    "category": "describe",
+    "subcategory": "environment",
+    "pattern_en": "The area around it is filled with ~",
+    "pattern_ko": "그 주변은 ~로 가득 차 있어요.",
+    "example": {
+      "en": "The area around it is filled with restaurants and cafes.",
+      "ko": "그 주변은 식당과 카페들로 가득 차 있어요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "environment",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_214",
+    "category": "describe",
+    "subcategory": "sound",
+    "pattern_en": "You can often hear ~",
+    "pattern_ko": "종종 ~ 소리를 들을 수 있어요.",
+    "example": {
+      "en": "You can often hear soft music in the background.",
+      "ko": "배경에서 잔잔한 음악 소리를 자주 들을 수 있어요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "sound",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_215",
+    "category": "describe",
+    "subcategory": "crowd",
+    "pattern_en": "It tends to get crowded during ~",
+    "pattern_ko": "~ 동안에는 사람이 많아지는 편이에요.",
+    "example": {
+      "en": "It tends to get crowded during weekends.",
+      "ko": "주말에는 사람이 많아지는 편이에요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "crowd",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_216",
+    "category": "describe",
+    "subcategory": "weather",
+    "pattern_en": "The weather makes the place feel ~",
+    "pattern_ko": "날씨 때문에 그곳이 ~하게 느껴져요.",
+    "example": {
+      "en": "The weather makes the place feel refreshing.",
+      "ko": "날씨 때문에 그곳이 상쾌하게 느껴져요."
+    },
+    "difficulty": 2,
+    "tags": [
+      "description",
+      "weather",
+      "ih",
+      "daily",
+      "IH"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "DES_217",
+    "category": "describe",
+    "subcategory": "comfort",
+    "pattern_en": "I feel comfortable because ~",
+    "pattern_ko": "~해서 편안함을 느껴요.",
+    "example": {
+      "en": "I feel comfortable because the place is quiet.",
+      "ko": "그곳이 조용해서 편안함을 느껴요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "comfort",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "atmosphere"
+  },
+  {
+    "pattern_id": "DES_218",
+    "category": "describe",
+    "subcategory": "visuals",
+    "pattern_en": "The view from there is ~",
+    "pattern_ko": "거기서 보는 풍경은 ~해요.",
+    "example": {
+      "en": "The view from there is absolutely beautiful.",
+      "ko": "거기서 보는 풍경은 정말 아름다워요."
+    },
+    "difficulty": 1,
+    "tags": [
+      "description",
+      "visuals",
+      "im",
+      "daily",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  }
+]
