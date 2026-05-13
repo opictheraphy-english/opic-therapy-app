@@ -49,8 +49,16 @@ def render_compact_pattern_card(
     tab_id: str,
     sec_uid: str,
     idx: int,
+    expand_more_label: str = "예문 더보기",
+    collapse_label: str = "접기",
+    additional_example_count: int | None = None,
 ) -> None:
     """Single flashcard-style block; English examples only (no KO dump)."""
+    add_n = (
+        additional_example_count
+        if additional_example_count is not None
+        else ADDITIONAL_EXAMPLE_COUNT
+    )
     pid = (pat.get("pattern_id") or "").strip() or f"{tab_id}_{idx}"
     row_key = _safe_fragment(f"{tab_id}_{sec_uid}_{pid}_{idx}")
     expand_key = f"pat_ex_expand_{row_key}"
@@ -80,15 +88,13 @@ def render_compact_pattern_card(
         return
 
     expanded = bool(st.session_state.get(expand_key))
-    btn_label = "예문 접기" if expanded else "예문 더보기"
+    btn_label = collapse_label if expanded else expand_more_label
     if st.button(btn_label, key=f"pat_ex_toggle_{row_key}", type="secondary"):
         st.session_state[expand_key] = not expanded
         expanded = bool(st.session_state.get(expand_key))
 
     if expanded:
-        extra_slice = lines[
-            VISIBLE_EXAMPLE_COUNT : VISIBLE_EXAMPLE_COUNT + ADDITIONAL_EXAMPLE_COUNT
-        ]
+        extra_slice = lines[VISIBLE_EXAMPLE_COUNT : VISIBLE_EXAMPLE_COUNT + add_n]
         if extra_slice:
             lis_extra = "".join(f"<li>{html.escape(x)}</li>" for x in extra_slice)
             st.markdown(

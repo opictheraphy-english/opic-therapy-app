@@ -56,7 +56,12 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
         return
     with st.expander(f"{title} · {cnt}", expanded=False):
         for i, pat in enumerate(patterns):
-            render_compact_pattern_card(pat, tab_id=tab_id, sec_uid=sec_uid, idx=i)
+            ex_kw: Dict[str, Any] = {}
+            if tab_id == "experience":
+                ex_kw["additional_example_count"] = 3
+            render_compact_pattern_card(
+                pat, tab_id=tab_id, sec_uid=sec_uid, idx=i, **ex_kw
+            )
 
 
 def render_patterns() -> None:

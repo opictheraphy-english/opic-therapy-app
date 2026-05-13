@@ -1,0 +1,770 @@
+[
+  {
+    "pattern_id": "EXP_G01",
+    "category": "experience",
+    "subcategory": "exp_good",
+    "pattern_en": "One of the best experiences I've had was ~",
+    "meaning": "제가 겪었던 최고의 경험 중 하나는 ~였어요.",
+    "examples": [
+      {
+        "en": "One of the best experiences I've had was volunteering abroad.",
+        "ko": "제가 겪었던 최고의 경험 중 하나는 해외 봉사였어요."
+      },
+      {
+        "en": "One of the best experiences I've had was learning to surf.",
+        "ko": "제가 겪었던 최고의 경험 중 하나는 서핑을 배운 것이었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_G02",
+    "category": "experience",
+    "subcategory": "exp_good",
+    "pattern_en": "I had a memorable experience when ~",
+    "meaning": "~했을 때 기억에 남는 경험을 했어요.",
+    "examples": [
+      {
+        "en": "I had a memorable experience when I met my childhood hero.",
+        "ko": "어릴 적 우상을 만났을 때 기억에 남는 경험을 했어요."
+      },
+      {
+        "en": "I had a memorable experience when our team won the finals.",
+        "ko": "우리 팀이 결승에서 이겼을 때 기억에 남는 경험을 했어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_G03",
+    "category": "experience",
+    "subcategory": "exp_good",
+    "pattern_en": "It turned out to be a great experience because ~",
+    "meaning": "~해서 정말 좋은 경험이 됐어요.",
+    "examples": [
+      {
+        "en": "It turned out to be a great experience because everyone was so welcoming.",
+        "ko": "모두가 환영해 줘서 정말 좋은 경험이 됐어요."
+      },
+      {
+        "en": "It turned out to be a great experience because I pushed myself out of my comfort zone.",
+        "ko": "안전지대를 벗어나 도전해서 정말 좋은 경험이 됐어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_G04",
+    "category": "experience",
+    "subcategory": "exp_good",
+    "pattern_en": "I'll never forget the time I ~",
+    "meaning": "제가 ~했던 그때를 잊을 수 없어요.",
+    "examples": [
+      {
+        "en": "I'll never forget the time I saw the northern lights.",
+        "ko": "오로라를 봤던 그때를 잊을 수 없어요."
+      },
+      {
+        "en": "I'll never forget the time I performed on stage.",
+        "ko": "무대에 섰던 그때를 잊을 수 없어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_P01",
+    "category": "experience",
+    "subcategory": "exp_problem",
+    "pattern_en": "I ran into a problem when ~",
+    "meaning": "~할 때 문제가 생겼어요.",
+    "examples": [
+      {
+        "en": "I ran into a problem when my flight was cancelled.",
+        "ko": "비행기가 취소됐을 때 문제가 생겼어요."
+      },
+      {
+        "en": "I ran into a problem when I lost my wallet on the subway.",
+        "ko": "지하철에서 지갑을 잃어버렸을 때 문제가 생겼어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_P02",
+    "category": "experience",
+    "subcategory": "exp_problem",
+    "pattern_en": "Things didn't go as planned because ~",
+    "meaning": "~해서 계획대로 되지 않았어요.",
+    "examples": [
+      {
+        "en": "Things didn't go as planned because the weather turned bad.",
+        "ko": "날씨가 갑자기 나빠져서 계획대로 되지 않았어요."
+      },
+      {
+        "en": "Things didn't go as planned because we underestimated the traffic.",
+        "ko": "교통 체증을 과소평가해서 계획대로 되지 않았어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_P03",
+    "category": "experience",
+    "subcategory": "exp_problem",
+    "pattern_en": "I made a mistake by ~ing",
+    "meaning": "~해서 실수를 했어요.",
+    "examples": [
+      {
+        "en": "I made a mistake by not double-checking the address.",
+        "ko": "주소를 다시 확인하지 않아서 실수를 했어요."
+      },
+      {
+        "en": "I made a mistake by leaving too late.",
+        "ko": "너무 늦게 나와서 실수를 했어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_P04",
+    "category": "experience",
+    "subcategory": "exp_problem",
+    "pattern_en": "Looking back, I should have ~",
+    "meaning": "돌이켜 보면 ~했어야 했어요.",
+    "examples": [
+      {
+        "en": "Looking back, I should have asked for help sooner.",
+        "ko": "돌이켜 보면 더 일찍 도움을 요청했어야 했어요."
+      },
+      {
+        "en": "Looking back, I should have saved more money in advance.",
+        "ko": "돌이켜 보면 미리 돈을 더 아껴뒀어야 했어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_T01",
+    "category": "experience",
+    "subcategory": "exp_travel_event",
+    "pattern_en": "Last summer, I went on a trip where ~",
+    "meaning": "지난여름 ~한 여행을 다녀왔어요.",
+    "examples": [
+      {
+        "en": "Last summer, I went on a trip where I hiked every day.",
+        "ko": "지난여름 매일 하이킹을 한 여행을 다녀왔어요."
+      },
+      {
+        "en": "Last summer, I went on a trip where I tried local street food.",
+        "ko": "지난여름 길거리 음식을 맛본 여행을 다녀왔어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_T02",
+    "category": "experience",
+    "subcategory": "exp_travel_event",
+    "pattern_en": "During a festival, I ~",
+    "meaning": "축제 때 저는 ~했어요.",
+    "examples": [
+      {
+        "en": "During a festival, I got lost in the crowd but found new friends.",
+        "ko": "축제 때 사람들 속에서 길을 잃었지만 새 친구를 만났어요."
+      },
+      {
+        "en": "During a festival, I tried on traditional clothes for fun.",
+        "ko": "축제 때 재미로 전통 옷을 입어 봤어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_T03",
+    "category": "experience",
+    "subcategory": "exp_travel_event",
+    "pattern_en": "At the wedding, I ~",
+    "meaning": "결혼식에서 저는 ~했어요.",
+    "examples": [
+      {
+        "en": "At the wedding, I gave a short speech in English.",
+        "ko": "결혼식에서 영어로 짧게 축사를 했어요."
+      },
+      {
+        "en": "At the wedding, I danced with people I'd just met.",
+        "ko": "결혼식에서 막 만난 사람들과 춤을 췄어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_T04",
+    "category": "experience",
+    "subcategory": "exp_travel_event",
+    "pattern_en": "On the way to the airport, I ~",
+    "meaning": "공항 가는 길에 저는 ~했어요.",
+    "examples": [
+      {
+        "en": "On the way to the airport, I realized I'd forgotten my passport.",
+        "ko": "공항 가는 길에 여권을 두고 온 걸 알았어요."
+      },
+      {
+        "en": "On the way to the airport, I grabbed a quick coffee with a friend.",
+        "ko": "공항 가는 길에 친구랑 급하게 커피 한 잔했어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_E01",
+    "category": "experience",
+    "subcategory": "exp_emotion_shift",
+    "pattern_en": "At first, I felt nervous, but later ~",
+    "meaning": "처음엔 긴장됐는데, 나중에는 ~했어요.",
+    "examples": [
+      {
+        "en": "At first, I felt nervous, but later I relaxed and enjoyed the talk.",
+        "ko": "처음엔 긴장됐는데, 나중에는 편해져서 이야기를 즐겼어요."
+      },
+      {
+        "en": "At first, I felt nervous, but later I was proud I tried.",
+        "ko": "처음엔 긴장됐는데, 나중에는 도전해서 뿌듯했어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_E02",
+    "category": "experience",
+    "subcategory": "exp_emotion_shift",
+    "pattern_en": "I ended up feeling much better after ~",
+    "meaning": "~한 뒤에 훨씬 나아진 기분이었어요.",
+    "examples": [
+      {
+        "en": "I ended up feeling much better after talking it through.",
+        "ko": "이야기를 나눈 뒤에 훨씬 나아진 기분이었어요."
+      },
+      {
+        "en": "I ended up feeling much better after taking a short walk.",
+        "ko": "짧게 산책한 뒤에 훨씬 나아진 기분이었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_E03",
+    "category": "experience",
+    "subcategory": "exp_emotion_shift",
+    "pattern_en": "I was worried at first, but in the end ~",
+    "meaning": "처음엔 걱정됐는데 결국 ~했어요.",
+    "examples": [
+      {
+        "en": "I was worried at first, but in the end everything worked out.",
+        "ko": "처음엔 걱정됐는데 결국 다 잘 풀렸어요."
+      },
+      {
+        "en": "I was worried at first, but in the end the team supported me.",
+        "ko": "처음엔 걱정됐는데 결국 팀이 저를 도와줬어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_E04",
+    "category": "experience",
+    "subcategory": "exp_emotion_shift",
+    "pattern_en": "My mood completely changed when ~",
+    "meaning": "~할 때 기분이 완전히 바뀌었어요.",
+    "examples": [
+      {
+        "en": "My mood completely changed when I heard the good news.",
+        "ko": "좋은 소식을 들었을 때 기분이 완전히 바뀌었어요."
+      },
+      {
+        "en": "My mood completely changed when we reached the summit.",
+        "ko": "정상에 올랐을 때 기분이 완전히 바뀌었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_M01",
+    "category": "experience",
+    "subcategory": "exp_memory",
+    "pattern_en": "What stood out the most was ~",
+    "meaning": "가장 인상 깊었던 건 ~였어요.",
+    "examples": [
+      {
+        "en": "What stood out the most was how kind the locals were.",
+        "ko": "가장 인상 깊었던 건 현지인들이 얼마나 친절했는지였어요."
+      },
+      {
+        "en": "What stood out the most was the silence in the mountains.",
+        "ko": "가장 인상 깊었던 건 산속의 고요였어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_M02",
+    "category": "experience",
+    "subcategory": "exp_memory",
+    "pattern_en": "One thing I clearly remember is ~",
+    "meaning": "분명히 기억나는 한 가지는 ~예요.",
+    "examples": [
+      {
+        "en": "One thing I clearly remember is the smell of the sea.",
+        "ko": "분명히 기억나는 한 가지는 바다 냄새예요."
+      },
+      {
+        "en": "One thing I clearly remember is how loud the crowd cheered.",
+        "ko": "분명히 기억나는 한 가지는 함성이 얼마나 컸는지예요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_M03",
+    "category": "experience",
+    "subcategory": "exp_memory",
+    "pattern_en": "I'll always associate that trip with ~",
+    "meaning": "그 여행이면 항상 ~이 떠올라요.",
+    "examples": [
+      {
+        "en": "I'll always associate that trip with rainy afternoons.",
+        "ko": "그 여행이면 항상 비 오는 오후가 떠올라요."
+      },
+      {
+        "en": "I'll always associate that trip with trying spicy food for the first time.",
+        "ko": "그 여행이면 항상 처음으로 매운 음식을 먹었던 게 떠올라요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_M04",
+    "category": "experience",
+    "subcategory": "exp_memory",
+    "pattern_en": "The moment that stuck with me was when ~",
+    "meaning": "기억에 남는 순간은 ~했을 때였어요.",
+    "examples": [
+      {
+        "en": "The moment that stuck with me was when the sun rose over the lake.",
+        "ko": "기억에 남는 순간은 해가 호수 위로 떠올랐을 때였어요."
+      },
+      {
+        "en": "The moment that stuck with me was when my friend surprised me.",
+        "ko": "기억에 남는 순간은 친구가 깜짝 놀라게 했을 때였어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_U01",
+    "category": "experience",
+    "subcategory": "exp_unexpected",
+    "pattern_en": "Something unexpected happened when ~",
+    "meaning": "~할 때 뜻밖의 일이 있었어요.",
+    "examples": [
+      {
+        "en": "Something unexpected happened when our guide suddenly changed the route.",
+        "ko": "가이드가 갑자기 코스를 바꿨을 때 뜻밖의 일이 있었어요."
+      },
+      {
+        "en": "Something unexpected happened when we bumped into a celebrity.",
+        "ko": "연예인을 우연히 만났을 때 뜻밖의 일이 있었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_U02",
+    "category": "experience",
+    "subcategory": "exp_unexpected",
+    "pattern_en": "I didn't expect ~ at all",
+    "meaning": "전혀 ~일 줄 몰랐어요.",
+    "examples": [
+      {
+        "en": "I didn't expect the concert to be that crowded.",
+        "ko": "콘서트가 그렇게 붐빌 줄 전혀 몰랐어요."
+      },
+      {
+        "en": "I didn't expect the interview to be so short.",
+        "ko": "면접이 그렇게 짧을 줄 전혀 몰랐어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_U03",
+    "category": "experience",
+    "subcategory": "exp_unexpected",
+    "pattern_en": "Out of nowhere, ~",
+    "meaning": "갑자기 ~했어요.",
+    "examples": [
+      {
+        "en": "Out of nowhere, it started pouring rain.",
+        "ko": "갑자기 비가 억수같이 쏟아졌어요."
+      },
+      {
+        "en": "Out of nowhere, my phone battery died.",
+        "ko": "갑자기 휴대폰 배터리가 나갔어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_U04",
+    "category": "experience",
+    "subcategory": "exp_unexpected",
+    "pattern_en": "Little did I know that ~",
+    "meaning": "~인 줄은 꿈에도 몰랐어요.",
+    "examples": [
+      {
+        "en": "Little did I know that the ticket would sell out so fast.",
+        "ko": "표가 그렇게 빨리 매진될 줄은 꿈에도 몰랐어요."
+      },
+      {
+        "en": "Little did I know that I'd get the job offer.",
+        "ko": "채용 제의를 받을 줄은 꿈에도 몰랐어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_L01",
+    "category": "experience",
+    "subcategory": "exp_learned",
+    "pattern_en": "What I learned from that experience was ~",
+    "meaning": "그 경험에서 배운 건 ~였어요.",
+    "examples": [
+      {
+        "en": "What I learned from that experience was to stay calm under pressure.",
+        "ko": "그 경험에서 배운 건 압박 속에서도 침착하라는 거였어요."
+      },
+      {
+        "en": "What I learned from that experience was to ask more questions.",
+        "ko": "그 경험에서 배운 건 더 많이 물어보라는 거였어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_L02",
+    "category": "experience",
+    "subcategory": "exp_learned",
+    "pattern_en": "That experience taught me to ~",
+    "meaning": "그 경험 덕분에 ~하게 됐어요.",
+    "examples": [
+      {
+        "en": "That experience taught me to pack lighter.",
+        "ko": "그 경험 덕분에 짐을 더 가볍게 싸게 됐어요."
+      },
+      {
+        "en": "That experience taught me to double-check reservations.",
+        "ko": "그 경험 덕분에 예약을 두 번 확인하게 됐어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_L03",
+    "category": "experience",
+    "subcategory": "exp_learned",
+    "pattern_en": "If I could do it again, I would ~",
+    "meaning": "다시 한다면 ~할 거예요.",
+    "examples": [
+      {
+        "en": "If I could do it again, I would leave earlier.",
+        "ko": "다시 한다면 더 일찍 나갈 거예요."
+      },
+      {
+        "en": "If I could do it again, I would take more photos.",
+        "ko": "다시 한다면 사진을 더 많이 찍을 거예요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_L04",
+    "category": "experience",
+    "subcategory": "exp_learned",
+    "pattern_en": "The biggest takeaway was ~",
+    "meaning": "가장 큰 깨달음은 ~였어요.",
+    "examples": [
+      {
+        "en": "The biggest takeaway was that teamwork matters.",
+        "ko": "가장 큰 깨달음은 팀워크가 중요하다는 거였어요."
+      },
+      {
+        "en": "The biggest takeaway was to trust the process.",
+        "ko": "가장 큰 깨달음은 과정을 믿으라는 거였어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_O01",
+    "category": "experience",
+    "subcategory": "exp_longtime",
+    "pattern_en": "It was the first time in a long while that I ~",
+    "meaning": "오랜만에 ~했어요.",
+    "examples": [
+      {
+        "en": "It was the first time in a long while that I visited my hometown.",
+        "ko": "오랜만에 고향에 다녀왔어요."
+      },
+      {
+        "en": "It was the first time in a long while that I rode a bike outdoors.",
+        "ko": "오랜만에 밖에서 자전거를 탔어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_O02",
+    "category": "experience",
+    "subcategory": "exp_longtime",
+    "pattern_en": "After a long break, I ~",
+    "meaning": "오랜 공백 뒤에 저는 ~했어요.",
+    "examples": [
+      {
+        "en": "After a long break, I started studying English again.",
+        "ko": "오랜 공백 뒤에 영어 공부를 다시 시작했어요."
+      },
+      {
+        "en": "After a long break, I met my old classmates.",
+        "ko": "오랜 공백 뒤에 옛 동창들을 만났어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_O03",
+    "category": "experience",
+    "subcategory": "exp_longtime",
+    "pattern_en": "I hadn't ~ in ages, but one day I ~",
+    "meaning": "오랫동안 ~하지 않았는데, 어느 날 ~했어요.",
+    "examples": [
+      {
+        "en": "I hadn't gone camping in ages, but one day I joined a trip.",
+        "ko": "오랫동안 캠핑을 안 했는데, 어느 날 여행에 참여했어요."
+      },
+      {
+        "en": "I hadn't sung in public in ages, but one day I tried karaoke.",
+        "ko": "오랫동안 공개적으로 노래를 안 했는데, 어느 날 노래방에서 불렀어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "EXP_O04",
+    "category": "experience",
+    "subcategory": "exp_longtime",
+    "pattern_en": "Reconnecting with ~ felt ~",
+    "meaning": "~와 다시 연락하니 ~한 느낌이었어요.",
+    "examples": [
+      {
+        "en": "Reconnecting with an old friend felt surprisingly natural.",
+        "ko": "옛 친구와 다시 연락하니 의외로 자연스러운 느낌이었어요."
+      },
+      {
+        "en": "Reconnecting with my mentor felt encouraging.",
+        "ko": "멘토와 다시 연락하니 힘이 나는 느낌이었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "experience",
+      "IM"
+    ],
+    "pattern_role": "detail"
+  }
+]
