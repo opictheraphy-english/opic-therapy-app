@@ -12,7 +12,7 @@ from components.audio_player import render_exam_question_audio_player
 from components.navigation import render_bottom_navigation
 from components.visualizer import render_realtime_visualizer
 from services.mock_exam.mock_exam_test_set_generator import generate_test_set
-from pages.final_report import render_final_report
+from views.final_report import render_final_report
 from services.evaluation_service import analyze_audio_with_ai
 from services.final_report_demo import seed_demo_final_report
 from services.report_service import cache_analysis_payload

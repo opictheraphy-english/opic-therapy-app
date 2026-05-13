@@ -1,2 +1,6 @@
 [browser]
 gatherUsageStats = false
+
+# Single entry (app.py) + custom bottom nav — hide Streamlit multipage sidebar UI.
+[client]
+showSidebarNavigation = false

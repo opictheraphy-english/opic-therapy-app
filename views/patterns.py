@@ -57,7 +57,7 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
     with st.expander(f"{title} · {cnt}", expanded=False):
         for i, pat in enumerate(patterns):
             ex_kw: Dict[str, Any] = {}
-            if tab_id == "experience":
+            if tab_id in ("experience", "comparison"):
                 ex_kw["additional_example_count"] = 3
             render_compact_pattern_card(
                 pat, tab_id=tab_id, sec_uid=sec_uid, idx=i, **ex_kw
@@ -74,8 +74,8 @@ def render_patterns() -> None:
     st.markdown(
         '<div class="pat-wrap">'
         '<p class="pat-head">패턴</p>'
-        "<p class='pat-sub'>카테고리 → 섹션 → 카드. 예문은 처음 2개만 보이고, 「예문 더보기」 시 영문 예문 2개만 추가로 펼칩니다. "
-        "다시 「예문 접기」로 접을 수 있습니다. 루틴 탭은 주제별로 나뉩니다. (오디오 비활성)</p>"
+        "<p class='pat-sub'>카테고리 → 섹션 → 카드. 예문은 처음 2개만 보이고, 「예문 더보기」로 추가 예문을 펼칩니다. "
+        "「접기」로 다시 접습니다. 루틴·경험·비교는 주제별 아코디언입니다. (오디오 비활성)</p>"
         "</div>",
         unsafe_allow_html=True,
     )

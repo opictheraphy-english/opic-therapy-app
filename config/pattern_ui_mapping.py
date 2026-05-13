@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Sequence, Tuple
 
+from config.comparison_patterns import bucket_comparison_rows
 from config.experience_patterns import bucket_experience_rows
 from config.pattern_config import ALLOWED_CATEGORIES, flat_patterns_with_audio
 from config.routine_patterns import bucket_routine_rows
@@ -137,6 +138,8 @@ def build_pattern_tabs_model() -> List[Dict[str, Any]]:
             sections = bucket_routine_rows(cat_rows) if cat_rows else []
         elif tab_id == "experience":
             sections = bucket_experience_rows(cat_rows) if cat_rows else []
+        elif tab_id == "comparison":
+            sections = bucket_comparison_rows(cat_rows) if cat_rows else []
         elif tab_id in ALLOWED_CATEGORIES:
             sections = _bucket_generic_category(cat_rows)
         else:
@@ -153,9 +156,13 @@ def build_pattern_tabs_model() -> List[Dict[str, Any]]:
                 "경험 패턴이 아직 없습니다. "
                 "master_patterns.json 등에 category=experience 데이터를 넣으면 아래 그룹으로 표시됩니다."
             )
-        elif not cat_rows and tab_id not in ("routine", "experience"):
+        elif not cat_rows and tab_id == "comparison":
+            empty_message = (
+                "비교 패턴이 아직 없습니다. "
+                "master_patterns.json 등에 category=comparison 데이터를 넣으면 아래 그룹으로 표시됩니다."
+            )
+        elif not cat_rows and tab_id not in ("routine", "experience", "comparison"):
             labels_ko = {
-                "comparison": "비교",
                 "opinion": "의견",
                 "roleplay": "롤플레이",
             }

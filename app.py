@@ -1,6 +1,7 @@
 """
 OPIc Therapy Clinic — Streamlit entrypoint.
-UI 라우팅만 담당하고 페이지·서비스·컴포넌트는 모듈로 분리했습니다.
+UI 라우팅만 담당하고 화면·서비스·컴포넌트는 모듈로 분리했습니다.
+(``views/`` 패키지 사용 — Streamlit 예약 디렉터리명 ``pages/`` 는 쓰지 않습니다.)
 """
 
 from __future__ import annotations
@@ -8,19 +9,23 @@ from __future__ import annotations
 import streamlit as st
 
 from components.navigation import render_bottom_navigation
-from pages.entry_gate import render_entry_gate
-from pages.home import render_home
-from pages.lectures import render_lectures
-from pages.mock_exam import render_mock_exam_shell, render_mock_flow
-from pages.patterns import render_patterns
-from pages.scripts import render_scripts
-from pages.settings_page import render_settings
+from views.entry_gate import render_entry_gate
+from views.home import render_home
+from views.lectures import render_lectures
+from views.mock_exam import render_mock_exam_shell, render_mock_flow
+from views.patterns import render_patterns
+from views.scripts import render_scripts
+from views.settings_page import render_settings
 from ui.styles import inject_global_styles
 from utils.local_profile import hydrate_entry_session, maybe_restore_mock_from_disk, sync_user_progress
 from utils.session_state import ensure_mock, ensure_pattern, ensure_settings, sync_settings_to_legacy
 
 # --- Page config & design ---
-st.set_page_config(page_title="OPIc Therapy Clinic", layout="wide")
+st.set_page_config(
+    page_title="OPIc Therapy Clinic",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 inject_global_styles()
 
 # --- Legacy + namespaced session ---

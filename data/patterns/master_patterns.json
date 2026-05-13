@@ -3376,5 +3376,1157 @@
       "IM"
     ],
     "pattern_role": "detail"
+  },
+  {
+    "pattern_id": "CMP_PC01",
+    "category": "comparison",
+    "subcategory": "cmp_pros_cons",
+    "pattern_en": "One advantage is that ~",
+    "meaning": "한 가지 장점은 ~라는 점이에요.",
+    "examples": [
+      {
+        "en": "One advantage is that it's very affordable.",
+        "ko": "한 가지 장점은 가격이 매우 저렴하다는 점이에요."
+      },
+      {
+        "en": "One advantage is that the location is convenient.",
+        "ko": "한 가지 장점은 위치가 편리하다는 점이에요."
+      },
+      {
+        "en": "One advantage is that the staff are friendly.",
+        "ko": "한 가지 장점은 직원들이 친절하다는 점이에요."
+      },
+      {
+        "en": "One advantage is that I can go there after work.",
+        "ko": "한 가지 장점은 퇴근 후에도 갈 수 있다는 점이에요."
+      },
+      {
+        "en": "One advantage is that it saves me a lot of time.",
+        "ko": "한 가지 장점은 시간을 많이 절약해 준다는 점이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PC02",
+    "category": "comparison",
+    "subcategory": "cmp_pros_cons",
+    "pattern_en": "The biggest drawback is ~",
+    "meaning": "가장 큰 단점은 ~예요.",
+    "examples": [
+      {
+        "en": "The biggest drawback is the long waiting time.",
+        "ko": "가장 큰 단점은 대기 시간이 길다는 거예요."
+      },
+      {
+        "en": "The biggest drawback is that it gets too crowded on weekends.",
+        "ko": "가장 큰 단점은 주말에 너무 붐빈다는 거예요."
+      },
+      {
+        "en": "The biggest drawback is the limited parking.",
+        "ko": "가장 큰 단점은 주차 공간이 부족하다는 거예요."
+      },
+      {
+        "en": "The biggest drawback is that it's a bit expensive.",
+        "ko": "가장 큰 단점은 조금 비싸다는 거예요."
+      },
+      {
+        "en": "The biggest drawback is the unreliable Wi-Fi.",
+        "ko": "가장 큰 단점은 와이파이가 불안정하다는 거예요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PC03",
+    "category": "comparison",
+    "subcategory": "cmp_pros_cons",
+    "pattern_en": "On the plus side, ~",
+    "meaning": "좋은 점으로는 ~예요.",
+    "examples": [
+      {
+        "en": "On the plus side, the view is amazing.",
+        "ko": "좋은 점으로는 전망이 정말 좋다는 거예요."
+      },
+      {
+        "en": "On the plus side, it's open late.",
+        "ko": "좋은 점으로는 늦게까지 문을 연다는 거예요."
+      },
+      {
+        "en": "On the plus side, they offer a student discount.",
+        "ko": "좋은 점으로는 학생 할인을 해 준다는 거예요."
+      },
+      {
+        "en": "On the plus side, the portions are huge.",
+        "ko": "좋은 점으로는 양이 아주 많다는 거예요."
+      },
+      {
+        "en": "On the plus side, it's easy to book online.",
+        "ko": "좋은 점으로는 온라인 예약이 쉽다는 거예요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PC04",
+    "category": "comparison",
+    "subcategory": "cmp_pros_cons",
+    "pattern_en": "The downside is that ~",
+    "meaning": "안 좋은 점은 ~라는 거예요.",
+    "examples": [
+      {
+        "en": "The downside is that it's far from the subway.",
+        "ko": "안 좋은 점은 지하철에서 멀다는 거예요."
+      },
+      {
+        "en": "The downside is that reservations are hard to get.",
+        "ko": "안 좋은 점은 예약이 잘 안 잡힌다는 거예요."
+      },
+      {
+        "en": "The downside is that the menu is quite limited.",
+        "ko": "안 좋은 점은 메뉴가 꽤 제한적이라는 거예요."
+      },
+      {
+        "en": "The downside is that it closes early.",
+        "ko": "안 좋은 점은 일찍 문을 닫는다는 거예요."
+      },
+      {
+        "en": "The downside is that the seats are uncomfortable.",
+        "ko": "안 좋은 점은 자리가 불편하다는 거예요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PP01",
+    "category": "comparison",
+    "subcategory": "cmp_past_present",
+    "pattern_en": "Compared to the past, ~",
+    "meaning": "과거에 비하면 ~예요.",
+    "examples": [
+      {
+        "en": "Compared to the past, public transport is much better.",
+        "ko": "과거에 비하면 대중교통이 훨씬 좋아졌어요."
+      },
+      {
+        "en": "Compared to the past, people rely more on apps.",
+        "ko": "과거에 비하면 사람들이 앱에 더 의존해요."
+      },
+      {
+        "en": "Compared to the past, I have less free time.",
+        "ko": "과거에 비하면 여유 시간이 줄었어요."
+      },
+      {
+        "en": "Compared to the past, the city feels safer.",
+        "ko": "과거에 비하면 도시가 더 안전하게 느껴져요."
+      },
+      {
+        "en": "Compared to the past, food delivery is everywhere.",
+        "ko": "과거에 비하면 배달 음식이 어디서나 가능해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PP02",
+    "category": "comparison",
+    "subcategory": "cmp_past_present",
+    "pattern_en": "These days, people tend to ~",
+    "meaning": "요즘 사람들은 ~하는 경향이 있어요.",
+    "examples": [
+      {
+        "en": "These days, people tend to work from home more often.",
+        "ko": "요즘 사람들은 재택근무를 더 자주 하는 경향이 있어요."
+      },
+      {
+        "en": "These days, people tend to watch short videos on their phones.",
+        "ko": "요즘 사람들은 휴대폰으로 짧은 영상을 보는 경향이 있어요."
+      },
+      {
+        "en": "These days, people tend to care more about mental health.",
+        "ko": "요즘 사람들은 정신 건강을 더 신경 쓰는 경향이 있어요."
+      },
+      {
+        "en": "These days, people tend to order coffee instead of making it.",
+        "ko": "요즘 사람들은 직접 내리기보다 커피를 주문하는 경향이 있어요."
+      },
+      {
+        "en": "These days, people tend to travel solo.",
+        "ko": "요즘 사람들은 혼자 여행 가는 경향이 있어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PP03",
+    "category": "comparison",
+    "subcategory": "cmp_past_present",
+    "pattern_en": "Back then, I used to ~, but now I ~",
+    "meaning": "예전엔 ~했는데, 지금은 ~해요.",
+    "examples": [
+      {
+        "en": "Back then, I used to stay up late, but now I sleep earlier.",
+        "ko": "예전엔 늦게 잤는데, 지금은 더 일찍 자요."
+      },
+      {
+        "en": "Back then, I used to eat out every day, but now I cook at home.",
+        "ko": "예전엔 매일 외식했는데, 지금은 집에서 요리해요."
+      },
+      {
+        "en": "Back then, I used to be shy, but now I'm more confident.",
+        "ko": "예전엔 수줍었는데, 지금은 더 자신 있어요."
+      },
+      {
+        "en": "Back then, I used to take the bus, but now I ride a bike.",
+        "ko": "예전엔 버스를 탔는데, 지금은 자전거를 타요."
+      },
+      {
+        "en": "Back then, I used to hate running, but now I enjoy it.",
+        "ko": "예전엔 달리기를 싫어했는데, 지금은 즐겨요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PP04",
+    "category": "comparison",
+    "subcategory": "cmp_past_present",
+    "pattern_en": "It used to be ~, but nowadays it's ~",
+    "meaning": "예전에는 ~였는데, 요즘은 ~예요.",
+    "examples": [
+      {
+        "en": "It used to be quiet, but nowadays it's really lively.",
+        "ko": "예전에는 조용했는데, 요즘은 정말 활기차요."
+      },
+      {
+        "en": "It used to be cheap, but nowadays prices have gone up.",
+        "ko": "예전에는 싼 편이었는데, 요즘은 가격이 올랐어요."
+      },
+      {
+        "en": "It used to be rare, but nowadays everyone does it.",
+        "ko": "예전에는 드물었는데, 요즘은 다들 해요."
+      },
+      {
+        "en": "It used to be inconvenient, but nowadays there's a new line.",
+        "ko": "예전에는 불편했는데, 요즘은 새 노선이 생겼어요."
+      },
+      {
+        "en": "It used to be empty, but nowadays you need a reservation.",
+        "ko": "예전에는 한산했는데, 요즘은 예약이 필요해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PE01",
+    "category": "comparison",
+    "subcategory": "cmp_people",
+    "pattern_en": "We have a lot in common, but ~",
+    "meaning": "공통점이 많은데, ~해요.",
+    "examples": [
+      {
+        "en": "We have a lot in common, but our tastes in music are totally different.",
+        "ko": "공통점이 많은데, 음악 취향은 완전 달라요."
+      },
+      {
+        "en": "We have a lot in common, but he is much more outgoing.",
+        "ko": "공통점이 많은데, 그는 훨씬 외향적이에요."
+      },
+      {
+        "en": "We have a lot in common, but she studies harder than I do.",
+        "ko": "공통점이 많은데, 그녀는 저보다 공부를 더 열심히 해요."
+      },
+      {
+        "en": "We have a lot in common, but we argue about small things.",
+        "ko": "공통점이 많은데, 사소한 일로 자주 다퉈요."
+      },
+      {
+        "en": "We have a lot in common, but our schedules rarely match.",
+        "ko": "공통점이 많은데, 일정이 잘 맞지 않아요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PE02",
+    "category": "comparison",
+    "subcategory": "cmp_people",
+    "pattern_en": "Unlike me, my friend ~",
+    "meaning": "저와 달리 제 친구는 ~해요.",
+    "examples": [
+      {
+        "en": "Unlike me, my friend wakes up at five every day.",
+        "ko": "저와 달리 제 친구는 매일 다섯 시에 일어나요."
+      },
+      {
+        "en": "Unlike me, my friend loves spicy food.",
+        "ko": "저와 달리 제 친구는 매운 음식을 좋아해요."
+      },
+      {
+        "en": "Unlike me, my friend is really good at math.",
+        "ko": "저와 달리 제 친구는 수학을 정말 잘해요."
+      },
+      {
+        "en": "Unlike me, my friend prefers staying in on weekends.",
+        "ko": "저와 달리 제 친구는 주말에 집에 있는 걸 좋아해요."
+      },
+      {
+        "en": "Unlike me, my friend never procrastinates.",
+        "ko": "저와 달리 제 친구는 미루는 법이 없어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PE03",
+    "category": "comparison",
+    "subcategory": "cmp_people",
+    "pattern_en": "My sibling and I are similar in that ~",
+    "meaning": "형제자매와 저는 ~라는 점에서 비슷해요.",
+    "examples": [
+      {
+        "en": "My sibling and I are similar in that we both love movies.",
+        "ko": "형제자매와 저는 둘 다 영화를 좋아한다는 점에서 비슷해요."
+      },
+      {
+        "en": "My sibling and I are similar in that we're both stubborn.",
+        "ko": "형제자매와 저는 둘 다 고집이 세다는 점에서 비슷해요."
+      },
+      {
+        "en": "My sibling and I are similar in that we worry a lot.",
+        "ko": "형제자매와 저는 둘 다 걱정이 많다는 점에서 비슷해요."
+      },
+      {
+        "en": "My sibling and I are similar in that we enjoy cooking.",
+        "ko": "형제자매와 저는 요리하는 걸 즐긴다는 점에서 비슷해요."
+      },
+      {
+        "en": "My sibling and I are similar in that we work in tech.",
+        "ko": "형제자매와 저는 둘 다 IT 분야에서 일한다는 점에서 비슷해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PE04",
+    "category": "comparison",
+    "subcategory": "cmp_people",
+    "pattern_en": "He's more ~ than I am.",
+    "meaning": "그는 저보다 더 ~해요.",
+    "examples": [
+      {
+        "en": "He's more patient than I am.",
+        "ko": "그는 저보다 더 참을성이 있어요."
+      },
+      {
+        "en": "He's more competitive than I am.",
+        "ko": "그는 저보다 더 승부욕이 강해요."
+      },
+      {
+        "en": "He's more organized than I am.",
+        "ko": "그는 저보다 더 정리정돈을 잘해요."
+      },
+      {
+        "en": "He's more adventurous than I am.",
+        "ko": "그는 저보다 더 모험적이에요."
+      },
+      {
+        "en": "He's more practical than I am.",
+        "ko": "그는 저보다 더 현실적이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PL01",
+    "category": "comparison",
+    "subcategory": "cmp_place",
+    "pattern_en": "This place is much more crowded than ~",
+    "meaning": "이곳은 ~보다 훨씬 더 붐벼요.",
+    "examples": [
+      {
+        "en": "This place is much more crowded than the library near my house.",
+        "ko": "이곳은 집 근처 도서관보다 훨씬 더 붐벼요."
+      },
+      {
+        "en": "This place is much more crowded than I expected.",
+        "ko": "이곳은 제가 생각했던 것보다 훨씬 더 붐벼요."
+      },
+      {
+        "en": "This place is much more crowded than it was last year.",
+        "ko": "이곳은 작년보다 훨씬 더 붐벼요."
+      },
+      {
+        "en": "This place is much more crowded than the other branch.",
+        "ko": "이곳은 다른 지점보다 훨씬 더 붐벼요."
+      },
+      {
+        "en": "This place is much more crowded than on weekdays.",
+        "ko": "이곳은 평일보다 훨씬 더 붐벼요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PL02",
+    "category": "comparison",
+    "subcategory": "cmp_place",
+    "pattern_en": "Compared to my hometown, ~",
+    "meaning": "고향에 비하면 ~예요.",
+    "examples": [
+      {
+        "en": "Compared to my hometown, the pace of life here is faster.",
+        "ko": "고향에 비하면 여기는 삶의 속도가 더 빨라요."
+      },
+      {
+        "en": "Compared to my hometown, rent is much higher.",
+        "ko": "고향에 비하면 월세가 훨씬 비싸요."
+      },
+      {
+        "en": "Compared to my hometown, public transport is more convenient.",
+        "ko": "고향에 비하면 대중교통이 더 편해요."
+      },
+      {
+        "en": "Compared to my hometown, there are more late-night options.",
+        "ko": "고향에 비하면 늦은 시간에 갈 곳이 더 많아요."
+      },
+      {
+        "en": "Compared to my hometown, the air quality is worse.",
+        "ko": "고향에 비하면 공기 질이 더 나빠요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PL03",
+    "category": "comparison",
+    "subcategory": "cmp_place",
+    "pattern_en": "The neighborhood here is ~ than ~",
+    "meaning": "이 동네는 ~보다 ~해요.",
+    "examples": [
+      {
+        "en": "The neighborhood here is quieter than downtown.",
+        "ko": "이 동네는 시내 중심가보다 조용해요."
+      },
+      {
+        "en": "The neighborhood here is greener than where I lived before.",
+        "ko": "이 동네는 예전에 살던 곳보다 녹지가 많아요."
+      },
+      {
+        "en": "The neighborhood here is safer than the old area.",
+        "ko": "이 동네는 옛날 동네보다 안전해요."
+      },
+      {
+        "en": "The neighborhood here is more family-friendly than my last one.",
+        "ko": "이 동네는 이전 동네보다 가족이 살기 좋아요."
+      },
+      {
+        "en": "The neighborhood here is busier than I thought.",
+        "ko": "이 동네는 생각보다 더 번화해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_PL04",
+    "category": "comparison",
+    "subcategory": "cmp_place",
+    "pattern_en": "It's not as ~ as ~, but ~",
+    "meaning": "~만큼 ~하지는 않지만, ~예요.",
+    "examples": [
+      {
+        "en": "It's not as big as the mall downtown, but it's cozier.",
+        "ko": "시내 몰만큼 크지는 않지만, 더 아늑해요."
+      },
+      {
+        "en": "It's not as famous as that spot, but the food is great.",
+        "ko": "그 명소만큼 유명하지는 않지만, 음식이 훌륭해요."
+      },
+      {
+        "en": "It's not as modern as the new campus, but I like the trees.",
+        "ko": "새 캠퍼스만큼 현대적이지는 않지만, 나무가 좋아요."
+      },
+      {
+        "en": "It's not as cheap as the market, but the quality is better.",
+        "ko": "시장만큼 싸지는 않지만, 품질이 더 좋아요."
+      },
+      {
+        "en": "It's not as close as the other gym, but the equipment is newer.",
+        "ko": "다른 헬스만큼 가깝지는 않지만, 기구가 더 새거예요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_CF01",
+    "category": "comparison",
+    "subcategory": "cmp_choice_pref",
+    "pattern_en": "I prefer ~ because ~",
+    "meaning": "~를 더 선호해요. 왜냐하면 ~거든요.",
+    "examples": [
+      {
+        "en": "I prefer taking the subway because it's predictable.",
+        "ko": "지하철을 더 선호해요. 왜냐하면 시간이 잘 맞거든요."
+      },
+      {
+        "en": "I prefer working in the morning because I'm more focused.",
+        "ko": "아침에 일하는 걸 더 선호해요. 왜냐하면 집중이 더 잘 되거든요."
+      },
+      {
+        "en": "I prefer small groups because I can talk more.",
+        "ko": "소규모 모임을 더 선호해요. 왜냐하면 더 많이 이야기할 수 있거든요."
+      },
+      {
+        "en": "I prefer this brand because the design is simpler.",
+        "ko": "이 브랜드를 더 선호해요. 왜냐하면 디자인이 더 심플하거든요."
+      },
+      {
+        "en": "I prefer texting first because I'm shy on the phone.",
+        "ko": "먼저 문자하는 걸 더 선호해요. 왜냐하면 전화는 부끄럽거든요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_CF02",
+    "category": "comparison",
+    "subcategory": "cmp_choice_pref",
+    "pattern_en": "I'd rather ~ than ~",
+    "meaning": "~하기보다는 ~하는 편이에요.",
+    "examples": [
+      {
+        "en": "I'd rather walk than sit in traffic.",
+        "ko": "막히는 차 안에 앉아 있기보다는 걷는 편이에요."
+      },
+      {
+        "en": "I'd rather cook at home than wait in line.",
+        "ko": "줄 서서 기다리기보다는 집에서 요리하는 편이에요."
+      },
+      {
+        "en": "I'd rather save money than buy the latest model.",
+        "ko": "최신 모델을 사기보다는 돈을 모으는 편이에요."
+      },
+      {
+        "en": "I'd rather read a book than binge-watch shows.",
+        "ko": "드라마를 정주행하기보다는 책을 읽는 편이에요."
+      },
+      {
+        "en": "I'd rather take a direct flight than save a little money.",
+        "ko": "조금 아끼기보다는 직항을 타는 편이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_CF03",
+    "category": "comparison",
+    "subcategory": "cmp_choice_pref",
+    "pattern_en": "If I had to choose, I'd pick ~",
+    "meaning": "고르라면 ~를 고를래요.",
+    "examples": [
+      {
+        "en": "If I had to choose, I'd pick the cheaper option.",
+        "ko": "고르라면 더 싼 쪽을 고를래요."
+      },
+      {
+        "en": "If I had to choose, I'd pick quality over speed.",
+        "ko": "고르라면 속도보다는 품질을 고를래요."
+      },
+      {
+        "en": "If I had to choose, I'd pick the window seat.",
+        "ko": "고르라면 창가 자리를 고를래요."
+      },
+      {
+        "en": "If I had to choose, I'd pick living closer to work.",
+        "ko": "고르라면 직장에 더 가깝게 살 거를 고를래요."
+      },
+      {
+        "en": "If I had to choose, I'd pick a smaller apartment in a good area.",
+        "ko": "고르라면 좋은 동네의 작은 집을 고를래요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_CF04",
+    "category": "comparison",
+    "subcategory": "cmp_choice_pref",
+    "pattern_en": "I'm more into ~ than ~",
+    "meaning": "~보다 ~에 더 빠져 있어요.",
+    "examples": [
+      {
+        "en": "I'm more into podcasts than radio these days.",
+        "ko": "요즘은 라디오보다 팟캐스트에 더 빠져 있어요."
+      },
+      {
+        "en": "I'm more into hiking than going to the gym.",
+        "ko": "헬스장보다 하이킹에 더 빠져 있어요."
+      },
+      {
+        "en": "I'm more into Korean dramas than movies lately.",
+        "ko": "요즘은 영화보다 한국 드라마에 더 빠져 있어요."
+      },
+      {
+        "en": "I'm more into tea than coffee in the evening.",
+        "ko": "저녁에는 커피보다 차에 더 빠져 있어요."
+      },
+      {
+        "en": "I'm more into board games than video games.",
+        "ko": "비디오 게임보다 보드게임에 더 빠져 있어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_EX01",
+    "category": "comparison",
+    "subcategory": "cmp_experience",
+    "pattern_en": "It was completely different from ~",
+    "meaning": "~와는 완전히 달랐어요.",
+    "examples": [
+      {
+        "en": "It was completely different from what I imagined.",
+        "ko": "제가 상상했던 것과는 완전히 달랐어요."
+      },
+      {
+        "en": "It was completely different from my first job.",
+        "ko": "첫 직장과는 완전히 달랐어요."
+      },
+      {
+        "en": "It was completely different from the tutorial videos.",
+        "ko": "튜토리얼 영상과는 완전히 달랐어요."
+      },
+      {
+        "en": "It was completely different from traveling alone.",
+        "ko": "혼자 여행할 때와는 완전히 달랐어요."
+      },
+      {
+        "en": "It was completely different from high school life.",
+        "ko": "고등학교 때와는 완전히 달랐어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_EX02",
+    "category": "comparison",
+    "subcategory": "cmp_experience",
+    "pattern_en": "Compared to my previous experience, ~",
+    "meaning": "이전 경험에 비하면 ~예요.",
+    "examples": [
+      {
+        "en": "Compared to my previous experience, this interview was shorter.",
+        "ko": "이전 경험에 비하면 이번 면접은 더 짧았어요."
+      },
+      {
+        "en": "Compared to my previous experience, the service was faster.",
+        "ko": "이전 경험에 비하면 서비스가 더 빨랐어요."
+      },
+      {
+        "en": "Compared to my previous experience, I felt less nervous.",
+        "ko": "이전 경험에 비하면 덜 긴장됐어요."
+      },
+      {
+        "en": "Compared to my previous experience, the course was harder.",
+        "ko": "이전 경험에 비하면 수업이 더 어려웠어요."
+      },
+      {
+        "en": "Compared to my previous experience, everything was better organized.",
+        "ko": "이전 경험에 비하면 모든 게 더 잘 정리돼 있었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_EX03",
+    "category": "comparison",
+    "subcategory": "cmp_experience",
+    "pattern_en": "The second time was ~ than the first.",
+    "meaning": "두 번째는 처음보다 ~했어요.",
+    "examples": [
+      {
+        "en": "The second time was easier than the first.",
+        "ko": "두 번째는 처음보다 쉬웠어요."
+      },
+      {
+        "en": "The second time was more fun than the first.",
+        "ko": "두 번째는 처음보다 더 재미있었어요."
+      },
+      {
+        "en": "The second time was less stressful than the first.",
+        "ko": "두 번째는 처음보다 덜 스트레스였어요."
+      },
+      {
+        "en": "The second time was quicker than the first.",
+        "ko": "두 번째는 처음보다 더 빨랐어요."
+      },
+      {
+        "en": "The second time felt more natural than the first.",
+        "ko": "두 번째는 처음보다 더 자연스러웠어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_EX04",
+    "category": "comparison",
+    "subcategory": "cmp_experience",
+    "pattern_en": "Nothing like ~ had ever happened to me before.",
+    "meaning": "전에 ~ 같은 일은 없었어요.",
+    "examples": [
+      {
+        "en": "Nothing like winning that prize had ever happened to me before.",
+        "ko": "전에 그 상을 탄 적 같은 일은 없었어요."
+      },
+      {
+        "en": "Nothing like that blackout had ever happened to me before.",
+        "ko": "전에 그런 정전 같은 일은 없었어요."
+      },
+      {
+        "en": "Nothing like speaking in front of five hundred people had ever happened to me before.",
+        "ko": "전에 500명 앞에서 말한 적 같은 일은 없었어요."
+      },
+      {
+        "en": "Nothing like missing the last train had ever happened to me before.",
+        "ko": "전에 막차를 놓친 적 같은 일은 없었어요."
+      },
+      {
+        "en": "Nothing like that surprise party had ever happened to me before.",
+        "ko": "전에 그런 깜짝 파티 같은 일은 없었어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_AT01",
+    "category": "comparison",
+    "subcategory": "cmp_atmosphere",
+    "pattern_en": "The atmosphere feels more relaxed than ~",
+    "meaning": "분위기가 ~보다 더 편안하게 느껴져요.",
+    "examples": [
+      {
+        "en": "The atmosphere feels more relaxed than at my old office.",
+        "ko": "분위기가 예전 사무실보다 더 편안하게 느껴져요."
+      },
+      {
+        "en": "The atmosphere feels more relaxed than I expected for a big city.",
+        "ko": "큰 도시치고는 생각보다 분위기가 더 편안하게 느껴져요."
+      },
+      {
+        "en": "The atmosphere feels more relaxed than during exam week.",
+        "ko": "시험 기간보다 분위기가 더 편안하게 느껴져요."
+      },
+      {
+        "en": "The atmosphere feels more relaxed than at the main branch.",
+        "ko": "본점보다 분위기가 더 편안하게 느껴져요."
+      },
+      {
+        "en": "The atmosphere feels more relaxed than on Friday nights downtown.",
+        "ko": "금요일 밤 시내 중심가보다 분위기가 더 편안하게 느껴져요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_AT02",
+    "category": "comparison",
+    "subcategory": "cmp_atmosphere",
+    "pattern_en": "It has a similar vibe to ~",
+    "meaning": "~와 비슷한 느낌이에요.",
+    "examples": [
+      {
+        "en": "It has a similar vibe to a European café.",
+        "ko": "유럽 카페와 비슷한 느낌이에요."
+      },
+      {
+        "en": "It has a similar vibe to the library I used to study in.",
+        "ko": "예전에 공부하던 도서관과 비슷한 느낌이에요."
+      },
+      {
+        "en": "It has a similar vibe to a small jazz club.",
+        "ko": "작은 재즈 클럽과 비슷한 느낌이에요."
+      },
+      {
+        "en": "It has a similar vibe to my favorite podcast.",
+        "ko": "제가 좋아하는 팟캐스트와 비슷한 느낌이에요."
+      },
+      {
+        "en": "It has a similar vibe to camping by the lake.",
+        "ko": "호숫가 캠핑과 비슷한 느낌이에요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_AT03",
+    "category": "comparison",
+    "subcategory": "cmp_atmosphere",
+    "pattern_en": "It's livelier than ~, but not as noisy as ~",
+    "meaning": "~보다는 활기차지만, ~만큼 시끄럽지는 않아요.",
+    "examples": [
+      {
+        "en": "It's livelier than a bookstore, but not as noisy as a club.",
+        "ko": "서점보다는 활기차지만, 클럽만큼 시끄럽지는 않아요."
+      },
+      {
+        "en": "It's livelier than our campus café, but not as noisy as the food court.",
+        "ko": "캠퍼스 카페보다는 활기차지만, 푸드코트만큼 시끄럽지는 않아요."
+      },
+      {
+        "en": "It's livelier than the suburbs, but not as noisy as downtown.",
+        "ko": "교외보다는 활기차지만, 시내 중심가만큼 시끄럽지는 않아요."
+      },
+      {
+        "en": "It's livelier than a museum, but not as noisy as a festival.",
+        "ko": "박물관보다는 활기차지만, 축제만큼 시끄럽지는 않아요."
+      },
+      {
+        "en": "It's livelier than my hometown, but not as noisy as Seoul.",
+        "ko": "고향보다는 활기차지만, 서울만큼 시끄럽지는 않아요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_AT04",
+    "category": "comparison",
+    "subcategory": "cmp_atmosphere",
+    "pattern_en": "The mood was ~ compared to ~",
+    "meaning": "~에 비해 분위기가 ~했어요.",
+    "examples": [
+      {
+        "en": "The mood was calmer compared to last year's event.",
+        "ko": "작년 행사에 비해 분위기가 더 차분했어요."
+      },
+      {
+        "en": "The mood was more formal compared to the rehearsal.",
+        "ko": "리허설에 비해 분위기가 더 격식 있었어요."
+      },
+      {
+        "en": "The mood was lighter compared to the morning meeting.",
+        "ko": "아침 회의에 비해 분위기가 더 가벼웠어요."
+      },
+      {
+        "en": "The mood was tenser compared to practice.",
+        "ko": "연습 때에 비해 분위기가 더 팽팽했어요."
+      },
+      {
+        "en": "The mood was friendlier compared to the other team.",
+        "ko": "다른 팀에 비해 분위기가 더 친근했어요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_LS01",
+    "category": "comparison",
+    "subcategory": "cmp_lifestyle",
+    "pattern_en": "My routine is quite different from ~",
+    "meaning": "제 루틴은 ~와 꽤 달라요.",
+    "examples": [
+      {
+        "en": "My routine is quite different from my roommate's.",
+        "ko": "제 루틴은 룸메이트와 꽤 달라요."
+      },
+      {
+        "en": "My routine is quite different from when I was a student.",
+        "ko": "학생 때와는 제 루틴이 꽤 달라요."
+      },
+      {
+        "en": "My routine is quite different from my parents'.",
+        "ko": "부모님과는 제 루틴이 꽤 달라요."
+      },
+      {
+        "en": "My routine is quite different from my colleagues'.",
+        "ko": "동료들과는 제 루틴이 꽤 달라요."
+      },
+      {
+        "en": "My routine is quite different from what it was abroad.",
+        "ko": "해외에 있을 때와는 제 루틴이 꽤 달라요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_LS02",
+    "category": "comparison",
+    "subcategory": "cmp_lifestyle",
+    "pattern_en": "My habits around ~ are different from my parents' generation.",
+    "meaning": "부모님 세대와는 ~에 대한 제 습관이 달라요.",
+    "examples": [
+      {
+        "en": "My habits around saving money are different from my parents' generation.",
+        "ko": "부모님 세대와는 돈 모으는 방식에 대한 제 습관이 달라요."
+      },
+      {
+        "en": "My habits around socializing are different from my parents' generation.",
+        "ko": "부모님 세대와는 사람 만나는 방식에 대한 제 습관이 달라요."
+      },
+      {
+        "en": "My habits around news are different from my parents' generation.",
+        "ko": "부모님 세대와는 뉴스를 보는 방식에 대한 제 습관이 달라요."
+      },
+      {
+        "en": "My habits around shopping are different from my parents' generation.",
+        "ko": "부모님 세대와는 쇼핑에 대한 제 습관이 달라요."
+      },
+      {
+        "en": "My habits around holidays are different from my parents' generation.",
+        "ko": "부모님 세대와는 명절 지내는 방식에 대한 제 습관이 달라요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_LS03",
+    "category": "comparison",
+    "subcategory": "cmp_lifestyle",
+    "pattern_en": "In my country, ~, whereas here ~",
+    "meaning": "제 나라에서는 ~인데, 여기서는 ~예요.",
+    "examples": [
+      {
+        "en": "In my country, dinner is early, whereas here people eat late.",
+        "ko": "제 나라에서는 저녁이 이른데, 여기서는 늦게 먹어요."
+      },
+      {
+        "en": "In my country, tipping is rare, whereas here it's expected.",
+        "ko": "제 나라에서는 팁이 드문데, 여기서는 당연시돼요."
+      },
+      {
+        "en": "In my country, people queue strictly, whereas here it's looser.",
+        "ko": "제 나라에서는 줄을 엄격히 서는데, 여기서는 느슨해요."
+      },
+      {
+        "en": "In my country, apartments are smaller, whereas here rooms are bigger.",
+        "ko": "제 나라에서는 아파트가 더 작은데, 여기서는 방이 더 커요."
+      },
+      {
+        "en": "In my country, we walk more, whereas here everyone drives.",
+        "ko": "제 나라에서는 걷는 게 많은데, 여기서는 다들 운전해요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
+  },
+  {
+    "pattern_id": "CMP_LS04",
+    "category": "comparison",
+    "subcategory": "cmp_lifestyle",
+    "pattern_en": "Living alone is ~ compared to living with family.",
+    "meaning": "혼자 사는 건 가족과 살 때에 비해 ~해요.",
+    "examples": [
+      {
+        "en": "Living alone is quieter compared to living with family.",
+        "ko": "혼자 사는 건 가족과 살 때에 비해 조용해요."
+      },
+      {
+        "en": "Living alone is more flexible compared to living with family.",
+        "ko": "혼자 사는 건 가족과 살 때에 비해 더 자유로워요."
+      },
+      {
+        "en": "Living alone is lonelier sometimes compared to living with family.",
+        "ko": "혼자 사는 건 가끔 가족과 살 때에 비해 더 외로워요."
+      },
+      {
+        "en": "Living alone is cheaper in some ways compared to living with family.",
+        "ko": "혼자 사는 건 어떤 면에서는 가족과 살 때에 비해 더 저렴해요."
+      },
+      {
+        "en": "Living alone teaches you more chores compared to living with family.",
+        "ko": "혼자 사는 건 가족과 살 때에 비해 집안일을 더 많이 배워요."
+      }
+    ],
+    "difficulty": 3,
+    "tags": [
+      "IH",
+      "comparison",
+      "IM"
+    ],
+    "pattern_role": "comparison"
   }
 ]

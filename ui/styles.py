@@ -37,6 +37,11 @@ GLOBAL_CSS = """
       background: var(--bg-page) !important;
     }
 
+    /* Single-app routing: no reserved Streamlit sidebar (bottom nav is primary). */
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="stSidebarNav"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
+
     section.main > div {
       padding-top: 1.25rem !important;
       padding-bottom: 6.5rem !important;
