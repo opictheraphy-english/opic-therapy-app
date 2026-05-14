@@ -80,8 +80,11 @@ def _normalize_master_record(rec: Dict[str, Any]) -> Dict[str, Any]:
     return r
 
 
-def load_master_patterns_flat() -> List[Dict[str, Any]]:
-    """Production DB: pattern master rows (고유 pattern_en, examples[])."""
+_MASTER_CACHE: Optional[List[Dict[str, Any]]] = None
+_FLAT_CACHE: Optional[List[Dict[str, Any]]] = None
+
+
+def _load_master_patterns_flat_uncached() -> List[Dict[str, Any]]:
     if not _MASTER_JSON.is_file():
         logger.error("Missing master pattern DB: %s", _MASTER_JSON)
         return []
@@ -105,15 +108,19 @@ def load_master_patterns_flat() -> List[Dict[str, Any]]:
     return out
 
 
+def load_master_patterns_flat() -> List[Dict[str, Any]]:
+    """Production DB: pattern master rows (process-cached, JSON read once)."""
+    global _MASTER_CACHE
+    if _MASTER_CACHE is None:
+        _MASTER_CACHE = _load_master_patterns_flat_uncached()
+    return _MASTER_CACHE
+
+
 def _audio_filename(global_index: int) -> str:
     return f"pattern_{global_index:04d}.mp3"
 
 
-def flat_patterns_with_audio() -> List[Dict[str, Any]]:
-    """
-    UI/매핑용 flat 리스트. 각 항목 = 고유 패턴 1개 + examples[] 전체.
-    기본 재생: 첫 예문 + 해당 audio_file (병합 시 레거시 파일명 유지).
-    """
+def _flat_patterns_with_audio_uncached() -> List[Dict[str, Any]]:
     raw = load_master_patterns_flat()
     out: List[Dict[str, Any]] = []
     for i, rec in enumerate(raw, start=1):
@@ -152,45 +159,19 @@ def flat_patterns_with_audio() -> List[Dict[str, Any]]:
     return out
 
 
-def load_grouped_patterns_for_ui() -> List[Dict[str, Any]]:
+def flat_patterns_with_audio() -> List[Dict[str, Any]]:
     """
-    Expander-ready blocks: {category: display title, sentences: [...]}.
-    Audio filenames follow global order in master file (pattern_0001.mp3 …).
+    UI/매핑용 flat 리스트 (process-cached). 각 항목 = 고유 패턴 1개 + examples[].
+    JSON 파싱 + 정규화는 첫 호출에서만 수행하고 이후 같은 리스트를 재사용합니다.
     """
-    flat = flat_patterns_with_audio()
-    seen_order: List[tuple] = []
-    groups: Dict[tuple, Dict[str, Any]] = {}
-
-    for row in flat:
-        cat = row.get("category") or "describe"
-        sub = (row.get("subcategory") or "general").strip().lower().replace(" ", "_")
-        key = (cat, sub)
-        if key not in groups:
-            sub_disp = sub.replace("_", " ").title()
-            groups[key] = {
-                "category": f"{cat.title()} · {sub_disp}",
-                "sentences": [],
-            }
-            seen_order.append(key)
-
-        pid = str(row.get("pattern_id") or "")
-        groups[key]["sentences"].append(
-            {
-                "en": row.get("example_en") or "",
-                "ko": row.get("example_ko") or "",
-                "pattern_id": pid,
-                "pattern_en": row.get("pattern_en"),
-                "meaning": row.get("meaning"),
-                "examples": row.get("examples"),
-                "difficulty": row.get("difficulty"),
-                "tags": row.get("tags"),
-                "audio_file": row.get("audio_file") or "",
-            }
-        )
-
-    return [groups[k] for k in seen_order]
+    global _FLAT_CACHE
+    if _FLAT_CACHE is None:
+        _FLAT_CACHE = _flat_patterns_with_audio_uncached()
+    return _FLAT_CACHE
 
 
-def load_description_patterns() -> List[Dict[str, Any]]:
-    """Backward-compatible name: UI expects grouped description-style drills."""
-    return load_grouped_patterns_for_ui()
+def invalidate_pattern_cache() -> None:
+    """Test/CLI helper — drop in-process pattern caches."""
+    global _MASTER_CACHE, _FLAT_CACHE
+    _MASTER_CACHE = None
+    _FLAT_CACHE = None

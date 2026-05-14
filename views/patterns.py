@@ -9,7 +9,7 @@ import streamlit as st
 
 from components.pattern_card_compact import render_compact_pattern_card
 from config.pattern_ui_mapping import build_pattern_tabs_model
-from utils.local_profile import sync_user_progress, touch_pattern_visit
+from utils.local_profile import touch_pattern_visit
 from utils.session_state import ensure_pattern, sync_settings_to_legacy
 
 
@@ -75,7 +75,7 @@ def render_patterns() -> None:
         '<div class="pat-wrap">'
         '<p class="pat-head">패턴</p>'
         "<p class='pat-sub'>카테고리 → 섹션 → 카드. 예문은 처음 2개만 보이고, 「예문 더보기」로 추가 예문을 펼칩니다. "
-        "「접기」로 다시 접습니다. 루틴·경험·비교는 주제별 아코디언입니다. (오디오 비활성)</p>"
+        "「접기」로 다시 접습니다. 루틴·경험·비교는 주제별 아코디언입니다.</p>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -102,5 +102,3 @@ def render_patterns() -> None:
                 patterns: List[Dict[str, Any]] = sec.get("patterns") or []
                 sec_uid = _safe_key(f"{tid}_{sec.get('section_id') or si}")
                 _render_section(tid, sec_uid, title, patterns)
-
-    sync_user_progress(st.session_state)

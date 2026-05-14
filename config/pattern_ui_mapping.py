@@ -82,6 +82,8 @@ _DESCRIBE_SECTION_META: Sequence[Tuple[str, str]] = (
 
 _OTHER_GENERIC_SECTION = "패턴 모음"
 
+_TABS_CACHE: List[Dict[str, Any]] | None = None
+
 
 def _patterns_for_category(
     rows: List[Dict[str, Any]], category_id: str
@@ -126,6 +128,11 @@ def _bucket_generic_category(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 
 
 def build_pattern_tabs_model() -> List[Dict[str, Any]]:
+    """Process-cached: pattern data is static per deploy."""
+    global _TABS_CACHE
+    if _TABS_CACHE is not None:
+        return _TABS_CACHE
+
     rows = flat_patterns_with_audio()
 
     tabs_out: List[Dict[str, Any]] = []
@@ -178,4 +185,5 @@ def build_pattern_tabs_model() -> List[Dict[str, Any]]:
             }
         )
 
+    _TABS_CACHE = tabs_out
     return tabs_out

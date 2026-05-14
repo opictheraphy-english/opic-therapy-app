@@ -7,7 +7,6 @@ import html
 import streamlit as st
 
 from utils.local_profile import human_time_ago, load_user_progress
-from utils.recent_patterns import recent_lines_for_home
 from utils.session_state import ensure_mock, ensure_settings, sync_settings_to_legacy
 
 
@@ -68,14 +67,6 @@ def render_home() -> None:
         """,
         unsafe_allow_html=True,
     )
-
-    recent_lines = recent_lines_for_home()
-    if recent_lines:
-        st.markdown('<div class="ds-section-title">최근 들은 패턴</div>', unsafe_allow_html=True)
-        inner = ""
-        for ln in recent_lines[:10]:
-            inner += f'<div class="recent-row" style="font-size:0.9rem;">🔊 {html.escape(ln)}</div>'
-        st.markdown(f'<div class="recent-list">{inner}</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="ds-section-title">핵심 기능</div>', unsafe_allow_html=True)
     st.markdown(

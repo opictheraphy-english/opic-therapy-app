@@ -43,8 +43,72 @@ GLOBAL_CSS = """
     [data-testid="collapsedControl"] { display: none !important; }
 
     section.main > div {
-      padding-top: 1.25rem !important;
+      padding-top: 0.6rem !important;
       padding-bottom: 6.5rem !important;
+    }
+
+    /* --- Mobile top bar (back · title · home) -------------------------- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      margin: 0 0 12px 0;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: saturate(160%) blur(14px);
+      -webkit-backdrop-filter: saturate(160%) blur(14px);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+    }
+    .topbar .tb-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      color: #0f172a;
+      text-decoration: none !important;
+      background: transparent;
+      border: 1px solid transparent;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .topbar .tb-btn:hover {
+      background: rgba(15, 23, 42, 0.05);
+      border-color: rgba(15, 23, 42, 0.08);
+      color: #0d9488;
+    }
+    .topbar .tb-btn:active { transform: scale(0.96); }
+    .topbar .tb-spacer { visibility: hidden; }
+    .topbar .tb-titleblock {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 4px;
+    }
+    .topbar .tb-eyebrow {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      line-height: 1.2;
+    }
+    .topbar .tb-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 60vw;
     }
 
     /* Typography system */

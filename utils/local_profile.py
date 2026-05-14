@@ -111,10 +111,39 @@ def _serialize_mock(mx: Dict[str, Any]) -> Dict[str, Any]:
     return snap
 
 
+def _progress_signature(ss: MutableMapping[str, Any]) -> str:
+    """Cheap fingerprint over the slices that actually drive user_progress.json."""
+    mx = ss.get("mock") if isinstance(ss.get("mock"), dict) else {}
+    pd = ss.get("pattern") if isinstance(ss.get("pattern"), dict) else {}
+    return "|".join(
+        str(part)
+        for part in (
+            ss.get("guest_id") or "",
+            ss.get("user_mode") or "",
+            mx.get("mock_page") or "",
+            mx.get("current_idx") or 0,
+            len(mx.get("results") or []),
+            bool(mx.get("exam_finished")),
+            bool(mx.get("analytics_cache")),
+            (pd or {}).get("_pattern_last_visit_at") or "",
+        )
+    )
+
+
 def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
-    """Write user_progress.json from session + guest metadata."""
+    """Write user_progress.json only when meaningful state has changed.
+
+    Streamlit reruns the script on every interaction. Rewriting the same JSON
+    each rerun is the most expensive piece of the home/pattern hot path on
+    Render Starter, so we short-circuit on an unchanged signature.
+    """
     if not ss.get("entry_gate_completed"):
         return
+
+    sig = _progress_signature(ss)
+    if ss.get("_progress_sig") == sig:
+        return
+
     ensure_local_dir()
     mx = ss.get("mock") or {}
     if not isinstance(mx, dict):
@@ -153,7 +182,11 @@ def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
         }
 
     try:
-        USER_PROGRESS_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        USER_PROGRESS_FILE.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
+        ss["_progress_sig"] = sig
     except Exception as e:
         logger.warning("user_progress write failed: %s", e)
 

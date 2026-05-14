@@ -20,8 +20,6 @@ def render_lectures() -> None:
         unsafe_allow_html=True,
     )
 
-    playlist_a = "https://www.youtube.com/playlist?list=PLiltzGCdKy3a_285OwiM1g6ZWH-rVMIU8"
-    playlist_b = "https://www.youtube.com/playlist?list=PLiltzGCdKy3ZwXzkUcXxkTj4cSA82su6-"
     playlist_a_id = "PLiltzGCdKy3a_285OwiM1g6ZWH-rVMIU8"
     playlist_b_id = "PLiltzGCdKy3ZwXzkUcXxkTj4cSA82su6-"
 
@@ -75,10 +73,10 @@ def render_lectures() -> None:
     ]
 
     with tab_expr:
-        _render_playlist_tab("오픽 표현 강의", playlist_a, playlist_a_id, expr_titles)
+        _render_playlist_tab("오픽 표현 강의", playlist_a_id, expr_titles)
 
     with tab_im:
-        _render_playlist_tab("오픽 IM2–IH 강의", playlist_b, playlist_b_id, im_titles)
+        _render_playlist_tab("오픽 IM2–IH 강의", playlist_b_id, im_titles)
 
     def _render_coming_soon() -> None:
         st.markdown(
@@ -89,18 +87,15 @@ def render_lectures() -> None:
 
     with tab_c:
         _render_coming_soon()
-        st.link_button("YouTube에서 열기", playlist_a, use_container_width=True)
     with tab_d:
         _render_coming_soon()
-        st.link_button("YouTube에서 열기", playlist_b, use_container_width=True)
     with tab_e:
         _render_coming_soon()
-        st.link_button("YouTube에서 열기", playlist_b, use_container_width=True)
 
 
-def _render_playlist_tab(title: str, playlist_url: str, playlist_id: str, lecture_titles: list) -> None:
-    st.link_button("플레이리스트 전체 재생", playlist_url, use_container_width=True)
-
+def _render_playlist_tab(title: str, playlist_id: str, lecture_titles: list) -> None:
+    # External "open in YouTube" links are intentionally omitted — every
+    # interaction stays inside the embedded iframe so no new browser tab opens.
     left, right = st.columns([1, 1.15], vertical_alignment="top")
 
     with left:
@@ -144,5 +139,3 @@ def _render_playlist_tab(title: str, playlist_url: str, playlist_id: str, lectur
             '<p class="lecture-aside">플레이어 메뉴에서 목록을 열면 세부 영상을 선택할 수 있습니다.</p>',
             unsafe_allow_html=True,
         )
-
-    st.link_button("YouTube에서 목록 보기", playlist_url, use_container_width=True)
