@@ -67,8 +67,9 @@ nav_param = _q_one("nav")
 mock_param = _q_one("mock")
 
 # --- Tab switch handler -------------------------------------------------------
-# Any change in the requested tab updates session_state.page and re-renders.
-# We deliberately keep the rerun light: heavy view modules are imported below.
+# Any change in the requested tab updates session_state.page in-place and lets
+# the *current* rerun continue downstream — no explicit ``st.rerun()`` here,
+# which saves one full script execution per tab tap (smoother feel on mobile).
 if nav_param in _ALLOWED_PAGES and nav_param != st.session_state.page:
     st.session_state.page = nav_param
     if nav_param != "MOCK":
@@ -76,10 +77,11 @@ if nav_param in _ALLOWED_PAGES and nav_param != st.session_state.page:
         mx = ensure_mock(st.session_state)
         mx["analysis_status"] = ""
         mx["audio_bytes"] = None
-    st.rerun()
 
 # --- Mock sub-screen handler --------------------------------------------------
 # Back / forward links from the mock top bar use ?nav=MOCK&mock=SURVEY etc.
+# Same rationale as above: mutate state in-place and let the current rerun
+# carry the new sub-screen through to the view.
 if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
     mx = ensure_mock(st.session_state)
     if mx.get("mock_page") != mock_param:
@@ -90,7 +92,6 @@ if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
             mx["exam_finished"] = True
         elif mock_param in {"SURVEY", "TEST"}:
             mx["exam_finished"] = False
-        st.rerun()
 
 page = st.session_state.page
 

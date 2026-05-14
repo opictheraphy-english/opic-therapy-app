@@ -33,6 +33,14 @@ GLOBAL_CSS = """
 
     html, body, [class*="css"], .stMarkdown { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
 
+    /* Lock html/body background to the page gradient so anchor navigations
+     * (?nav=...) don't flash white between the old page unload and the new
+     * Streamlit shell paint. */
+    html, body {
+      background: #f4f4f5 !important;
+      background-color: #f4f4f5 !important;
+    }
+
     .stApp {
       background: var(--bg-page) !important;
     }
@@ -42,9 +50,39 @@ GLOBAL_CSS = """
     [data-testid="stSidebarNav"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
 
+    /* Quiet Streamlit's "Running…" status widget. Reruns happen often on tab
+     * switches; the bouncing dot in the corner makes everything feel like a
+     * page reload. We softly hide it without removing the toolbar entirely. */
+    [data-testid="stStatusWidget"],
+    [data-testid="stToolbarActions"] [data-testid="stStatusWidget"] {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transition: opacity 0.2s ease;
+    }
+
+    /* Decoration block that sometimes pulses on rerun — keep it from drawing
+     * attention to the rerender. */
+    [data-testid="stDecoration"] {
+      opacity: 0 !important;
+    }
+
     section.main > div {
       padding-top: 0.6rem !important;
       padding-bottom: 6.5rem !important;
+    }
+
+    /* Subtle fade-in on each rerun so the rerender feels like a transition
+     * instead of a hard repaint. Kept short (140ms) and opacity-only so it
+     * never delays interactivity. */
+    section.main > div > div.block-container {
+      animation: pageSettle 0.14s var(--ease-out);
+    }
+    @keyframes pageSettle {
+      from { opacity: 0.85; }
+      to { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      section.main > div > div.block-container { animation: none !important; }
     }
 
     /* --- Mobile top bar (back · title · home) -------------------------- */
@@ -204,7 +242,8 @@ GLOBAL_CSS = """
         linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
       border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow-card);
-      animation: dsFadeIn 0.45s var(--ease-out);
+      /* Single global page settle animation handles fade-in; hero no longer
+       * animates per-rerun so HOME doesn't visibly re-appear each time. */
     }
 
     .home-metrics {
@@ -248,6 +287,153 @@ GLOBAL_CSS = """
     }
     .feature-tile .ft-title { font-weight: 700; font-size: 1rem; color: var(--navy); margin-bottom: 8px; }
     .feature-tile .ft-body { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; }
+
+    /* ------------------------------------------------------------------
+     * Home "이어하기" (resume mock exam) card
+     * ------------------------------------------------------------------ */
+    .resume-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(13, 148, 136, 0.10) 0%, rgba(255, 255, 255, 0.6) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      box-shadow: 0 6px 22px rgba(13, 148, 136, 0.08);
+      margin: 0 0 var(--space-3) 0;
+    }
+    .resume-card .rc-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+    }
+    .resume-card .rc-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+    }
+    .resume-card .rc-meta {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .resume-card .rc-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .resume-card .rc-action {
+      flex: 1;
+      display: inline-block;
+      text-align: center;
+      padding: 12px 14px;
+      border-radius: 12px;
+      text-decoration: none !important;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .resume-card .rc-action.rc-primary {
+      background: var(--mint);
+      color: #ffffff !important;
+      box-shadow: 0 2px 10px rgba(13, 148, 136, 0.25);
+    }
+    .resume-card .rc-action.rc-primary:hover {
+      background: #0b8076;
+      box-shadow: 0 6px 18px rgba(13, 148, 136, 0.32);
+    }
+    .resume-card .rc-action.rc-secondary {
+      background: rgba(15, 23, 42, 0.04);
+      color: var(--navy) !important;
+      border: 1px solid var(--border-subtle);
+    }
+    .resume-card .rc-action.rc-secondary:hover {
+      background: rgba(15, 23, 42, 0.07);
+    }
+    .resume-card .rc-action:active { transform: scale(0.98); }
+
+    /* ------------------------------------------------------------------
+     * Smart feedback cards — grammar fix + alternative expressions
+     * ------------------------------------------------------------------ */
+    .grammar-fix {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 6px 0;
+    }
+    .grammar-fix .gf-line {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+    .grammar-fix .gf-mark {
+      flex: 0 0 auto;
+      font-size: 0.95rem;
+    }
+    .grammar-fix .gf-text {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .grammar-fix .gf-bad-line .gf-text {
+      color: #b91c1c;
+      text-decoration: line-through;
+      text-decoration-color: rgba(185, 28, 28, 0.4);
+    }
+    .grammar-fix .gf-good {
+      color: var(--mint);
+    }
+    .grammar-fix .gf-good-line .gf-text.gf-good {
+      color: var(--mint);
+      font-weight: 700;
+    }
+    .grammar-fix .gf-note {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .alt-card {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 6px 0;
+    }
+    .alt-card .alt-header {
+      font-size: 0.95rem;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+    .alt-card .alt-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 6px 0 4px 0;
+    }
+    .alt-card .alt-chip {
+      display: inline-block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      color: var(--mint);
+      background: var(--mint-muted);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(13, 148, 136, 0.18);
+    }
+    .alt-card .alt-note {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
 
     .recent-list {
       border-radius: var(--radius-md);
@@ -343,7 +529,9 @@ GLOBAL_CSS = """
       box-shadow:
         0 4px 24px rgba(15, 23, 42, 0.08),
         0 1px 0 rgba(255, 255, 255, 0.9) inset;
-      animation: dockFadeUp 0.42s var(--ease-out);
+      /* No fade-up animation on rerun — the dock should *feel* persistent.
+       * Re-animating it on every nav switch is the strongest "page reloaded"
+       * signal the user sees. */
     }
     .bottom-nav-inner a.nav-item {
       flex: 1;

@@ -10,6 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from components.smart_feedback import render_smart_feedback_block
 from services.exam_analytics import compute_exam_aggregates, detect_risk_flags, summary_rows_for_table
 from utils.text_utils import DISCOURSE_MARKERS
 
@@ -264,6 +265,13 @@ def render_final_report(mx: Dict[str, Any]) -> None:
                 "개선 우선순위: 담화 연결 → 구체적 디테일 → 시제 안정성 · 추천 연결어 예시: "
                 + ", ".join(DISCOURSE_MARKERS[:5])
             )
+
+            # [D-ii] Rule-based grammar fix + alternative-expression cards.
+            # Same component the per-question report card uses, kept here so
+            # the final report stays the single source of truth for review.
+            _tx = (res.get("transcript") or "").strip()
+            if _tx:
+                render_smart_feedback_block(_tx)
 
             st.markdown("##### [E] 세부 점수")
             rs = res.get("rubric_scores") or {}

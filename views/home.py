@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+from typing import Any, Dict, Optional
 
 import streamlit as st
 
@@ -15,6 +16,11 @@ def render_home() -> None:
     mx = ensure_mock(st.session_state)
     sett = ensure_settings(st.session_state)
     prog_disk = load_user_progress()
+
+    # Resume-mode banner — surfaced before the metric tiles so users always
+    # see a one-tap "continue mock" path. Snapshot lives in user_progress.json
+    # and is written every time the script reruns after a state change.
+    _render_resume_card(prog_disk, mx)
 
     agg = mx.get("analytics_cache") or {}
     level_display = agg.get("overall_display") or mx.get("overall_estimated_level") or "—"
@@ -140,3 +146,87 @@ def _feature_link(href: str, title: str, body: str) -> str:
           </div>
         </a>
     """
+
+
+def _detect_in_progress_snapshot(
+    prog_disk: Optional[Dict[str, Any]],
+    mx: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Pick the freshest non-empty mid-exam state between disk + in-memory.
+
+    Falls back to the live ``mx`` dict when the user just generated the exam
+    and the disk write hasn't landed yet. Returns ``None`` when there's
+    nothing to resume (no exam, or exam already finished).
+    """
+    candidate: Dict[str, Any] = {}
+    if isinstance(prog_disk, dict):
+        snap = prog_disk.get("mock_snapshot")
+        if isinstance(snap, dict):
+            candidate = dict(snap)
+
+    if not candidate and isinstance(mx, dict):
+        candidate = {k: mx.get(k) for k in (
+            "current_exam",
+            "current_idx",
+            "results",
+            "exam_finished",
+            "mock_page",
+            "exam_started_at",
+            "exam_last_seen_at",
+        )}
+
+    if not isinstance(candidate.get("current_exam"), list):
+        return None
+    if not candidate["current_exam"]:
+        return None
+    if candidate.get("exam_finished"):
+        return None
+
+    total = len(candidate["current_exam"])
+    idx = int(candidate.get("current_idx") or 0)
+    results_done = len(candidate.get("results") or [])
+    if results_done >= total and not candidate.get("exam_finished"):
+        # All answers in but the celebration hasn't been recorded yet —
+        # treat as finished so we don't show stale resume CTA.
+        return None
+    if idx >= total and results_done >= total:
+        return None
+
+    return candidate
+
+
+def _render_resume_card(
+    prog_disk: Optional[Dict[str, Any]],
+    mx: Dict[str, Any],
+) -> None:
+    snap = _detect_in_progress_snapshot(prog_disk, mx)
+    if snap is None:
+        return
+
+    total = len(snap.get("current_exam") or [])
+    idx = int(snap.get("current_idx") or 0)
+    next_q = min(idx + 1, total)
+    last_seen = snap.get("exam_last_seen_at") or snap.get("exam_started_at")
+    last_label = human_time_ago(last_seen) if last_seen else "방금 전"
+
+    topic = ""
+    try:
+        topic = str((snap.get("current_exam") or [])[idx].get("topic") or "")
+    except Exception:
+        topic = ""
+    topic_safe = html.escape(topic) if topic else ""
+
+    st.markdown(
+        f"""
+        <section class="resume-card" role="region" aria-label="모의고사 이어하기">
+          <div class="rc-eyebrow">이어하기 가능</div>
+          <div class="rc-title">Q{next_q} / {total} · 마지막 학습 {html.escape(last_label)}</div>
+          {'<div class="rc-meta">최근 주제: ' + topic_safe + '</div>' if topic_safe else ''}
+          <div class="rc-actions">
+            <a class="rc-action rc-primary" href="?nav=MOCK&amp;mock=TEST">이어하기</a>
+            <a class="rc-action rc-secondary" href="?nav=MOCK&amp;mock=SURVEY">처음부터 다시</a>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )

@@ -15,6 +15,7 @@ import streamlit as st
 
 from components.audio_player import render_exam_question_audio_player
 from components.navigation import render_bottom_navigation
+from components.smart_feedback import render_smart_feedback_block
 from components.topbar import render_top_bar
 from services.mock_exam.mock_exam_test_set_generator import generate_test_set
 from services.report_service import cache_analysis_payload
@@ -25,6 +26,7 @@ from services.tts_service import (
     neural2_voice_for_session,
     tts_audio_cached,
 )
+from utils.local_profile import iso_now
 from utils.secrets import get_gemini_api_key
 from utils.session_state import mock_session, settings_session, sync_settings_to_legacy
 from utils.text_utils import DISCOURSE_MARKERS, PRECISION_MAP, keywords
@@ -227,6 +229,10 @@ def _render_survey(mx: dict) -> None:
         mx["last_result"] = None
         mx["question_play_counts"] = {}
         mx["exam_listen_nonce"] = secrets.token_hex(8)
+        # Resume-mode timestamps — the home "이어하기" card uses these.
+        _now = iso_now()
+        mx["exam_started_at"] = _now
+        mx["exam_last_seen_at"] = _now
         clear_mock_question_tts_keys()
         mx["mock_page"] = "TEST"
         st.rerun()
@@ -246,6 +252,11 @@ def _render_test(mx: dict) -> None:
         mx["mock_page"] = "SURVEY"
         mx["current_idx"] = 0
         st.rerun()
+
+    # Touch last-seen so the home "이어하기" card knows when the user was here.
+    mx["exam_last_seen_at"] = iso_now()
+    if not mx.get("exam_started_at"):
+        mx["exam_started_at"] = mx["exam_last_seen_at"]
 
     q = _exam_run[mx["current_idx"]]
     q_id = q["id"]
@@ -526,14 +537,18 @@ def _render_report(mx: dict) -> None:
             st.subheader("🚨 시제 적절성 피드백")
             st.write(result.get("tense_appropriateness_feedback") or result.get("breakdown", "없음"))
 
+            # Acting feedback — only surface when there's a real signal (raw
+            # AI text, or the high-WPM heuristic). The generic empty-state
+            # string was removed per the "no boilerplate feedback" rule.
             acting = (result.get("acting_feedback") or "").strip()
             if isinstance(wpm, (int, float)) and wpm >= 200:
                 if word_count < 120:
                     acting = "속도는 매우 빠르지만 암기 발화(Drone) 가능성이 있습니다. 감정선과 호흡, 강조 포인트를 분명히 분배하세요."
                 else:
                     acting = "초고속 발화 구간에서도 연기력과 감정 전달이 유지되는지 냉정하게 점검했습니다."
-            st.subheader("🔥 연기력 피드백")
-            st.write(acting or "연기력 피드백 데이터가 없습니다.")
+            if acting:
+                st.subheader("🔥 연기력 피드백")
+                st.write(acting)
 
             _sr = (result.get("summary_speech_rehab") or "").strip()
             if _sr:
@@ -546,6 +561,13 @@ def _render_report(mx: dict) -> None:
                 st.error(raw_parse_failed)
 
             transcript = (result.get("transcript") or "").strip()
+            # Rule-based, category-specific cards: concrete grammar fixes +
+            # alternative-expression upgrades, computed directly from the
+            # restored transcript. Replaces the old generic "표현 다양성"
+            # boilerplate with actionable ❌/✅ pairs.
+            if transcript:
+                render_smart_feedback_block(transcript)
+
             st.text_area(
                 f"Q{qid} 복원 텍스트",
                 value=transcript or "(비어 있음)",
@@ -677,14 +699,12 @@ def _render_precision_section(mx: dict) -> None:
                     }
                 )
 
+            # When no specific finding triggered, surface only a quiet status
+            # caption — replaces the old "표현 다양성만 소폭 확장" generic
+            # boilerplate that fired on every clean answer.
             if not lines:
-                lines.append(
-                    {
-                        "axis": "종합",
-                        "current": "큰 결함 없이 안정적",
-                        "recommend": "현재 구조를 유지하되, 표현 다양성만 소폭 확장하면 상위 등급 안정화에 유리합니다.",
-                    }
-                )
+                st.caption("이 답변에서는 별도의 정밀 처방 항목이 감지되지 않았습니다.")
+                continue
 
             for row in lines:
                 st.markdown(

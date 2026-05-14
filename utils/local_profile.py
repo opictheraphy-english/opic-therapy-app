@@ -27,6 +27,9 @@ MOCK_SNAPSHOT_KEYS = (
     "survey_results",
     "current_exam",
     "exam",
+    # Resume-mode metadata — populated by views/mock_exam.py.
+    "exam_started_at",
+    "exam_last_seen_at",
 )
 
 
@@ -36,6 +39,11 @@ def ensure_local_dir() -> None:
 
 def _iso_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def iso_now() -> str:
+    """Public ISO-8601 UTC timestamp helper (used by view layer)."""
+    return _iso_now()
 
 
 def new_guest_id() -> str:
@@ -112,7 +120,12 @@ def _serialize_mock(mx: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _progress_signature(ss: MutableMapping[str, Any]) -> str:
-    """Cheap fingerprint over the slices that actually drive user_progress.json."""
+    """Cheap fingerprint over the slices that actually drive user_progress.json.
+
+    Includes ``len(current_exam)`` and ``exam_started_at`` so the very first
+    save (right after ``시험지 생성``) lands on disk even before the user
+    answers a question — that's what powers the home "이어하기" card.
+    """
     mx = ss.get("mock") if isinstance(ss.get("mock"), dict) else {}
     pd = ss.get("pattern") if isinstance(ss.get("pattern"), dict) else {}
     return "|".join(
@@ -123,8 +136,10 @@ def _progress_signature(ss: MutableMapping[str, Any]) -> str:
             mx.get("mock_page") or "",
             mx.get("current_idx") or 0,
             len(mx.get("results") or []),
+            len(mx.get("current_exam") or []),
             bool(mx.get("exam_finished")),
             bool(mx.get("analytics_cache")),
+            mx.get("exam_started_at") or "",
             (pd or {}).get("_pattern_last_visit_at") or "",
         )
     )
