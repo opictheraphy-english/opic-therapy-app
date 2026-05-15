@@ -220,6 +220,63 @@ def render_native_upgrade_section(result: Dict[str, Any]) -> None:
     )
 
 
+def render_pronunciation_section(result: Dict[str, Any]) -> None:
+    """Lightweight 발음·강세 전달력 section using pronunciation_scores."""
+    pron = result.get("pronunciation_scores")
+    sem = result.get("semantic_dimensions") or {}
+    # Fall back to semantic_dimensions when pronunciation_scores absent (old results)
+    if not isinstance(pron, dict) or not pron:
+        pron = {k: sem.get(k) for k in ("pronunciation_clarity", "intonation_control", "stress_rhythm", "linking_naturalness")}
+        pron = {k: v for k, v in pron.items() if v is not None}
+    if not pron:
+        return
+
+    feedback = (result.get("pronunciation_feedback") or "").strip()
+    if not feedback:
+        from services.evaluation.eval_grading import _pronunciation_feedback
+        pron_floats = {k: float(v) for k, v in pron.items()}
+        feedback = _pronunciation_feedback(pron_floats)
+
+    labels = {
+        "pronunciation_clarity": "발음 명확도",
+        "intonation_control": "억양 조절",
+        "stress_rhythm": "강세·리듬",
+        "linking_naturalness": "연음 자연스러움",
+    }
+
+    chips = []
+    for k, lab in labels.items():
+        v = pron.get(k)
+        if v is None:
+            continue
+        try:
+            score = float(v)
+        except (TypeError, ValueError):
+            continue
+        color = "#0f766e" if score >= 70 else ("#b45309" if score >= 45 else "#b91c1c")
+        chips.append(
+            f'<div class="mx-coach-pron-chip">'
+            f'<span class="mx-coach-pron-label">{html.escape(lab)}</span>'
+            f'<span class="mx-coach-pron-score" style="color:{color};">{round(score)}</span>'
+            f"</div>"
+        )
+
+    if not chips:
+        return
+
+    st.markdown(
+        f"""
+        <section class="mx-coach-section" aria-label="발음 강세">
+          <p class="mx-coach-sec-eyebrow">발음·강세 전달력</p>
+          <h3 class="mx-coach-sec-title">청자에게 얼마나 잘 전달됐나요</h3>
+          <div class="mx-coach-pron-grid">{"".join(chips)}</div>
+          <p class="mx-coach-pron-feedback">{html.escape(feedback)}</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_flow_coaching_section(result: Dict[str, Any]) -> None:
     pairs = flow_coaching_bodies(result)
     cards = []
@@ -398,6 +455,7 @@ def render_grammar_and_expression_coaching(transcript: str) -> Dict[str, int]:
 
 
 __all__ = [
+    "render_pronunciation_section",
     "collect_strong_points",
     "compact_score_strip_html",
     "coaching_headline_subtitle",

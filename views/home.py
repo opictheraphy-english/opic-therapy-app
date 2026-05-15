@@ -11,8 +11,7 @@ admin-y:
   3) Quick Actions      — 4 compact cards that fan out to the main tabs.
   4) Simple Stats       — 3 honest, derived numbers (no new tracking).
 
-Routing, query params, and session_state are untouched — every CTA is a
-plain ``<a href="?nav=...">`` anchor, identical to the rest of the app.
+Routing uses ``navigate_to`` + ``st.button`` (same tab); query params stay in sync.
 """
 
 from __future__ import annotations
@@ -22,6 +21,7 @@ from typing import Any, Dict, Optional
 
 import streamlit as st
 
+from components.navigation import navigate_to
 from utils.exam_state import (
     count_completed_exam_prefix,
     has_resumable_exam,
@@ -167,14 +167,19 @@ def _render_resume_card(snap: Dict[str, Any]) -> None:
           <div class="cc-progress" aria-hidden="true">
             <span class="cc-progress-fill" style="width:{progress_pct}%"></span>
           </div>
-          <div class="cc-actions">
-            <a class="cc-action cc-primary" href="?nav=MOCK&amp;mock=TEST">이어하기</a>
-            <a class="cc-action cc-secondary" href="?nav=MOCK&amp;mock=SURVEY&amp;reset=1">처음부터 다시</a>
-          </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("이어하기", type="primary", use_container_width=True, key="home_resume_continue"):
+            navigate_to("MOCK", mock="TEST")
+            st.rerun()
+    with c2:
+        if st.button("처음부터 다시", use_container_width=True, key="home_resume_reset"):
+            navigate_to("MOCK", mock="SURVEY", reset=True)
+            st.rerun()
 
 
 def _render_start_card(
@@ -201,12 +206,12 @@ def _render_start_card(
         ]
         sub_html = " · ".join(sub_bits)
         primary_label = "모의고사 시작"
-        primary_href = "?nav=MOCK"
+        primary_nav = ("MOCK", None, False)
         secondary_label = "최근 리포트"
-        secondary_href = (
-            "?nav=MOCK&amp;mock=FINAL"
+        secondary_nav = (
+            ("MOCK", "FINAL", False)
             if card.get("exam_finished")
-            else "?nav=MOCK&amp;mock=REPORT"
+            else ("MOCK", "REPORT", False)
         )
     else:
         eyebrow = "환영합니다"
@@ -216,9 +221,9 @@ def _render_start_card(
             f"목표 난이도 <b>Lv.{diff}</b>"
         )
         primary_label = "진단 시작"
-        primary_href = "?nav=MOCK"
+        primary_nav = ("MOCK", None, False)
         secondary_label = "패턴 둘러보기"
-        secondary_href = "?nav=PATTERN"
+        secondary_nav = ("PATTERN", None, False)
 
     st.markdown(
         f"""
@@ -229,14 +234,21 @@ def _render_start_card(
           </div>
           <div class="cc-title">{html.escape(title)}</div>
           <div class="cc-meta">{sub_html}</div>
-          <div class="cc-actions">
-            <a class="cc-action cc-primary" href="{primary_href}">{html.escape(primary_label)}</a>
-            <a class="cc-action cc-secondary" href="{secondary_href}">{html.escape(secondary_label)}</a>
-          </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button(primary_label, type="primary", use_container_width=True, key="home_start_primary"):
+            page, mock, reset = primary_nav
+            navigate_to(page, mock=mock, reset=reset)
+            st.rerun()
+    with c2:
+        if st.button(secondary_label, use_container_width=True, key="home_start_secondary"):
+            page, mock, reset = secondary_nav
+            navigate_to(page, mock=mock, reset=reset)
+            st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -281,25 +293,27 @@ _QA_ICONS: Dict[str, str] = {
 
 def _render_quick_actions() -> None:
     items = (
-        ("?nav=PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기"),
-        ("?nav=SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기"),
-        ("?nav=LECTURES", "play", "강의 보기", "출제 유형 강의"),
-        ("?nav=MOCK", "chart", "학습 기록", "최근 리포트 다시 보기"),
+        ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기"),
+        ("SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기"),
+        ("LECTURES", "play", "강의 보기", "출제 유형 강의"),
+        ("MOCK", "chart", "학습 기록", "최근 리포트 다시 보기"),
     )
-    cards = []
-    for href, ico, title, sub in items:
-        cards.append(
-            f'<a class="qa-card" href="{href}" aria-label="{html.escape(title)}">'
-            f'<span class="qa-ico">{_QA_ICONS.get(ico, "")}</span>'
-            f'<span class="qa-title">{html.escape(title)}</span>'
-            f'<span class="qa-sub">{html.escape(sub)}</span>'
-            "</a>"
-        )
-    st.markdown(
-        '<div class="home-section-h">빠른 학습</div>'
-        f'<div class="qa-grid">{"".join(cards)}</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="home-section-h">빠른 학습</div>', unsafe_allow_html=True)
+    row_a = st.columns(2, gap="small")
+    row_b = st.columns(2, gap="small")
+    for col, (page, ico, title, sub) in zip(row_a + row_b, items):
+        with col:
+            st.markdown(
+                f'<div class="qa-card" aria-label="{html.escape(title)}">'
+                f'<span class="qa-ico">{_QA_ICONS.get(ico, "")}</span>'
+                f'<span class="qa-title">{html.escape(title)}</span>'
+                f'<span class="qa-sub">{html.escape(sub)}</span>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            if st.button(f"{title} 열기", key=f"qa_nav_{page}", use_container_width=True):
+                navigate_to(page)
+                st.rerun()
 
 
 # ---------------------------------------------------------------------------

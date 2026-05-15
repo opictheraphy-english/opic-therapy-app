@@ -283,4 +283,13 @@ def detect_risk_flags(result: Dict[str, Any]) -> List[str]:
     sd = sem.get("semantic_density")
     if isinstance(wpm, (int, float)) and wpm >= 150 and isinstance(sd, (int, float)) and sd < 48:
         flags.append("⚠️ High WPM with shallow semantic density — review pacing")
+    pc = sem.get("pronunciation_clarity")
+    ir = sem.get("intonation_control")
+    sr = sem.get("stress_rhythm")
+    if any(
+        isinstance(v, (int, float)) and v < 35
+        for v in (pc, ir, sr)
+        if v is not None
+    ):
+        flags.append("발음·강세 전달력이 낮아 이해도가 떨어질 수 있습니다.")
     return flags

@@ -68,7 +68,7 @@ GLOBAL_CSS = """
 
     section.main > div {
       padding-top: 0.6rem !important;
-      padding-bottom: 6.5rem !important;
+      padding-bottom: 96px !important;
     }
 
     /* Subtle fade-in on each rerun so the rerender feels like a transition
@@ -1271,23 +1271,23 @@ GLOBAL_CSS = """
      * Designed to feel calmer and more app-like (Duolingo / Quizlet /
      * Headspace inspired) without any structural changes.
      */
-    .bottom-nav-dock {
+    /* Fixed bottom tab bar — CSS flex row only (no Streamlit columns) */
+    .opic-bottom-nav {
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
       bottom: max(14px, env(safe-area-inset-bottom, 14px));
-      width: min(540px, calc(100vw - 24px));
+      width: min(100%, 560px);
+      max-width: calc(100vw - 16px);
       z-index: 10000;
-      pointer-events: none;
-    }
-    .bottom-nav-inner {
-      pointer-events: auto;
       display: flex;
-      justify-content: space-between;
+      flex-direction: row;
+      flex-wrap: nowrap;
       align-items: stretch;
+      justify-content: space-between;
       gap: 2px;
       padding: 8px 10px;
-      /* Brighter, more solid glass — feels premium yet still translucent. */
+      box-sizing: border-box;
       background: linear-gradient(180deg,
         rgba(255, 255, 255, 0.95) 0%,
         rgba(255, 255, 255, 0.86) 100%);
@@ -1295,105 +1295,104 @@ GLOBAL_CSS = """
       -webkit-backdrop-filter: saturate(180%) blur(24px);
       border: 1px solid rgba(255, 255, 255, 0.75);
       border-radius: 28px;
-      /* Layered shadow: tight contact + soft wide ambient + inner highlight. */
       box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.06),
         0 8px 28px rgba(15, 23, 42, 0.10),
         0 1px 0 rgba(255, 255, 255, 0.95) inset,
         0 -1px 0 rgba(15, 23, 42, 0.02) inset;
     }
-    .bottom-nav-inner a.nav-item {
-      flex: 1;
-      position: relative;
+    a.opic-bottom-nav__item {
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: none;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 3px;
-      padding: 8px 4px 7px 4px;
-      min-height: 54px;
+      padding: 8px 2px 7px 2px;
+      min-height: 56px;
+      border: none;
       border-radius: 18px;
-      text-decoration: none !important;
-      color: var(--text-soft) !important;
-      font-size: 0.6rem;
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--text-soft);
+      font-size: 0.58rem;
       font-weight: 600;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.01em;
+      text-align: center;
+      text-decoration: none !important;
+      box-sizing: border-box;
       transition:
         color 0.18s ease,
         background-color 0.22s ease,
         transform 0.12s ease;
     }
-    .bottom-nav-inner a.nav-item .nav-ico {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      color: var(--text-soft);
-      transition: color 0.18s ease, transform 0.18s ease;
-    }
-    .bottom-nav-inner a.nav-item .nav-ico svg {
-      width: 22px;
-      height: 22px;
-      stroke-width: 1.9;
-    }
-
-    /* Quiet hover — keep the resting state restrained, never chatty. */
-    .bottom-nav-inner a.nav-item:hover {
-      color: var(--text) !important;
+    a.opic-bottom-nav__item:hover {
+      color: var(--text);
       background: rgba(15, 23, 42, 0.035);
     }
-    .bottom-nav-inner a.nav-item:hover .nav-ico {
-      color: var(--text);
-    }
-
-    /* Active tab — soft mint pill with a tiny dot indicator below the icon.
-     * The dot is the single most premium "you are here" cue and is hidden on
-     * inactive items so it never adds visual noise. */
-    .bottom-nav-inner a.nav-item.active {
-      color: var(--mint) !important;
+    .opic-bottom-nav__item--active {
+      color: var(--mint);
       background: linear-gradient(180deg,
         rgba(13, 148, 136, 0.14) 0%,
         rgba(13, 148, 136, 0.09) 100%);
       box-shadow: 0 1px 0 rgba(13, 148, 136, 0.10) inset;
     }
-    .bottom-nav-inner a.nav-item.active .nav-ico {
-      color: var(--mint);
-      transform: translateY(-1px);
+    .opic-bottom-nav__ico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      color: inherit;
     }
-    .bottom-nav-inner a.nav-item.active .nav-ico svg {
+    .opic-bottom-nav__ico svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 1.9;
+    }
+    .opic-bottom-nav__item--active .opic-bottom-nav__ico svg {
       stroke-width: 2.2;
     }
-
-    .bottom-nav-inner a.nav-item:focus-visible {
+    .opic-bottom-nav__label {
+      display: block;
+      line-height: 1.15;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    a.opic-bottom-nav__item:focus-visible {
       outline: 2px solid rgba(13, 148, 136, 0.35);
       outline-offset: 2px;
     }
-    .bottom-nav-inner a.nav-item:active {
+    a.opic-bottom-nav__item:active {
       transform: scale(0.96);
     }
-
-    .nav-label {
-      line-height: 1.2;
-      max-width: 68px;
-      text-align: center;
-    }
-
-    /* Tighten label sizing on very narrow screens so 6 tabs still breathe. */
     @media (max-width: 360px) {
-      .bottom-nav-inner { padding: 6px 6px; gap: 0; border-radius: 24px; }
-      .bottom-nav-inner a.nav-item { font-size: 0.55rem; padding: 8px 2px 6px 2px; }
+      .opic-bottom-nav { padding: 6px 4px; border-radius: 24px; }
+      a.opic-bottom-nav__item { font-size: 0.52rem; padding: 8px 1px 6px 1px; }
+      .opic-bottom-nav__ico svg { width: 18px; height: 18px; }
     }
-
-    /* Respect reduced-motion preference — disable scale/translate effects. */
     @media (prefers-reduced-motion: reduce) {
-      .bottom-nav-inner a.nav-item,
-      .bottom-nav-inner a.nav-item .nav-ico { transition: none !important; }
-      .bottom-nav-inner a.nav-item:active { transform: none !important; }
-      .bottom-nav-inner a.nav-item.active .nav-ico { transform: none !important; }
+      a.opic-bottom-nav__item,
+      .opic-bottom-nav__ico { transition: none !important; }
+      a.opic-bottom-nav__item:active { transform: none !important; }
+    }
+    /* Nav is position:fixed — do not reserve vertical space in the page flow */
+    section.main [data-testid="stMarkdown"]:has(.opic-bottom-nav),
+    section.main .stMarkdown:has(.opic-bottom-nav) {
+      height: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: visible !important;
     }
 
-    .page-bottom-space { height: 100px; }
+    .topbar--inline .tb-titleblock { text-align: center; }
 
     @keyframes dsFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -1463,6 +1462,12 @@ GLOBAL_CSS = """
       max-width: 720px;
       margin: 0 auto;
       padding: 0 4px;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+    .pat-screen [data-testid="column"],
+    .pat-screen [data-testid="stHorizontalBlock"] {
+      max-width: 100%;
     }
 
     /* --- Hero (greeting + subtitle) ----------------------------------- */
@@ -2362,6 +2367,41 @@ GLOBAL_CSS = """
     section.main:has(.mx-marker) .mx-coach-mini-rest {
       font-weight: 500;
     }
+    section.main:has(.mx-marker) .mx-coach-pron-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0 0 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-pron-chip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.8rem;
+    }
+    section.main:has(.mx-marker) .mx-coach-pron-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    section.main:has(.mx-marker) .mx-coach-pron-score {
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    section.main:has(.mx-marker) .mx-coach-pron-feedback {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 12px 0 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(241, 245, 249, 0.8);
+      border-left: 3px solid rgba(13, 148, 136, 0.3);
+    }
+
     section.main:has(.mx-marker) .mx-coach-retry-banner {
       margin: 20px 0 8px 0;
       padding: 16px 14px;

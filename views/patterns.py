@@ -43,7 +43,7 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
         for i, pat in enumerate(patterns):
             ex_kw: Dict[str, Any] = {}
             if tab_id in ("experience", "comparison"):
-                ex_kw["additional_example_count"] = 3
+                ex_kw["additional_example_count"] = 2
             render_compact_pattern_card(
                 pat, tab_id=tab_id, sec_uid=sec_uid, idx=i, **ex_kw
             )

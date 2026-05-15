@@ -414,6 +414,27 @@ def is_completed_exam(snap: Dict[str, Any]) -> bool:
     return bool(snap.get("exam_finished"))
 
 
+def is_completed_mock(mx: Dict[str, Any]) -> bool:
+    """Finished attempt — not an active in-progress test (Mock tab landing)."""
+    if not isinstance(mx, dict):
+        return False
+    if mx.get("exam_finished"):
+        return True
+    page = mx.get("mock_page")
+    if page in ("FINAL", "REPORT") and (mx.get("results") or mx.get("analytics_cache")):
+        exam = mx.get("current_exam") or mx.get("exam") or []
+        if isinstance(exam, list) and exam:
+            return count_completed_exam_prefix(mx) >= len(exam)
+    return False
+
+
+def has_active_unfinished_mock(mx: Dict[str, Any]) -> bool:
+    """In-progress exam the user can resume — never a completed session."""
+    if is_completed_mock(mx):
+        return False
+    return has_resumable_exam(mx)
+
+
 def format_mock_attempt_label(
     mx: Dict[str, Any],
     *,
@@ -487,6 +508,7 @@ def start_new_mock_attempt(mx: Dict[str, Any], ss: MutableMapping[str, Any]) -> 
         mx.pop(k, None)
     mx.pop("_final_report_demo", None)
     mx.pop("_demo_preview_loaded", None)
+    mx.pop("_view_completed_report", None)
 
     mx["exam_finished"] = False
     mx["results"] = []
@@ -515,4 +537,7 @@ def start_new_mock_attempt(mx: Dict[str, Any], ss: MutableMapping[str, Any]) -> 
 
     reconcile_mock_exam_pointer(mx)
     ss.pop("_progress_sig", None)
+    md = ss.get("mock_data")
+    if isinstance(md, dict):
+        md["recording_active"] = False
     return True

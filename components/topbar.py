@@ -1,9 +1,4 @@
-"""Mobile-style top bar — back arrow + section title + home, anchor-based.
-
-Anchor links keep the navigation lightweight (single Streamlit rerun, no full
-asset reload). All hrefs target internal Streamlit query parameters and have
-no ``target="_blank"``, so the browser stays in the **same tab**.
-"""
+"""Mobile-style top bar — back + title + home via in-app buttons (same tab)."""
 
 from __future__ import annotations
 
@@ -11,6 +6,8 @@ import html
 from typing import Optional
 
 import streamlit as st
+
+from components.navigation import _href_key, navigate_from_href, navigate_to
 
 _BACK_SVG = (
     '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" '
@@ -34,52 +31,40 @@ def render_top_bar(
     show_home: bool = True,
     eyebrow: Optional[str] = None,
 ) -> None:
-    """Render a compact mobile-style header.
-
-    Parameters
-    ----------
-    title: Section name shown in the center.
-    back_href: When provided, renders a left-side back chevron linking to this
-        anchor (e.g. ``"?nav=HOME"`` or ``"?nav=MOCK&mock=SURVEY"``). When
-        ``None`` no back affordance is rendered.
-    show_home: Renders the right-side 🏠 anchor to ``?nav=HOME``. Disabled when
-        the current screen is HOME so the bar reads as a pure header there.
-    eyebrow: Tiny label above the title (e.g. "MOCK · Q3"). Optional.
-    """
+    """Render a compact mobile-style header with Streamlit buttons (no ``<a href>``)."""
     title_html = html.escape((title or "").strip())
     eyebrow_html = html.escape((eyebrow or "").strip()) if eyebrow else ""
-
-    if back_href:
-        back_html = (
-            f'<a class="tb-btn tb-back" href="{html.escape(back_href, quote=True)}" '
-            f'aria-label="뒤로가기">{_BACK_SVG}</a>'
-        )
-    else:
-        back_html = '<span class="tb-btn tb-spacer" aria-hidden="true"></span>'
-
-    if show_home:
-        home_html = (
-            '<a class="tb-btn tb-home" href="?nav=HOME" aria-label="홈으로">'
-            f"{_HOME_SVG}</a>"
-        )
-    else:
-        home_html = '<span class="tb-btn tb-spacer" aria-hidden="true"></span>'
-
     eyebrow_block = (
         f'<div class="tb-eyebrow">{eyebrow_html}</div>' if eyebrow_html else ""
     )
 
-    # IMPORTANT: single concatenated string with no leading whitespace per
-    # line. A multi-line indented f-string would be parsed by markdown as a
-    # code block and the HTML would render as literal text.
-    st.markdown(
-        '<header class="topbar" role="banner">'
-        f"{back_html}"
-        '<div class="tb-titleblock">'
-        f"{eyebrow_block}"
-        f'<div class="tb-title">{title_html}</div>'
-        "</div>"
-        f"{home_html}"
-        "</header>",
-        unsafe_allow_html=True,
-    )
+    col_back, col_mid, col_home = st.columns([1, 6, 1], gap="small")
+    with col_back:
+        if back_href:
+            if st.button(
+                "←",
+                key=f"tb_back_{_href_key(back_href)}",
+                help="뒤로가기",
+                use_container_width=True,
+            ):
+                navigate_from_href(back_href)
+                st.rerun()
+        else:
+            st.empty()
+
+    with col_mid:
+        st.markdown(
+            f'<header class="topbar topbar--inline" role="banner">'
+            f'<div class="tb-titleblock">{eyebrow_block}'
+            f'<div class="tb-title">{title_html}</div>'
+            f"</div></header>",
+            unsafe_allow_html=True,
+        )
+
+    with col_home:
+        if show_home:
+            if st.button("⌂", key="tb_home", help="홈으로", use_container_width=True):
+                navigate_to("HOME")
+                st.rerun()
+        else:
+            st.empty()

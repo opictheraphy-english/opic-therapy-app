@@ -30,9 +30,9 @@ from components.coaching_experience import (
     render_history_expander_coaching,
     render_native_upgrade_section,
     render_overall_coaching_hero,
+    render_pronunciation_section,
     render_strong_points_cards,
 )
-from components.navigation import render_bottom_navigation
 from components.topbar import render_top_bar
 from services.evaluation_service import analyze_audio_with_retry
 from services.mock_exam.mock_exam_test_set_generator import generate_test_set
@@ -53,12 +53,14 @@ from utils.exam_state import (
     format_mock_attempt_label,
     has_pending_recovery_for,
     has_resumable_exam,
+    is_completed_mock,
     mark_pending_recovery,
     reconcile_mock_exam_pointer,
     reset_exam_state,
+    start_new_mock_attempt,
     upsert_mock_exam_result,
 )
-from utils.local_profile import force_restore_mock_from_disk, iso_now
+from utils.local_profile import force_restore_mock_from_disk, iso_now, sync_user_progress
 from utils.secrets import get_gemini_api_key
 from utils.session_state import mock_session, settings_session, sync_settings_to_legacy
 from utils.text_utils import (
@@ -82,33 +84,98 @@ def _nav_after_question_analysis(mx: dict, qid: int) -> None:
         mx["exam_finished"] = True
         mx["mock_page"] = "FINAL"
         mx["_show_exam_celebration"] = True
+        mx["_view_completed_report"] = True
     else:
         mx["mock_page"] = "REPORT"
+
+
+def _mock_query_param() -> str | None:
+    v = st.query_params.get("mock")
+    if isinstance(v, list):
+        return v[0] if v else None
+    return v
+
+
+def _should_show_completed_final_report(mx: dict) -> bool:
+    """True when the user explicitly wants the archived report, not the landing."""
+    if not is_completed_mock(mx):
+        return False
+    if mx.get("_show_exam_celebration"):
+        return True
+    if mx.get("_view_completed_report"):
+        return True
+    return _mock_query_param() == "FINAL"
+
+
+def render_completed_exam_landing(mx: dict) -> None:
+    """After a full mock exam — start a new attempt or open the previous report."""
+    att = int(mx.get("attempt_no") or 1)
+    next_att = att + 1
+    render_top_bar("모의고사", back_href="?nav=HOME", eyebrow=format_mock_attempt_label(mx))
+    st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <section class="continue-card continue-card--start mx-landing-card" role="region"
+                 aria-label="모의고사 완료">
+          <div class="cc-row-top">
+            <div class="cc-eyebrow">완료</div>
+          </div>
+          <div class="cc-title">{att}회 모의고사가 끝났어요</div>
+          <div class="cc-meta">이전 모의고사가 완료되었습니다.<br/>
+            새 모의고사를 시작할까요? 다음은 <b>{next_att}회 모의고사</b>입니다.</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("새 모의고사 시작하기", type="primary", use_container_width=True, key="mx_landing_new_attempt"):
+        if start_new_mock_attempt(mx, st.session_state):
+            clear_mock_question_tts_keys()
+            sync_user_progress(st.session_state)
+            try:
+                st.query_params.clear()
+                st.query_params["nav"] = "MOCK"
+                st.query_params["mock"] = "TEST"
+            except Exception:
+                pass
+            st.rerun()
+        else:
+            st.error("설문 데이터가 없으면 새 시험을 시작할 수 없습니다. 설정에서 설문을 다시 진행해 주세요.")
+
+    if st.button("이전 리포트 보기", use_container_width=True, key="mx_landing_prev_report"):
+        mx["_view_completed_report"] = True
+        mx["mock_page"] = "FINAL"
+        try:
+            st.query_params.clear()
+            st.query_params["nav"] = "MOCK"
+            st.query_params["mock"] = "FINAL"
+        except Exception:
+            pass
+        st.rerun()
 
 
 def render_mock_exam_shell() -> None:
     mx = mock_session()
     if mx["mock_page"] not in {"SURVEY", "TEST", "REPORT", "FINAL"}:
         mx["mock_page"] = "SURVEY"
-        st.rerun()
 
-    # If the user lands on the MOCK tab with the default ``mock_page="SURVEY"``
-    # (e.g. tapping 모의고사 in the bottom nav without an explicit ``?mock=``
-    # param) **and** they have a resumable exam, jump straight into the
-    # test instead of forcing them through the survey again. This honors
-    # the spec's "DO NOT reopen survey flow if resumable exam exists" rule
-    # for every entry path, not just the home "이어하기" card.
+    mock_q = _mock_query_param()
+    if is_completed_mock(mx):
+        if mock_q == "FINAL":
+            mx["_view_completed_report"] = True
+        elif mock_q is None:
+            mx.pop("_view_completed_report", None)
+
     if mx["mock_page"] == "SURVEY" and has_resumable_exam(mx):
         mx["mock_page"] = "TEST"
 
-    # Every MOCK entry reconciles ``current_idx`` vs ``results`` so stale
-    # disk snapshots (idx stuck on a completed question) cannot replay Q1.
-    if mx.get("current_exam"):
+    if mx.get("current_exam") and not is_completed_mock(mx):
         reconcile_mock_exam_pointer(mx)
 
     if "mock_data" not in st.session_state:
         st.session_state.mock_data = {"recording_active": False}
-    st.session_state.mock_data["recording_active"] = bool(mx["audio_bytes"])
+    st.session_state.mock_data["recording_active"] = bool(mx.get("audio_bytes"))
 
 
 def render_mock_flow() -> None:
@@ -129,17 +196,19 @@ def render_mock_flow() -> None:
             pass
         st.rerun()
 
-    if mx.get("exam_finished") or mx.get("mock_page") == "FINAL":
+    if is_completed_mock(mx) and not _should_show_completed_final_report(mx):
+        render_completed_exam_landing(mx)
+        return
+
+    if is_completed_mock(mx) and _should_show_completed_final_report(mx):
         render_top_bar(
             "종합 리포트",
-            back_href="?nav=HOME",
+            back_href="?nav=MOCK",
             eyebrow=format_mock_attempt_label(mx),
         )
         from views.final_report import render_final_report
 
         render_final_report(mx)
-        st.caption("© opictherapist")
-        render_bottom_navigation()
         return
 
     if mx["mock_page"] == "SURVEY":
@@ -149,8 +218,6 @@ def render_mock_flow() -> None:
     elif mx["mock_page"] == "REPORT":
         _render_report(mx)
 
-    st.caption("© opictherapist")
-    render_bottom_navigation()
 
 
 def _render_survey(mx: dict) -> None:
@@ -1046,6 +1113,7 @@ def _render_report(mx: dict) -> None:
             render_grammar_and_expression_coaching(_heard_raw)
             render_native_upgrade_section(_lr)
             render_flow_coaching_section(_lr)
+            render_pronunciation_section(_lr)
             _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
             if _sum_rehab and len(_sum_rehab) > 160:
                 with st.expander("AI 총평 전문", expanded=False):

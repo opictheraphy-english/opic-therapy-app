@@ -1,13 +1,14 @@
-"""Persistent bottom navigation — 6 tabs, mobile-first.
-
-Anchor-based dock. ``<a href="?nav=KEY">`` triggers a normal same-tab
-navigation (no ``target="_blank"``) and Streamlit then reads ``?nav=`` to
-swap the active view inside the current browser tab.
-"""
+"""Bottom navigation — fixed horizontal tab bar (CSS flex, no ``st.columns``)."""
 
 from __future__ import annotations
 
+import html
+import re
+from urllib.parse import parse_qs
+
 import streamlit as st
+
+_ALLOWED_PAGES = frozenset({"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS"})
 
 _SVG = {
     "home": (
@@ -69,21 +70,124 @@ NAV_ITEMS = (
 )
 
 
-def render_bottom_navigation() -> None:
-    page = st.session_state.get("page", "HOME")
-    parts = []
+def _href_key(href: str) -> str:
+    """Stable Streamlit widget key suffix from a legacy ``?nav=…`` href."""
+    q = (href or "").strip().lstrip("?").replace("&amp;", "&")
+    safe = re.sub(r"[^a-zA-Z0-9_]+", "_", q)[:64]
+    return safe or "back"
+
+
+def navigate_to(
+    page: str,
+    *,
+    mock: str | None = None,
+    reset: bool = False,
+) -> None:
+    """Set active tab in session (and sync URL). Caller should ``st.rerun()``."""
+    if page not in _ALLOWED_PAGES:
+        page = "HOME"
+    st.session_state.page = page
+
+    if page != "MOCK":
+        md = st.session_state.get("mock_data")
+        if isinstance(md, dict):
+            md["recording_active"] = False
+
+    if page == "MOCK" and mock:
+        from utils.session_state import ensure_mock
+
+        mx = ensure_mock(st.session_state)
+        prev_m = mx.get("mock_page")
+        mx["mock_page"] = mock
+        if mock == "FINAL":
+            mx["exam_finished"] = True
+        elif mock in {"SURVEY", "TEST"}:
+            if mx.get("exam_finished"):
+                pass
+            elif mx.get("final_report_generated") or mx.get("analytics_cache"):
+                pass
+            elif prev_m in {"REPORT", "FINAL"}:
+                pass
+            else:
+                mx["exam_finished"] = False
+
+    try:
+        st.query_params.clear()
+        st.query_params["nav"] = page
+        if mock:
+            st.query_params["mock"] = mock
+        if reset:
+            st.query_params["reset"] = "1"
+    except Exception:
+        pass
+
+
+def navigate_from_href(href: str) -> None:
+    """Parse ``?nav=…&mock=…`` for top-bar back buttons."""
+    q = (href or "").strip()
+    if q.startswith("?"):
+        q = q[1:]
+    q = q.replace("&amp;", "&")
+    params = parse_qs(q, keep_blank_values=True)
+    page = (params.get("nav") or ["HOME"])[0]
+    mock_vals = params.get("mock")
+    mock = mock_vals[0] if mock_vals else None
+    reset_vals = params.get("reset")
+    reset = bool(reset_vals and reset_vals[0] == "1")
+    navigate_to(page, mock=mock, reset=reset)
+
+
+_NAV_SAME_TAB_SCRIPT = """
+<script>
+(function () {
+  var bar = document.querySelector(".opic-bottom-nav");
+  if (!bar || bar.dataset.opicNavBound === "1") return;
+  bar.dataset.opicNavBound = "1";
+  bar.addEventListener("click", function (e) {
+    var el = e.target.closest("a.opic-bottom-nav__item[data-nav]");
+    if (!el) return;
+    e.preventDefault();
+    var page = el.getAttribute("data-nav");
+    if (!page) return;
+    var params = new URLSearchParams(window.location.search);
+    params.set("nav", page);
+    params.delete("reset");
+    if (page !== "MOCK") params.delete("mock");
+    var qs = params.toString();
+    var url = window.location.pathname + (qs ? "?" + qs : "");
+    window.location.assign(url);
+  });
+})();
+</script>
+"""
+
+
+def _build_opic_bottom_nav_html(page: str) -> str:
+    """Single-row flex tab bar — same-tab ``?nav=`` via ``location.assign`` (not new tab)."""
+    tabs: list[str] = []
     for key, label, ico in NAV_ITEMS:
-        active = "active" if page == key else ""
+        active = " opic-bottom-nav__item--active" if page == key else ""
+        aria = ' aria-current="page"' if page == key else ""
         svg = _SVG.get(ico, _SVG["home"])
-        parts.append(
-            f'<a class="nav-item {active}" href="?nav={key}" title="{label}">'
-            f'<span class="nav-ico">{svg}</span>'
-            f'<span class="nav-label">{label}</span></a>'
+        safe_key = html.escape(key)
+        tabs.append(
+            f'<a class="opic-bottom-nav__item{active}"'
+            f' href="?nav={safe_key}"'
+            f' target="_self"'
+            f' data-nav="{safe_key}"'
+            f' role="tab"'
+            f' aria-label="{html.escape(label)}"{aria}>'
+            f'<span class="opic-bottom-nav__ico">{svg}</span>'
+            f'<span class="opic-bottom-nav__label">{html.escape(label)}</span>'
+            "</a>"
         )
-    html = (
-        '<nav class="bottom-nav-dock" aria-label="주요 메뉴">'
-        f'<div class="bottom-nav-inner">{"".join(parts)}</div>'
-        "</nav>"
-        '<div class="page-bottom-space"></div>'
+    return (
+        f'<nav class="opic-bottom-nav" aria-label="주요 메뉴">{"".join(tabs)}</nav>'
+        f"{_NAV_SAME_TAB_SCRIPT}"
     )
-    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_bottom_navigation() -> None:
+    """Fixed horizontal bottom tab bar — always one row, never ``st.columns``."""
+    page = st.session_state.get("page", "HOME")
+    st.markdown(_build_opic_bottom_nav_html(page), unsafe_allow_html=True)

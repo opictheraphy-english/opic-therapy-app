@@ -23,7 +23,7 @@ STACK_HEAD = 2
 # Cap on extra example lines shown per "더보기" expand (beyond the guided stack).
 STACK_MAX = 6
 # Beyond the stack, how many extra lines to show per "더보기" toggle slice
-ADDITIONAL_EXAMPLE_SLICE = 4
+ADDITIONAL_EXAMPLE_SLICE = 2
 
 _TAB_LABEL_KO: Dict[str, str] = {
     "describe": "묘사",
@@ -180,6 +180,41 @@ def render_compact_pattern_card(
     meaning_h = html.escape(meaning)
     usage_inner = _usage_blurb(pat, tab_id)
 
+    # Only one expanded pattern detail per page (controller in session state).
+    st.session_state.setdefault("open_pattern_key", None)
+    this_open_key = row_key
+    detail_open = st.session_state.get("open_pattern_key") == this_open_key
+
+    # Collapsed header (short): stays in-place and prevents scroll hell.
+    col_left, col_btn = st.columns([8, 2], gap="small")
+    with col_left:
+        st.markdown(
+            f"""
+            <div class="pat-card" style="margin: 0 0 8px 0;">
+              <div class="pat-en">{tpl_h}</div>
+              <div class="pat-ko">{meaning_h}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_btn:
+        btn_label = "접기 ▲" if detail_open else "열기"
+        if st.button(
+            btn_label,
+            key=f"pat_detail_toggle_{row_key}",
+            type="secondary",
+            use_container_width=True,
+        ):
+            if detail_open:
+                st.session_state["open_pattern_key"] = None
+                st.session_state.pop(expand_key, None)
+            else:
+                st.session_state["open_pattern_key"] = this_open_key
+            st.rerun()
+
+    if not detail_open:
+        return
+
     # --- 1) Hero ---------------------------------------------------------
     st.markdown(
         f"""
@@ -283,25 +318,35 @@ def render_compact_pattern_card(
     )
 
     # --- Extra examples (beyond first 3) ---------------------------------
-    if len(ex_rows) <= STACK_HEAD + 1:
-        return
+    show_tail = len(ex_rows) > STACK_HEAD + 1
+    if show_tail:
+        tail = ex_rows[STACK_HEAD + 1 :]
+        tail_open = bool(st.session_state.get(expand_key))
+        btn_label = collapse_label if tail_open else expand_more_label
+        if st.button(btn_label, key=f"pat_ex_toggle_{row_key}", type="secondary"):
+            st.session_state[expand_key] = not tail_open
+            tail_open = bool(st.session_state.get(expand_key))
 
-    tail = ex_rows[STACK_HEAD + 1 :]
-    expanded = bool(st.session_state.get(expand_key))
-    btn_label = collapse_label if expanded else expand_more_label
-    if st.button(btn_label, key=f"pat_ex_toggle_{row_key}", type="secondary"):
-        st.session_state[expand_key] = not expanded
-        expanded = bool(st.session_state.get(expand_key))
+        if tail_open:
+            slice_n = min(add_n, len(tail), STACK_MAX)
+            for j, row in enumerate(tail[:slice_n]):
+                en = html.escape(row["en"])
+                st.markdown(
+                    f'<div class="pat-ex-wrap pat-ex-wrap--extra pat-ex-wrap--tail">'
+                    f'<span class="pat-ex-label">추가 예문 {j + 1}</span>'
+                    f'<ul><li>{en}</li></ul>'
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+                _try_play_example_audio(row.get("audio_file") or "")
 
-    if expanded:
-        slice_n = min(add_n, len(tail), STACK_MAX)
-        for j, row in enumerate(tail[:slice_n]):
-            en = html.escape(row["en"])
-            st.markdown(
-                f'<div class="pat-ex-wrap pat-ex-wrap--extra pat-ex-wrap--tail">'
-                f'<span class="pat-ex-label">추가 예문 {j + 1}</span>'
-                f'<ul><li>{en}</li></ul>'
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            _try_play_example_audio(row.get("audio_file") or "")
+    # Bottom 접기 (also collapses the long detail stack).
+    if st.button(
+        "접기",
+        key=f"pat_detail_close_bottom_{row_key}",
+        type="secondary",
+        use_container_width=True,
+    ):
+        st.session_state["open_pattern_key"] = None
+        st.session_state.pop(expand_key, None)
+        st.rerun()

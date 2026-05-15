@@ -6,12 +6,8 @@ cold-start path stays minimal on Render. Persistent **bottom nav** + per-page
 **top bar** give the app a continuous, mobile-first feel (back + home are
 always reachable; tab switching is instant).
 
-Navigation contract:
-  ``?nav=HOME|PATTERN|MOCK|SCRIPTS|LECTURES|SETTINGS`` — primary tab.
-  ``?nav=MOCK&mock=SURVEY|TEST|REPORT|FINAL`` — mock sub-screen (used for
-  back). All in-app links target these query parameters via plain ``<a>``
-  anchors with no ``target="_blank"``, so the browser stays in the **same
-  tab** and Streamlit reruns in-place.
+Navigation: ``st.session_state.page`` + ``navigate_to()`` / bottom nav buttons.
+Optional ``?nav=`` query param syncs on load (same browser tab).
 
 First entry: after the guest/login entry gate, a short onboarding flow runs
 until ``onboarding_completed`` is set (local ``app_session.json``). Returning
@@ -111,43 +107,24 @@ nav_param = _q_one("nav")
 mock_param = _q_one("mock")
 reset_param = _q_one("reset")
 
-# --- Order of operations (read this before tweaking!) ------------------------
-# 1. ``?reset=1``           — wipe mx + set ``_suppress_disk_restore``.
-# 2. ``maybe_restore_mock_from_disk`` — runs once per session, immediately
-# after ``ensure_mock`` (see above) so disk hydrates before entry/onboarding
-# gates and before any ``sync_user_progress`` call on the first paint.
-#
-# 3. Tab switch handler — set ``st.session_state.page`` from ``?nav=``.
-# 4. Sub-screen handler — set ``mx["mock_page"]`` from ``?mock=``.
-# 5. Render the page.
-#
-# Steps 3–4 used to clear ``audio_bytes`` when leaving MOCK; that dropped
-# in-flight recordings. Restore now runs before entry/onboarding (step 2).
-
-# 1. Explicit exam reset (home "처음부터 다시" anchor)
+# 1. Explicit exam reset (home "처음부터 다시")
 if reset_param == "1" and (nav_param == "MOCK" or st.session_state.page == "MOCK"):
     from utils.exam_state import reset_exam_state
 
     _mx_reset = ensure_mock(st.session_state)
     reset_exam_state(_mx_reset, st.session_state)
-    # Clean the URL so a refresh doesn't trigger another reset.
     try:
         del st.query_params["reset"]
     except Exception:
         pass
 
-# 3. Tab switch handler
-# Any change in the requested tab updates session_state.page in-place and
-# lets the *current* rerun continue downstream — no explicit ``st.rerun()``
-# here, which saves one full script execution per tab tap.
-if nav_param in _ALLOWED_PAGES and nav_param != st.session_state.page:
+# 2. Sync primary tab from URL (bookmark / refresh)
+if nav_param in _ALLOWED_PAGES:
     st.session_state.page = nav_param
     if nav_param != "MOCK":
-        # Mic UI only — never drop in-flight mock audio or exam rows here.
         st.session_state.mock_data["recording_active"] = False
 
-# 4. Mock sub-screen handler — URL intent wins. This runs AFTER restore so
-# ``?mock=TEST`` is never overwritten by a stale snapshot value.
+# 3. Mock sub-screen from URL
 if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
     mx = ensure_mock(st.session_state)
     if mx.get("mock_page") != mock_param:
@@ -156,7 +133,6 @@ if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
         if mock_param == "FINAL":
             mx["exam_finished"] = True
         elif mock_param in {"SURVEY", "TEST"}:
-            # Do not clear a finished exam or review navigation back into TEST/SURVEY.
             if mx.get("exam_finished"):
                 pass
             elif mx.get("final_report_generated") or mx.get("analytics_cache"):
@@ -167,68 +143,70 @@ if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
                 mx["exam_finished"] = False
 
 page = st.session_state.page
+if page not in _ALLOWED_PAGES:
+    st.session_state.page = "HOME"
+    page = "HOME"
 
 _router_debug("post_handlers", st.session_state, nav_param, mock_param)
 
 
-def _page_footer() -> None:
-    st.caption("© opictherapist")
-    render_bottom_navigation()
+def _render_active_page() -> None:
+    """Render the selected view — page content only (no bottom nav)."""
+    if page == "HOME":
+        if not st.session_state.get("splash_seen_this_session"):
+            from views.splash import render_splash_screen
 
-
-if page == "HOME":
-    # Session-only splash before Home (never written to disk).
-    if not st.session_state.get("splash_seen_this_session"):
-        from views.splash import render_splash_screen
-
-        if not st.session_state.get("_splash_once"):
+            if not st.session_state.get("_splash_once"):
+                render_splash_screen()
+                st.session_state._splash_once = True
+                st.rerun()
             render_splash_screen()
-            st.session_state._splash_once = True
+            time.sleep(1.2)
+            st.session_state.splash_seen_this_session = True
+            st.session_state.pop("_splash_once", None)
             st.rerun()
-        render_splash_screen()
-        time.sleep(1.2)
-        st.session_state.splash_seen_this_session = True
-        st.session_state.pop("_splash_once", None)
-        st.rerun()
 
-    from views.home import render_home
+        from views.home import render_home
 
-    render_home()
-    _page_footer()
-    sync_user_progress(st.session_state)
-    st.stop()
+        render_home()
+        sync_user_progress(st.session_state)
+        return
 
-if page == "PATTERN":
-    from views.patterns import render_patterns
+    if page == "MOCK":
+        from views.mock_exam import render_mock_exam_shell, render_mock_flow
 
-    render_patterns()
-    _page_footer()
-    st.stop()
+        render_mock_exam_shell()
+        render_mock_flow()
+        sync_user_progress(st.session_state)
+        return
 
-if page == "SCRIPTS":
-    from views.scripts import render_scripts
+    if page == "PATTERN":
+        from views.patterns import render_patterns
 
-    render_scripts()
-    _page_footer()
-    st.stop()
+        render_patterns()
+        return
 
-if page == "LECTURES":
-    from views.lectures import render_lectures
+    if page == "SCRIPTS":
+        from views.scripts import render_scripts
 
-    render_lectures()
-    _page_footer()
-    st.stop()
+        render_scripts()
+        return
 
-if page == "SETTINGS":
-    from views.settings_page import render_settings
+    if page == "LECTURES":
+        from views.lectures import render_lectures
 
-    render_settings()
-    _page_footer()
-    st.stop()
+        render_lectures()
+        return
 
-# --- Default: MOCK ------------------------------------------------------------
-from views.mock_exam import render_mock_exam_shell, render_mock_flow
+    if page == "SETTINGS":
+        from views.settings_page import render_settings
 
-render_mock_exam_shell()
-render_mock_flow()
-sync_user_progress(st.session_state)
+        render_settings()
+        return
+
+
+# --- Main shell: page body first, navigation last ----------------------------
+_render_active_page()
+st.caption("© opictherapist")
+render_bottom_navigation()
+st.stop()

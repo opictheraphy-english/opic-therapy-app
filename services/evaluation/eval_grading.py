@@ -46,7 +46,18 @@ _SEMANTIC_DEFAULTS: Dict[str, float] = {
     "pause_stability": 50.0,
     "repetition_ratio": 35.0,
     "abandoned_sentence_ratio": 28.0,
+    "pronunciation_clarity": 50.0,
+    "intonation_control": 50.0,
+    "stress_rhythm": 50.0,
+    "linking_naturalness": 50.0,
 }
+
+_PRONUNCIATION_KEYS = (
+    "pronunciation_clarity",
+    "intonation_control",
+    "stress_rhythm",
+    "linking_naturalness",
+)
 
 
 def normalize_semantic(raw: Optional[Dict[str, Any]]) -> Dict[str, float]:
@@ -87,18 +98,60 @@ def _idiom_bonus(lower: str) -> float:
     return float(sum(3 for phrase in IDIOM_SMALL_BONUS_PHRASES if phrase in lower))
 
 
+def _pronunciation_delivery_low(semantic: Dict[str, float]) -> bool:
+    """Mild intelligibility warning only — never auto-drop level on accent alone."""
+    for k in ("pronunciation_clarity", "intonation_control", "stress_rhythm"):
+        v = semantic.get(k, 50.0)
+        if v < 35.0:
+            return True
+    return False
+
+
+def _pronunciation_feedback(semantic: Dict[str, float]) -> str:
+    """One short Korean sentence for report UI (accent-fair)."""
+    clarity = semantic.get("pronunciation_clarity", 50.0)
+    intonation = semantic.get("intonation_control", 50.0)
+    stress = semantic.get("stress_rhythm", 50.0)
+    linking = semantic.get("linking_naturalness", 50.0)
+    avg = (clarity + intonation + stress + linking) / 4.0
+
+    if clarity < 35 or stress < 35 or intonation < 35:
+        return (
+            "단어 하나하나를 또박또박 읽는 느낌이 있어요. "
+            "문장 단위로 묶어서 말하고, 핵심 단어에 힘을 주는 연습이 필요합니다."
+        )
+    if avg >= 72:
+        return (
+            "발음은 전반적으로 이해 가능해요. "
+            "중요한 단어에 강세를 조금 더 주면 답변이 더 자연스럽게 들릴 수 있어요."
+        )
+    if clarity < 50 or stress < 50:
+        return (
+            "발음은 대체로 따라오지만, 강세와 리듬이 평평하면 청자가 피로할 수 있어요. "
+            "핵심 단어를 살짝 길게, 나머지는 짧게 이어 보세요."
+        )
+    return (
+        "발음은 전반적으로 이해 가능하지만, 억양과 강세를 조금 더 살리면 "
+        "답변이 더 자연스럽게 들릴 수 있어요."
+    )
+
+
 def _composite_quality(semantic: Dict[str, float], filler_adj: float, shallow_pen: float, idiom_b: float) -> float:
     w = {
-        "fluency_score": 0.11,
-        "grammar_score": 0.15,
-        "lexical_score": 0.11,
-        "logic_score": 0.11,
-        "semantic_density": 0.13,
-        "discourse_continuity": 0.13,
-        "narrative_depth": 0.10,
-        "elaboration_quality": 0.10,
-        "spontaneity_score": 0.03,
-        "naturalness": 0.03,
+        "fluency_score": 0.09,
+        "grammar_score": 0.14,
+        "lexical_score": 0.10,
+        "logic_score": 0.10,
+        "semantic_density": 0.12,
+        "discourse_continuity": 0.12,
+        "narrative_depth": 0.09,
+        "elaboration_quality": 0.09,
+        "spontaneity_score": 0.025,
+        "naturalness": 0.025,
+        "pronunciation_clarity": 0.04,
+        "intonation_control": 0.03,
+        "stress_rhythm": 0.03,
+        "linking_naturalness": 0.02,
     }
     acc = sum(semantic.get(k, 50.0) * wt for k, wt in w.items())
     acc += filler_adj
@@ -211,6 +264,11 @@ def evaluate_grading_logic(
         )
     if fh >= 7:
         summary_parts.append("필러 과다 사용으로 리듬이 산만해 보일 수 있습니다.")
+    if _pronunciation_delivery_low(sem):
+        summary_parts.append("발음·강세 전달력이 낮아 이해도가 떨어질 수 있습니다.")
+
+    pronunciation_feedback = _pronunciation_feedback(sem)
+    pronunciation_scores = {k: round(sem[k], 1) for k in _PRONUNCIATION_KEYS}
 
     final_grade_score = round(composite, 1)
 
@@ -242,6 +300,8 @@ def evaluate_grading_logic(
             "grammar": round(sem["grammar_score"], 1),
         },
         "semantic_dimensions": {k: round(v, 1) for k, v in sem.items()},
+        "pronunciation_scores": pronunciation_scores,
+        "pronunciation_feedback": pronunciation_feedback,
         "final_grade_score": final_grade_score,
         "summary_line": " ".join(summary_parts).strip(),
         "rule_flags": {
@@ -249,6 +309,7 @@ def evaluate_grading_logic(
             "im3_gate_trim": _im3_hit,
             "shallow_template_penalty": shallow_pen,
             "filler_adjustment": filler_adj,
+            "pronunciation_delivery_low": _pronunciation_delivery_low(sem),
         },
     }
 

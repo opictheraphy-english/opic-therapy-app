@@ -44,6 +44,10 @@ SEMANTIC_KEYS = (
     "pause_stability",
     "repetition_ratio",
     "abandoned_sentence_ratio",
+    "pronunciation_clarity",
+    "intonation_control",
+    "stress_rhythm",
+    "linking_naturalness",
 )
 
 
@@ -76,6 +80,14 @@ Grading philosophy:
 - Natural narration, elaboration, discourse continuity, spontaneity, and grammar matter MORE than raw speed.
 - Penalize filler dependence, shallow repetition, template memorization, broken clauses, and tense instability.
 - Idioms are optional SMALL flair — never sufficient alone for top tiers.
+- Pronunciation, intonation, stress, rhythm, and linking are a LIGHT supporting axis (~12% of quality).
+  Score clarity, rhythm, stress placement, and intelligibility from the audio — NOT native-like accent.
+
+Accent fairness (required):
+- Do not penalize the speaker merely for having a Korean accent.
+- Penalize only when pronunciation, stress, rhythm, or intonation reduces intelligibility
+  or makes the answer difficult to follow.
+- A Korean accent is acceptable if words are understandable and rhythm supports meaning.
 
 Question prompt for context (DO NOT echo this text into transcription):
 """ + repr(question_text or "") + f"""
@@ -107,8 +119,19 @@ Return ONLY one JSON object (no markdown fences). Required schema — integers 0
   "repetition_ratio": 0,
   "abandoned_sentence_ratio": 0,
 
+  "pronunciation_clarity": 0,
+  "intonation_control": 0,
+  "stress_rhythm": 0,
+  "linking_naturalness": 0,
+
   "feedback": "<concise Korean coaching paragraph, or empty if no speech>"
 }}
+
+Pronunciation dimension guide (0–100, higher = better):
+- pronunciation_clarity: how clearly words are pronounced and understood
+- intonation_control: natural rise/fall; avoid flat robotic delivery
+- stress_rhythm: stress on content words; natural English rhythm
+- linking_naturalness: connected speech sounds natural, not overly word-by-word
 
 Interpret ratios as severity scales (higher = worse) for repetition/abandonment.
 """.strip()
@@ -421,6 +444,8 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
             "ai_grade_raw": ai_grade_hint,
             "semantic_feedback": summary_ai,
             "semantic_dimensions": sem_flat,
+            "pronunciation_scores": grading.get("pronunciation_scores") or {},
+            "pronunciation_feedback": (grading.get("pronunciation_feedback") or "").strip(),
             "grading_rule_flags": grading.get("rule_flags") or {},
             "novice_band": grading.get("novice_band"),
             "audio_metrics": {
