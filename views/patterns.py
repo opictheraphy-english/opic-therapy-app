@@ -1,4 +1,9 @@
-"""Patterns — mobile-first, text-only drill list (no TTS / no audio UI)."""
+"""Patterns — premium mobile drill screen (step 3 shell + step 5 detail flow).
+
+Tab / accordion layout unchanged. Each pattern is a guided stack (hero →
+examples → IH → tip → practice); visuals live in ``ui/styles.py`` under
+``.pat-screen``.
+"""
 
 from __future__ import annotations
 
@@ -18,34 +23,14 @@ def _safe_key(s: str, max_len: int = 48) -> str:
     return (x[:max_len]) or "x"
 
 
-def _compact_css() -> None:
+def _render_hero() -> None:
     st.markdown(
-        """
-<style>
-.pat-wrap { max-width: 640px; margin: 0 auto; }
-.pat-head {
-  font-size: 0.95rem; font-weight: 600; color: #0f766e; margin: 0 0 6px 0;
-}
-.pat-sub { font-size: 0.72rem; color: #64748b; margin: 0 0 10px 0; line-height: 1.35; }
-.pat-card {
-  border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin: 0 0 6px 0;
-  background: #fff;
-}
-.pat-en { font-size: 0.88rem; color: #0f172a; line-height: 1.35; font-weight: 500; }
-.pat-ko { font-size: 0.78rem; color: #475569; line-height: 1.4; margin-top: 4px; }
-.pat-ex-wrap {
-  margin-top: 6px; padding: 6px 8px; background: #f8fafc; border-radius: 8px;
-  font-size: 0.74rem; color: #334155; line-height: 1.45;
-}
-.pat-ex-wrap ul { margin: 4px 0 0 16px; padding: 0; }
-.pat-wrap button[kind="secondary"] {
-  min-height: 1.75rem !important;
-  padding: 0.1rem 0.5rem !important;
-  font-size: 12px !important;
-}
-div[data-testid="stExpander"] details { border: 1px solid #e2e8f0; border-radius: 10px; }
-</style>
-""",
+        '<div class="pat-hero">'
+        '<p class="pat-eyebrow">Patterns</p>'
+        '<p class="pat-title">패턴 드릴</p>'
+        "<p class=\"pat-sub\">탭으로 유형을 고르고, 섹션을 펼치면 <b>히어로 → 예문 → IH → 팁 → 직접 말하기</b> 순서로 "
+        "안내됩니다. 예문이 많은 패턴은 맨 아래 <b>나머지 예문 더보기</b>로 추가 문장을 볼 수 있어요.</p>"
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -54,7 +39,7 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
     cnt = len(patterns)
     if not patterns:
         return
-    with st.expander(f"{title} · {cnt}", expanded=False):
+    with st.expander(f"{title}  ·  {cnt}", expanded=False):
         for i, pat in enumerate(patterns):
             ex_kw: Dict[str, Any] = {}
             if tab_id in ("experience", "comparison"):
@@ -69,16 +54,12 @@ def render_patterns() -> None:
     ensure_pattern(st.session_state)
     touch_pattern_visit(st.session_state)
 
-    _compact_css()
+    # Open the scoped wrapper — every .pat-screen rule in ui/styles.py only
+    # activates while this div is in the DOM, so the tab/expander/button
+    # overrides never bleed into HOME, MOCK, SETTINGS, etc.
+    st.markdown('<div class="pat-screen">', unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="pat-wrap">'
-        '<p class="pat-head">패턴</p>'
-        "<p class='pat-sub'>카테고리 → 섹션 → 카드. 예문은 처음 2개만 보이고, 「예문 더보기」로 추가 예문을 펼칩니다. "
-        "「접기」로 다시 접습니다. 루틴·경험·비교는 주제별 아코디언입니다.</p>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    _render_hero()
 
     tabs_model = build_pattern_tabs_model()
     tabs = st.tabs([t["label"] for t in tabs_model])
@@ -102,3 +83,5 @@ def render_patterns() -> None:
                 patterns: List[Dict[str, Any]] = sec.get("patterns") or []
                 sec_uid = _safe_key(f"{tid}_{sec.get('section_id') or si}")
                 _render_section(tid, sec_uid, title, patterns)
+
+    st.markdown("</div>", unsafe_allow_html=True)

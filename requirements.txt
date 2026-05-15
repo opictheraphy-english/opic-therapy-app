@@ -12,6 +12,6 @@ pandas
 plotly
 matplotlib
 
-# PDF export (optional runtime; app runs without these — see services/pdf_report.py)
-pillow
-reportlab
+# PDF export (final report download — install on Render with main app deps)
+pillow>=10.0.0
+reportlab>=4.0.0

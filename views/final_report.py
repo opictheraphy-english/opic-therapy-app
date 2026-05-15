@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from datetime import datetime
 from typing import Any, Dict, List
@@ -12,7 +13,12 @@ import streamlit as st
 
 from components.smart_feedback import render_smart_feedback_block
 from services.exam_analytics import compute_exam_aggregates, detect_risk_flags, summary_rows_for_table
-from utils.text_utils import DISCOURSE_MARKERS
+from utils.exam_state import reset_exam_state
+from utils.text_utils import (
+    DISCOURSE_MARKERS,
+    NO_SPEECH_EMPTY_TEXT,
+    is_real_speech_transcript,
+)
 
 try:
     from services.pdf_report import build_exam_pdf, pdf_export_available
@@ -245,8 +251,41 @@ def render_final_report(mx: Dict[str, Any]) -> None:
             st.write(row.get("question") or "—")
 
             st.markdown("##### [B] 나의 답변 (Transcript)")
-            tx = (res.get("transcript") or "").strip() or "(없음)"
-            st.markdown(f'<div class="mono-tx">{tx}</div>', unsafe_allow_html=True)
+            tx_raw = (res.get("transcript") or "").strip()
+            tx_is_real = False
+            if res.get("diagnosis_status") == "analysis_pending":
+                st.markdown(
+                    f'<div class="mono-tx" style="opacity:.9;">'
+                    f'⏳ {html.escape((res.get("summary_speech_rehab") or "").strip() or "AI 분석 대기")}'
+                    f'<br/><span style="font-size:0.9em;">{html.escape((res.get("prescription") or "").strip())}</span>'
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                tx_no_speech = bool(res.get("no_speech_detected")) or (
+                    res.get("diagnosis_status") == "no_speech"
+                )
+                tx_is_real = (
+                    bool(tx_raw)
+                    and not tx_no_speech
+                    and is_real_speech_transcript(tx_raw)
+                )
+                if tx_is_real:
+                    st.markdown(
+                        f'<div class="mono-tx">{tx_raw}</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    # Trust-gate rejection: render the empty-state copy instead
+                    # of any potentially fabricated text. Never display "(없음)"
+                    # next to a content area — users read that as "the system
+                    # erased my speech".
+                    st.markdown(
+                        f'<div class="mono-tx" style="opacity:.85;">'
+                        f'🎤 {NO_SPEECH_EMPTY_TEXT}'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
 
             st.markdown("##### [C] 에이바(Ava)의 상세 피드백")
             st.info(res.get("semantic_feedback") or res.get("summary_speech_rehab") or "—")
@@ -269,9 +308,10 @@ def render_final_report(mx: Dict[str, Any]) -> None:
             # [D-ii] Rule-based grammar fix + alternative-expression cards.
             # Same component the per-question report card uses, kept here so
             # the final report stays the single source of truth for review.
-            _tx = (res.get("transcript") or "").strip()
-            if _tx:
-                render_smart_feedback_block(_tx)
+            # Only run when the trust gate has accepted the transcript so we
+            # never "fix grammar" on hallucinated text.
+            if tx_is_real:
+                render_smart_feedback_block(tx_raw)
 
             st.markdown("##### [E] 세부 점수")
             rs = res.get("rubric_scores") or {}
@@ -343,31 +383,12 @@ def render_final_report(mx: Dict[str, Any]) -> None:
     dc3.caption("추후: 공유 링크 · 클라우드 저장 · 강사 검수 연동 예정")
 
     if st.button("🏠 홈으로 돌아가기", use_container_width=True):
-        _reset_exam_session(mx)
+        # Centralized reset — wipes exam state AND suppresses the on-disk
+        # snapshot from rehydrating the just-completed session on the next
+        # rerun (the old partial-cleanup helper used to leak ``current_exam``
+        # and ``exam_started_at`` back into HOME's resume detector).
+        reset_exam_state(mx, st.session_state)
         st.session_state.page = "HOME"
+        st.query_params.clear()
+        st.query_params["nav"] = "HOME"
         st.rerun()
-
-
-def _reset_exam_session(mx: Dict[str, Any]) -> None:
-    for k in (
-        "exam_finished",
-        "final_report_generated",
-        "overall_estimated_level",
-        "analytics_cache",
-        "downloadable_report_bytes",
-        "_analytics_sig",
-        "_show_exam_celebration",
-        "_final_report_demo",
-        "_demo_preview_loaded",
-    ):
-        mx.pop(k, None)
-    mx["mock_page"] = "SURVEY"
-    mx["current_idx"] = 0
-    mx["results"] = []
-    mx["last_result"] = None
-    mx["recordings"] = {}
-    mx["audio_bytes"] = None
-    mx["exam"] = []
-    mx["current_exam"] = []
-    mx["preview_transcript"] = None
-    mx["question_play_counts"] = {}

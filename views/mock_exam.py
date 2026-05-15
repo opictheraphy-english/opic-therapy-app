@@ -4,9 +4,17 @@ Heavy deps (``google.genai``, ``pandas``/``plotly`` via final_report,
 ``streamlit_mic_recorder``) are imported lazily per branch so cold-start on
 Render stays minimal. Visualizer + live-analytics monitoring tiles were
 removed per mobile-first spec.
+
+Failure handling
+----------------
+When Gemini analysis fails (503 / 429 / timeout / network) after all
+retries, the row is stored as ``analysis_pending`` so the user can advance;
+recordings stay in ``recordings``. Optional recovery still applies for
+no-speech trust-gate cases.
 """
 from __future__ import annotations
 
+import html
 import logging
 import re
 import secrets
@@ -14,9 +22,19 @@ import secrets
 import streamlit as st
 
 from components.audio_player import render_exam_question_audio_player
+from components.coaching_experience import (
+    render_coaching_cta_preamble,
+    render_coaching_retry_banner,
+    render_flow_coaching_section,
+    render_grammar_and_expression_coaching,
+    render_history_expander_coaching,
+    render_native_upgrade_section,
+    render_overall_coaching_hero,
+    render_strong_points_cards,
+)
 from components.navigation import render_bottom_navigation
-from components.smart_feedback import render_smart_feedback_block
 from components.topbar import render_top_bar
+from services.evaluation_service import analyze_audio_with_retry
 from services.mock_exam.mock_exam_test_set_generator import generate_test_set
 from services.report_service import cache_analysis_payload
 from services.tts_service import (
@@ -26,10 +44,33 @@ from services.tts_service import (
     neural2_voice_for_session,
     tts_audio_cached,
 )
-from utils.local_profile import iso_now
+from utils.exam_state import (
+    NO_SPEECH_ERROR_SENTINEL,
+    build_analysis_pending_result,
+    classify_analysis_error,
+    clear_pending_recovery,
+    count_completed_exam_prefix,
+    has_pending_recovery_for,
+    has_resumable_exam,
+    mark_pending_recovery,
+    reconcile_mock_exam_pointer,
+    reset_exam_state,
+    upsert_mock_exam_result,
+)
+from utils.local_profile import force_restore_mock_from_disk, iso_now
 from utils.secrets import get_gemini_api_key
 from utils.session_state import mock_session, settings_session, sync_settings_to_legacy
-from utils.text_utils import DISCOURSE_MARKERS, PRECISION_MAP, keywords
+from utils.text_utils import (
+    DISCOURSE_MARKERS,
+    PRECISION_MAP,
+    is_real_speech_transcript,
+    keywords,
+)
+
+# Re-entry guard. Streamlit reruns are normally synchronous so a second
+# call is unlikely, but this defends against any odd path where the same
+# rerun reaches _run_analysis twice (e.g. recovery panel + button race).
+_ANALYSIS_IN_FLIGHT_KEY = "_analysis_in_flight"
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +90,21 @@ def render_mock_exam_shell() -> None:
     if mx["mock_page"] not in {"SURVEY", "TEST", "REPORT", "FINAL"}:
         mx["mock_page"] = "SURVEY"
         st.rerun()
+
+    # If the user lands on the MOCK tab with the default ``mock_page="SURVEY"``
+    # (e.g. tapping 모의고사 in the bottom nav without an explicit ``?mock=``
+    # param) **and** they have a resumable exam, jump straight into the
+    # test instead of forcing them through the survey again. This honors
+    # the spec's "DO NOT reopen survey flow if resumable exam exists" rule
+    # for every entry path, not just the home "이어하기" card.
+    if mx["mock_page"] == "SURVEY" and has_resumable_exam(mx):
+        mx["mock_page"] = "TEST"
+
+    # Every MOCK entry reconciles ``current_idx`` vs ``results`` so stale
+    # disk snapshots (idx stuck on a completed question) cannot replay Q1.
+    if mx.get("current_exam"):
+        reconcile_mock_exam_pointer(mx)
+
     if "mock_data" not in st.session_state:
         st.session_state.mock_data = {"recording_active": False}
     st.session_state.mock_data["recording_active"] = bool(mx["audio_bytes"])
@@ -95,19 +151,28 @@ def render_mock_flow() -> None:
 def _render_survey(mx: dict) -> None:
     st.title("📋 Background Survey")
     st.write("당신의 상황에 맞는 답변을 선택해주세요. 이 선택에 따라 문제가 출제됩니다.")
-    d1, d2 = st.columns([1, 2])
-    with d1:
-        if st.button(
-            "📋 종합 리포트 미리보기 (데모)",
-            help="녹음·시험 없이 최종 진단 리포트 화면만 확인합니다.",
-            key="btn_preview_final_demo",
-        ):
-            from services.final_report_demo import seed_demo_final_report
+    # The "final report preview" button seeds synthetic demo transcripts
+    # into the session — useful for developers iterating on the report UI
+    # but a trust risk in production (users could mistake demo content for
+    # their own results). Gate behind ``OPIC_DEBUG_DEMO=1`` so the button
+    # is hidden from real users while the ``?preview_final=1`` URL still
+    # works for the developer who knows about it.
+    import os
 
-            seed_demo_final_report(mx)
-            st.rerun()
-    with d2:
-        st.caption("모의고사 탭에서 주소 끝에 `?preview_final=1` 을 붙여도 같은 미리보기로 이동합니다.")
+    if os.getenv("OPIC_DEBUG_DEMO") == "1":
+        d1, d2 = st.columns([1, 2])
+        with d1:
+            if st.button(
+                "📋 종합 리포트 미리보기 (데모)",
+                help="녹음·시험 없이 최종 진단 리포트 화면만 확인합니다.",
+                key="btn_preview_final_demo",
+            ):
+                from services.final_report_demo import seed_demo_final_report
+
+                seed_demo_final_report(mx)
+                st.rerun()
+        with d2:
+            st.caption("모의고사 탭에서 주소 끝에 `?preview_final=1` 을 붙여도 같은 미리보기로 이동합니다.")
 
     with st.container(border=True):
         st.subheader("🎚️ Self-Assessment (난이도 설정)")
@@ -200,6 +265,11 @@ def _render_survey(mx: dict) -> None:
         mx["exam_finished"] = False
         mx.pop("_final_report_demo", None)
         mx.pop("_demo_preview_loaded", None)
+        # Defensive: a failed analysis from a previous attempt should never
+        # carry into a freshly generated exam. ``reset_exam_state`` would
+        # also clear this, but the survey-start path is reached from inside
+        # the mock view (no URL reset) so we wipe it here explicitly.
+        clear_pending_recovery(mx)
         for k in (
             "final_report_generated",
             "overall_estimated_level",
@@ -248,10 +318,18 @@ def _render_test(mx: dict) -> None:
 
     _exam_run = mx.get("current_exam") or mx["exam"]
     if not _exam_run:
+        # Last-ditch restore: ``maybe_restore_mock_from_disk`` already ran
+        # earlier in ``app.py`` but might have been bypassed (e.g. mx had
+        # leftover ``results`` from a previous flow). Try once more —
+        # disk has the canonical exam payload in 100% of resume cases.
+        if force_restore_mock_from_disk(mx):
+            st.rerun()
         st.warning("시험지가 없습니다. 설문에서 「시험지 생성 및 시험 시작」을 눌러 주세요.")
         mx["mock_page"] = "SURVEY"
         mx["current_idx"] = 0
         st.rerun()
+
+    reconcile_mock_exam_pointer(mx)
 
     # Touch last-seen so the home "이어하기" card knows when the user was here.
     mx["exam_last_seen_at"] = iso_now()
@@ -260,15 +338,67 @@ def _render_test(mx: dict) -> None:
 
     q = _exam_run[mx["current_idx"]]
     q_id = q["id"]
+    audio_key = f"q_{q_id}"
     total = len(_exam_run)
     render_top_bar(
         f"Q{q_id} · {q.get('topic', '')}".strip(" ·"),
         back_href="?nav=MOCK&mock=SURVEY",
         eyebrow=f"모의고사 · {q_id}/{total}",
     )
-    st.progress((mx["current_idx"] + 1) / total)
-    st.markdown(f"**[{q['type']}] {q.get('topic', '')}**")
-    st.caption("질문 음성을 듣고 녹음해 주세요. (질문 텍스트는 비공개)")
+
+    # Marker — activates the ``section.main:has(.mx-marker)`` Streamlit-widget
+    # overrides in ``ui/styles.py`` (progress bar hidden, primary button
+    # styled, expander cards). Stays invisible (``display:none`` via empty
+    # element) so it only acts as a CSS sentinel.
+    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+
+    # --- Pending recovery branch -----------------------------------------
+    # When a previous analysis attempt failed for THIS question, we never
+    # destroyed the current question state — the audio + question are still
+    # in ``mx``. Show the recovery panel only, hiding the regular test UI
+    # (mic recorder, analyze button) so the user can't accidentally
+    # over-record their preserved answer.
+    if has_pending_recovery_for(mx, q_id):
+        _render_recovery_panel(mx, q, q_id, audio_key)
+        return
+
+    # 1) Top progress strip — custom HTML replaces ``st.progress`` (which is
+    # hidden by the scoped CSS) so the visual hierarchy matches HOME/PATTERN.
+    _answered = count_completed_exam_prefix(mx)
+    progress_pct = int(round((_answered / total) * 100)) if total else 0
+    topic_safe = html.escape(q.get("topic", "") or "")
+    type_safe = html.escape(q.get("type", "") or "")
+    st.markdown(
+        f"""
+        <div class="mx-progress">
+          <div class="mx-progress-meta">
+            <span class="mx-progress-eyebrow">진행</span>
+            <span class="mx-progress-count">Q{q_id} <span class="mx-progress-of">/ {total}</span></span>
+          </div>
+          {('<div class="mx-progress-chip">' + topic_safe + '</div>') if topic_safe else ''}
+        </div>
+        <div class="mx-progress-bar" aria-hidden="true">
+          <span class="mx-progress-fill" style="width:{progress_pct}%"></span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 2) Question card — type chip + topic + listening guidance. The
+    # question text itself stays hidden ("질문 텍스트는 비공개") because the
+    # OPIc format requires the test-taker to comprehend from audio only.
+    st.markdown(
+        f"""
+        <div class="mx-question-card">
+          {('<span class="mx-question-type">' + type_safe + '</span>') if type_safe else ''}
+          <div class="mx-question-topic">{topic_safe or '주제 안내'}</div>
+          <p class="mx-question-hint">
+            <strong>질문 음성</strong>을 듣고 답변을 녹음해 주세요. 질문 텍스트는 공개되지 않습니다.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     q_text = q["question"]
     voice_id = neural2_voice_for_session()
@@ -291,11 +421,22 @@ def _render_test(mx: dict) -> None:
             st.session_state[mock_err_key] = str(e)
             logger.warning("Mock exam TTS prefetch failed: %s: %s", type(e).__name__, e)
 
-    st.caption("질문 음성은 재생(▶) 시작마다 횟수가 줄며 **문항당 최대 2회**까지 재생됩니다.")
+    # 3) Listen stage — branded label above the audio player.
+    st.markdown(
+        '<div class="mx-listen-stage">'
+        '<span class="mx-stage-eyebrow">음성 듣기 · 최대 2회</span>',
+        unsafe_allow_html=True,
+    )
 
     err_msg = st.session_state.get(mock_err_key)
     if err_msg:
-        st.error(f"질문 음성을 만들 수 없습니다.\n\n{err_msg}")
+        st.markdown(
+            f'<div class="mx-status mx-status--error">'
+            f'<span class="mx-status-icon">⚠️</span>'
+            f'<span>질문 음성을 만들 수 없습니다.<br>{html.escape(err_msg)}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
         if st.button("다시 시도", key=f"mock_tts_retry_{q_id}"):
             st.session_state.pop(fail_key, None)
             st.session_state.pop(pref_key, None)
@@ -312,9 +453,23 @@ def _render_test(mx: dict) -> None:
             max_plays=2,
         )
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # 4) Record stage — the dark-teal "studio" panel. The mic_recorder
+    # component renders an iframe so we can only style the wrapper, but
+    # the wrapper alone shifts the screen's emotional focus to recording.
+    st.markdown(
+        '<div class="mx-record-stage">'
+        '<p class="mx-record-eyebrow">답변 녹음</p>'
+        '<div class="mx-record-title">마이크 버튼을 눌러 답변을 시작하세요</div>'
+        '<p class="mx-record-hint">'
+        '준비가 되면 <b>답변 시작</b>을 누르고, 마치면 <b>녹음 완료</b>를 눌러 저장합니다.'
+        '</p>',
+        unsafe_allow_html=True,
+    )
+
     from streamlit_mic_recorder import mic_recorder
 
-    audio_key = f"q_{q_id}"
     audio = mic_recorder(
         start_prompt="🎤 답변 시작 (클릭)",
         stop_prompt="⏹️ 녹음 완료 (클릭)",
@@ -326,21 +481,55 @@ def _render_test(mx: dict) -> None:
     saved_audio = mx["audio_bytes"] or mx["recordings"].get(audio_key)
 
     if saved_audio:
-        st.caption(f"녹음 데이터 감지됨: {len(saved_audio)} bytes")
+        st.markdown(
+            f'<div class="mx-record-saved">'
+            f'녹음 저장됨 · {len(saved_audio):,} bytes'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.info("먼저 녹음을 완료해주세요. 녹음이 저장되면 진단 버튼이 활성화됩니다.")
+        st.markdown(
+            '<div class="mx-record-empty">'
+            '먼저 녹음을 완료해 주세요. 녹음이 저장되면 진단 버튼이 활성화됩니다.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # 5) Status / error messages — same logic as before, just calmer cards.
     if mx["analysis_status"]:
-        st.info(mx["analysis_status"])
+        st.markdown(
+            f'<div class="mx-status mx-status--info">'
+            f'<span class="mx-status-icon">💡</span>'
+            f'<span>{html.escape(str(mx["analysis_status"]))}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
     if mx["analysis_error_msg"]:
-        st.error(mx["analysis_error_msg"])
+        st.markdown(
+            f'<div class="mx-status mx-status--error">'
+            f'<span class="mx-status-icon">⚠️</span>'
+            f'<span>{html.escape(str(mx["analysis_error_msg"]))}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
         mx["analysis_error_msg"] = ""
     if mx["analysis_done"]:
         mx["analysis_done"] = False
 
+    # 6) Primary CTA — restyled to mint pill via :has() scope (see ui/styles.py).
+    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
     if not st.button(
         "AI 테라피 진단받기",
-        disabled=(not bool(api_key)) or (not bool(saved_audio)),
+        type="primary",
+        use_container_width=True,
+        disabled=(not bool(api_key)) or (not bool(saved_audio)) or in_flight,
+        help=(
+            "AI 분석이 진행 중이에요. 잠시만 기다려 주세요."
+            if in_flight
+            else None
+        ),
     ):
         return
 
@@ -348,145 +537,515 @@ def _render_test(mx: dict) -> None:
 
 
 def _run_analysis(mx: dict, q: dict, q_id: int, audio_key: str, api_key: str) -> None:
-    mx["analysis_result"] = None
-    mx["analysis_error_msg"] = ""
-    mx["analysis_done"] = False
-    mx["analysis_status"] = ""
+    """Drive Gemini analysis with smart retry + cross-session serialization.
 
-    blob = mx["audio_bytes"] or mx["recordings"].get(audio_key)
-    if not blob:
-        st.error("오디오 데이터가 유실되었습니다. 다시 녹음해주세요.")
-        missing_audio_result = {
-            "diagnosis_status": "api_error",
-            "error": "오디오 데이터 유실",
-            "transcript": "",
-            "estimated_level": "측정 불가",
-            "estimated_level_display": "측정 불가",
-            "summary_speech_rehab": "녹음 데이터가 전달되지 않아 분석을 진행할 수 없었습니다.",
-            "prescription": "브라우저 마이크 권한 허용 후 3초 이상 다시 녹음해 주세요.",
-            "wpm": 0,
-            "sentence_count": 0,
-            "word_count": 0,
-            "fact_scores": {"text_type": 0, "accuracy": 0},
-        }
-        mx["analysis_result"] = missing_audio_result
-        mx["last_result"] = missing_audio_result
-        mx["results"].append(
-            {
-                "q_id": q["id"],
-                "question": q["question"],
-                "type": q["type"],
-                "topic": q.get("topic", ""),
-                "result": missing_audio_result,
-            }
-        )
-        _nav_after_question_analysis(mx, q["id"])
-        mx["analysis_done"] = True
+    All the heavy lifting (process-wide lock, exponential backoff, transient
+    vs. non-transient classification) lives in
+    ``services.evaluation_service.analyze_audio_with_retry`` so this view
+    only owns the state-machine transitions:
+
+      * Missing audio        →  upsert ``no_audio`` row, navigate, reconcile
+                                 pointer (next question index persisted).
+      * Success              →  upsert result, navigate, reconcile pointer,
+                                 clear recovery.
+      * All retries exhausted  →  upsert ``analysis_pending`` row, advance
+                                 exam pointer (recording kept in ``recordings``).
+
+    A small re-entry guard (``_ANALYSIS_IN_FLIGHT_KEY``) makes the function
+    idempotent within a single rerun — Streamlit is synchronous in practice
+    but this defends against any unexpected re-entry from the recovery
+    panel or rapid widget interactions.
+    """
+    if st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY):
+        # An analysis is already running in this rerun's call chain; refuse
+        # to start a second one. The user's audio is safe regardless.
         return
 
-    with st.spinner("AI가 발화를 진단 중입니다…"):
-        from services.evaluation_service import analyze_audio_with_ai
+    st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = True
+    try:
+        mx["analysis_result"] = None
+        mx["analysis_error_msg"] = ""
+        mx["analysis_done"] = False
+        mx["analysis_status"] = ""
+        # CRITICAL: wipe any leftover transcript from a PREVIOUS question
+        # before this attempt. If analysis fails or returns no speech, the
+        # recovery panel must never surface the previous question's text
+        # as if it belonged to this question.
+        mx["preview_transcript"] = None
 
-        try:
-            result = analyze_audio_with_ai(
-                blob,
-                q["question"],
-                api_key,
-                int(settings_session()["difficulty"]),
-            )
-
-            if not result or "error" in result:
-                safe_result = result or {"error": "결과값이 비어있습니다."}
-                err_msg = (safe_result.get("error") or "결과값이 비어있습니다.").strip()
-                err_upper = err_msg.upper()
-                if "404" in err_upper or "NOT_FOUND" in err_upper or "엔진 경로" in err_msg:
-                    st.error("엔진 경로 재설정 중")
-                elif "429" in err_upper or "RESOURCE_EXHAUSTED" in err_upper or "할당량 초과" in err_msg:
-                    st.error("잠시 대기")
-                else:
-                    st.error(f"상세 에러: {err_msg}")
-                safe_result.setdefault("diagnosis_status", "api_error")
-                safe_result.setdefault("transcript", f"(분석 실패 원문) {err_msg}")
-                safe_result.setdefault("estimated_level", "측정 불가")
-                safe_result.setdefault("estimated_level_display", "측정 불가")
-                safe_result.setdefault("summary_speech_rehab", f"분석 엔진 오류: {err_msg}")
-                safe_result.setdefault("prescription", "네트워크 상태를 확인하고, 3~5초 길이로 다시 녹음해 주세요.")
-                safe_result.setdefault("wpm", 0)
-                safe_result.setdefault("sentence_count", 0)
-                safe_result.setdefault("word_count", 0)
-                safe_result.setdefault("fact_scores", {"text_type": 0, "accuracy": 0})
-                result_to_store = safe_result
-            else:
-                result_to_store = cache_analysis_payload(result)
-
-            mx["analysis_result"] = result_to_store
-            mx["preview_transcript"] = (result_to_store.get("transcript") or "").strip()
-            raw_parse_failed = (result_to_store.get("raw_text_parse_failed") or "").strip()
-            if raw_parse_failed:
-                st.error(raw_parse_failed)
-            mx["last_result"] = result_to_store
-            mx["results"].append(
+        blob = mx["audio_bytes"] or mx["recordings"].get(audio_key)
+        if not blob:
+            st.error("오디오 데이터가 유실되었습니다. 다시 녹음해주세요.")
+            missing_audio_result = {
+                "diagnosis_status": "no_audio",
+                "error": "오디오 데이터 유실",
+                "transcript": "",
+                "estimated_level": "측정 불가",
+                "estimated_level_display": "측정 불가",
+                "summary_speech_rehab": "녹음 데이터가 전달되지 않아 분석을 진행할 수 없었습니다.",
+                "prescription": "브라우저 마이크 권한 허용 후 3초 이상 다시 녹음해 주세요.",
+                "wpm": 0,
+                "sentence_count": 0,
+                "word_count": 0,
+                "fact_scores": {"text_type": 0, "accuracy": 0},
+            }
+            mx["analysis_result"] = missing_audio_result
+            mx["last_result"] = missing_audio_result
+            upsert_mock_exam_result(
+                mx,
                 {
                     "q_id": q["id"],
                     "question": q["question"],
                     "type": q["type"],
                     "topic": q.get("topic", ""),
-                    "result": result_to_store,
-                }
+                    "result": missing_audio_result,
+                },
             )
             _nav_after_question_analysis(mx, q["id"])
+            reconcile_mock_exam_pointer(mx)
             mx["analysis_done"] = True
-        except Exception as e:
-            st.error(f"에러 발생: {str(e)}")
+            return
 
-    if mx["analysis_done"]:
+        difficulty = int(settings_session()["difficulty"])
+
+        # ``st.status`` (vs ``st.spinner``) lets us push friendlier interim
+        # messages while the retry loop is running. The label updates are
+        # opacity-only so they never feel like a hard rerun.
+        with st.status("AI가 발화를 진단 중입니다…", expanded=False) as status:
+
+            def _on_status(stage: str, label: str) -> None:
+                try:
+                    status.update(label=label)
+                except Exception:  # pragma: no cover — status UI is best-effort
+                    logger.debug("status.update raised; ignoring (stage=%s)", stage)
+
+            result, last_error, attempts = analyze_audio_with_retry(
+                blob,
+                q["question"],
+                api_key,
+                difficulty,
+                on_status=_on_status,
+            )
+
+            try:
+                if result is None:
+                    status.update(
+                        label="잠시 후 다시 시도해 주세요. 답변은 안전하게 저장되었습니다.",
+                        state="error",
+                    )
+                else:
+                    status.update(label="진단 완료", state="complete")
+            except Exception:
+                pass
+
+        if result is None:
+            err_kind = classify_analysis_error(last_error)
+            logger.warning(
+                "Gemini analysis exhausted retries q_id=%s attempts=%s kind=%s",
+                q.get("id"),
+                attempts,
+                err_kind,
+            )
+            logger.warning("Gemini last_error detail (server log): %s", last_error)
+            pending = build_analysis_pending_result(q, err_kind, attempts)
+            mx["analysis_result"] = pending
+            mx["last_result"] = pending
+            upsert_mock_exam_result(
+                mx,
+                {
+                    "q_id": q["id"],
+                    "question": q["question"],
+                    "type": q["type"],
+                    "topic": q.get("topic", ""),
+                    "result": pending,
+                },
+            )
+            clear_pending_recovery(mx)
+            _nav_after_question_analysis(mx, q["id"])
+            reconcile_mock_exam_pointer(mx)
+            mx["analysis_done"] = True
+            mx["preview_transcript"] = None
+            st.rerun()
+            return
+
+        # Unified trust gate: treat the answer as "no speech" if EITHER
+        # the pipeline already flagged it OR the transcript fails the
+        # view-boundary sanitizer (placeholder phrases, question-echo,
+        # leaked JSON fragments, …). Either way we route through the
+        # recovery flow with a calm "음성이 감지되지 않았어요" panel +
+        # an explicit re-record affordance — never silently committing
+        # an empty / fabricated transcript and advancing the exam.
+        _pipeline_no_speech = bool(result.get("no_speech_detected")) or (
+            result.get("diagnosis_status") == "no_speech"
+        )
+        _transcript_raw = (result.get("transcript") or "").strip()
+        _transcript_is_real = bool(_transcript_raw) and is_real_speech_transcript(
+            _transcript_raw
+        )
+        if _pipeline_no_speech or not _transcript_is_real:
+            mark_pending_recovery(
+                mx,
+                q_id=int(q["id"]),
+                audio_key=audio_key,
+                error_message=NO_SPEECH_ERROR_SENTINEL,
+                attempts=attempts,
+                transcript_preview=None,
+            )
+            st.rerun()
+            return
+
+        result_to_store = cache_analysis_payload(result)
+        mx["preview_transcript"] = _transcript_raw
+        mx["analysis_result"] = result_to_store
+        raw_parse_failed = (result_to_store.get("raw_text_parse_failed") or "").strip()
+        if raw_parse_failed:
+            st.error(raw_parse_failed)
+        mx["last_result"] = result_to_store
+        upsert_mock_exam_result(
+            mx,
+            {
+                "q_id": q["id"],
+                "question": q["question"],
+                "type": q["type"],
+                "topic": q.get("topic", ""),
+                "result": result_to_store,
+            },
+        )
+        _nav_after_question_analysis(mx, q["id"])
+        reconcile_mock_exam_pointer(mx)
+        mx["analysis_done"] = True
+        clear_pending_recovery(mx)
+
         st.rerun()
+    finally:
+        # Always clear the flag so a future rerun starts fresh — even if
+        # ``st.rerun()`` raised or the user navigated away mid-call.
+        st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = False
+
+
+# ---------------------------------------------------------------------------
+# Recovery panel — surfaced only while ``pending_recovery`` is set for the
+# current question. Three actions; never destructive.
+# ---------------------------------------------------------------------------
+
+_RECOVERY_COPY: dict[str, tuple[str, str]] = {
+    "no_speech": (
+        "음성이 감지되지 않았어요 🙏",
+        "이번 답변에서 인식된 발화가 없어요. 마이크가 켜져 있는지 확인하고 "
+        "조용한 환경에서 또렷한 목소리로 다시 한 번 답변해 보세요. "
+        "진행 상황과 다른 문항의 답변은 그대로 안전하게 보관됩니다.",
+    ),
+    "overload": (
+        "AI 분석 서버가 잠시 혼잡해요 🙏",
+        "잠시 후 다시 시도하면 대부분 정상적으로 진행돼요. "
+        "녹음과 진행 상황은 안전하게 보관 중입니다.",
+    ),
+    "rate_limit": (
+        "잠시 후 다시 시도해 주세요 🙏",
+        "잠깐 쉬어 가는 동안 녹음과 진행 상황은 안전하게 보관됩니다. "
+        "약 1~2분 뒤에 다시 시도해 주세요.",
+    ),
+    "timeout": (
+        "AI 분석이 잠시 지연되고 있어요 🙏",
+        "네트워크가 잠깐 지연되는 상황이에요. 녹음은 그대로 남아 있으니 "
+        "다시 분석하기를 눌러 같은 답변으로 재시도할 수 있어요.",
+    ),
+    "engine_path": (
+        "AI 엔진 경로를 재설정 중이에요",
+        "내부 모델 라우팅이 잠깐 흔들리는 상황이에요. "
+        "‘다시 분석하기’를 한 번 더 눌러 주세요.",
+    ),
+    "unknown": (
+        "AI 분석이 잠시 지연되고 있어요 🙏",
+        "녹음과 진행 상황은 모두 안전하게 보관됐어요. "
+        "‘다시 분석하기’를 눌러도 같은 문항에 그대로 머무릅니다.",
+    ),
+}
+
+
+def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None:
+    """Friendly fallback UI shown when Gemini analysis has failed.
+
+    Critical invariant: this view only mutates ``pending_recovery``. It
+    never touches ``current_idx``, ``results``, ``current_exam``,
+    ``audio_bytes``, or ``recordings`` — every retry path reads from the
+    audio that was already preserved when the analysis first failed.
+    """
+    pr: dict = mx.get("pending_recovery") or {}
+    err_kind = str(pr.get("error_kind") or "unknown")
+    title, body = _RECOVERY_COPY.get(err_kind, _RECOVERY_COPY["unknown"])
+    attempts = int(pr.get("attempts") or 0)
+    saved_audio = mx.get("audio_bytes") or mx.get("recordings", {}).get(audio_key)
+    audio_size = len(saved_audio) if saved_audio else 0
+    is_no_speech = err_kind == "no_speech"
+
+    # Different eyebrow / meta for the no-speech case — this isn't an AI
+    # failure, it's an empty-state, so we don't show "AI 분석 일시 지연".
+    eyebrow_text = "음성 미감지" if is_no_speech else "AI 분석 일시 지연"
+    audio_meta = (
+        "녹음 음성 미감지"
+        if is_no_speech
+        else f"녹음 {audio_size:,} bytes 보존됨"
+    )
+
+    st.markdown(
+        f"""
+        <section class="recovery-card" role="alert" aria-live="polite">
+          <div class="rv-eyebrow">{html.escape(eyebrow_text)}</div>
+          <div class="rv-title">{html.escape(title)}</div>
+          <div class="rv-body">{html.escape(body)}</div>
+          <div class="rv-meta">
+            <span>시도 횟수 {attempts}회</span>
+            <span class="rv-sep">·</span>
+            <span>{html.escape(audio_meta)}</span>
+            <span class="rv-sep">·</span>
+            <span>Q{q_id} 위치 유지</span>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
+    c1, c2, c3 = st.columns(3)
+
+    if is_no_speech:
+        # No-speech branch: re-analysing the same silent audio would just
+        # produce no_speech again, so the primary action is "re-record".
+        # We deliberately drop the saved audio for this question so the
+        # mic recorder comes back fresh — no stale or "leaked" audio.
+        with c1:
+            if st.button(
+                "🎤 다시 녹음하기",
+                key=f"recover_rerecord_{q_id}",
+                type="primary",
+                use_container_width=True,
+            ):
+                mx["audio_bytes"] = None
+                mx["recordings"].pop(audio_key, None)
+                mx["preview_transcript"] = None
+                clear_pending_recovery(mx)
+                st.rerun()
+        with c2:
+            if st.button(
+                "⏸️ 잠시 후 시도",
+                key=f"recover_pause_{q_id}",
+                use_container_width=True,
+            ):
+                clear_pending_recovery(mx)
+                st.rerun()
+        with c3:
+            if st.button(
+                "🏠 홈으로",
+                key=f"recover_home_{q_id}",
+                use_container_width=True,
+            ):
+                st.session_state.page = "HOME"
+                try:
+                    st.query_params["nav"] = "HOME"
+                except Exception:  # pragma: no cover
+                    logger.debug("query_params set failed; ignoring")
+                st.rerun()
+        return
+
+    with c1:
+        if st.button(
+            "🔄 다시 분석하기",
+            key=f"recover_retry_{q_id}",
+            type="primary",
+            use_container_width=True,
+            disabled=(audio_size == 0) or in_flight,
+            help=(
+                "AI 분석이 진행 중이에요. 잠시만 기다려 주세요."
+                if in_flight
+                else None
+            ),
+        ):
+            api_key = get_gemini_api_key()
+            if not api_key:
+                st.error("Gemini API Key가 없어 다시 시도할 수 없습니다. 설정에서 키를 등록해 주세요.")
+            else:
+                clear_pending_recovery(mx)
+                _run_analysis(mx, q, q_id, audio_key, api_key)
+    with c2:
+        if st.button(
+            "⏸️ 잠시 후 시도",
+            key=f"recover_pause_{q_id}",
+            use_container_width=True,
+        ):
+            # Hide the panel — audio and question state stay intact, the
+            # regular test UI returns with the "AI 테라피 진단받기" button
+            # ready for whenever the user is ready.
+            clear_pending_recovery(mx)
+            st.rerun()
+    with c3:
+        if st.button(
+            "🏠 홈으로",
+            key=f"recover_home_{q_id}",
+            use_container_width=True,
+        ):
+            # Keep ``pending_recovery`` set so coming back to TEST shows
+            # the same panel — the user explicitly paused mid-failure.
+            st.session_state.page = "HOME"
+            st.query_params.clear()
+            st.query_params["nav"] = "HOME"
+            st.rerun()
+
+    preview = (pr.get("transcript_preview") or "").strip()
+    if preview:
+        with st.expander("복원된 발화 미리보기", expanded=False):
+            st.write(preview)
+
+    # Last-resort technical detail, collapsed by default so it doesn't
+    # crowd the friendly copy.
+    err_msg = (pr.get("error_message") or "").strip()
+    if err_msg:
+        with st.expander("기술 상세", expanded=False):
+            st.code(err_msg, language="text")
 
 
 def _render_report(mx: dict) -> None:
     render_top_bar(
-        "AI 진단 리포트",
+        "말하기 코칭",
         back_href="?nav=MOCK&mock=TEST",
-        eyebrow="모의고사 · 결과",
+        eyebrow="모의고사 · 코칭",
     )
-    st.caption("Eric No Coaching Mode")
+
+    # Marker for the scoped Streamlit-widget overrides (button + expander).
+    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
 
     _exam_run = mx.get("current_exam") or mx["exam"]
+    if _exam_run:
+        reconcile_mock_exam_pointer(mx)
 
+    _latest_ok_coaching = False
+    _last_i = -1
     if mx["results"]:
+        _last_i = len(mx["results"]) - 1
         _lr = mx["results"][-1].get("result", {})
         _lq = mx["results"][-1].get("q_id")
-        _heard = (_lr.get("transcript") or "").strip()
-        st.write("AI가 들은 내용:", _heard or "(없음)")
-
-        st.subheader("📝 복원 발화 텍스트")
-        st.text_area(
-            f"Q{_lq} 상세",
-            value=_heard or "(없음)",
-            height=160,
-            key=f"restored_transcript_q_{_lq}",
+        _heard_raw = (_lr.get("transcript") or "").strip()
+        # Trust gate: AI-emitted no_speech OR sanitizer rejection both lead
+        # to the friendly empty-state hero. We never render unknown text
+        # as if it were the user's recorded speech.
+        _no_speech = bool(_lr.get("no_speech_detected")) or (
+            _lr.get("diagnosis_status") == "no_speech"
         )
-        _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
-        if _sum_rehab:
-            st.subheader("💬 총평 · Speech rehabilitation (발화 재활)")
-            st.info(_sum_rehab)
+        _has_real_speech = (
+            bool(_heard_raw)
+            and not _no_speech
+            and is_real_speech_transcript(_heard_raw)
+        )
+        _latest_ok_coaching = _has_real_speech and _lr.get("diagnosis_status") == "ok"
+
+        if _latest_ok_coaching:
+            render_overall_coaching_hero(_lr, int(_lq))
+            render_strong_points_cards(_lr)
+
+        if _has_real_speech:
+            _wpm = _lr.get("wpm")
+            _sent = _lr.get("sentence_count", 0)
+            _words = _lr.get("word_count", 0)
+            meta_chips = []
+            if isinstance(_wpm, (int, float)):
+                meta_chips.append(f'<span class="mx-rh-chip">WPM {_wpm}</span>')
+            meta_chips.append(f'<span class="mx-rh-chip">문장 {_sent}</span>')
+            meta_chips.append(f'<span class="mx-rh-chip">단어 {_words}</span>')
+            meta_html = f'<div class="mx-rh-meta">{"".join(meta_chips)}</div>'
+
+            transcript_html = html.escape(_heard_raw)
+            st.markdown(
+                f"""
+                <section class="mx-report-hero">
+                  <p class="mx-rh-eyebrow">Q{_lq} · 복원 발화</p>
+                  <div class="mx-rh-title">방금 말씀하신 흐름을 그대로 옮겨 적었어요</div>
+                  <div class="mx-rh-transcript">{transcript_html}</div>
+                  {meta_html}
+                </section>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.text_area(
+                f"Q{_lq} 텍스트 (복사·수정용)",
+                value=_heard_raw,
+                height=140,
+                key=f"restored_transcript_q_{_lq}",
+            )
+        elif _lr.get("diagnosis_status") == "analysis_pending":
+            summ = html.escape((_lr.get("summary_speech_rehab") or "").strip())
+            prev = html.escape((_lr.get("prescription") or "").strip())
+            st.markdown(
+                f"""
+                <section class="mx-report-hero">
+                  <p class="mx-rh-eyebrow">Q{_lq} · AI 분석 대기</p>
+                  <div class="mx-rh-title">이번 답변은 아직 AI 피드백이 연결되지 않았어요</div>
+                  <div class="mx-rh-transcript">{summ}</div>
+                  <p class="mx-rh-transcript" style="margin-top:10px;font-size:0.95rem;">{prev}</p>
+                </section>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f"""
+                <section class="mx-report-hero">
+                  <p class="mx-rh-eyebrow">Q{_lq} · 음성 미감지</p>
+                  <div class="mx-rh-title">음성이 감지되지 않았어요 🙏</div>
+                  <div class="mx-rh-transcript">
+                    이번 답변에서는 인식된 발화가 없습니다. 마이크가 켜져 있는지 확인하고
+                    다시 한 번 또렷한 목소리로 답변해 보세요.
+                  </div>
+                </section>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        if _latest_ok_coaching:
+            render_grammar_and_expression_coaching(_heard_raw)
+            render_native_upgrade_section(_lr)
+            render_flow_coaching_section(_lr)
+            _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
+            if _sum_rehab and len(_sum_rehab) > 160:
+                with st.expander("AI 총평 전문", expanded=False):
+                    st.write(_sum_rehab)
+        elif _has_real_speech:
+            render_grammar_and_expression_coaching(_heard_raw)
+            _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
+            if _sum_rehab:
+                st.caption(_sum_rehab[:280] + ("…" if len(_sum_rehab) > 280 else ""))
+        elif _lr.get("diagnosis_status") == "analysis_pending":
+            pass
+        else:
+            _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
+            if _sum_rehab:
+                st.caption(_sum_rehab[:280] + ("…" if len(_sum_rehab) > 280 else ""))
+
         _raw_parse_failed = (_lr.get("raw_text_parse_failed") or "").strip()
         if _raw_parse_failed:
-            st.error(_raw_parse_failed)
-        _wpm = _lr.get("wpm")
-        if isinstance(_wpm, (int, float)):
-            st.caption(
-                f"WPM: {_wpm} | 문장수: {_lr.get('sentence_count', 0)} | 단어수: {_lr.get('word_count', 0)}"
+            st.markdown(
+                f'<div class="mx-status mx-status--error">'
+                f'<span class="mx-status-icon">⚠️</span>'
+                f'<span>{html.escape(_raw_parse_failed)}</span>'
+                f"</div>",
+                unsafe_allow_html=True,
             )
 
     api_error_count = sum(
         1 for item in mx["results"] if item.get("result", {}).get("diagnosis_status") == "api_error"
     )
     if api_error_count:
-        st.info(f"API 오류로 실패한 문항: {api_error_count}개")
+        st.markdown(
+            f'<div class="mx-status mx-status--warn">'
+            f'<span class="mx-status-icon">⚠️</span>'
+            f"<span>API 오류로 실패한 문항: <b>{api_error_count}개</b></span>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
-    st.subheader("🧾 문항별 코칭 카드")
-    for item in mx["results"]:
+    st.markdown('<div class="mx-section-h">이번 세션 문항 기록</div>', unsafe_allow_html=True)
+    for i, item in enumerate(mx["results"]):
+        if i == _last_i and _latest_ok_coaching:
+            continue
         result = item.get("result", {})
         qid = item.get("q_id")
         label = f"Q{qid} | {item.get('type', '')} {item.get('topic', '')}".strip()
@@ -497,123 +1056,71 @@ def _render_report(mx: dict) -> None:
             if result.get("diagnosis_status") == "api_error":
                 st.error(result.get("error", "API 오류"))
                 continue
+            if result.get("diagnosis_status") == "analysis_pending":
+                st.info(
+                    (result.get("summary_speech_rehab") or "").strip()
+                    + " "
+                    + (result.get("prescription") or "").strip()
+                )
+                continue
             if "error" in result:
                 st.error(result["error"])
                 continue
 
-            st.markdown(f"**문제:** {item.get('question', '')}")
+            st.caption(item.get("question", "") or "")
             if qid == 1:
                 st.info("몸 풀기 단계입니다. 본인의 바이브를 잘 점검해 보세요.")
-            else:
-                display_level = result.get("estimated_level_display") or result.get("estimated_level", "N/A")
-                st.markdown(f"**Q{qid} 예상 등급:** {display_level}")
-            if result.get("estimated_range"):
-                st.info(result["estimated_range"])
+            render_history_expander_coaching(item)
 
-            wpm = result.get("wpm")
-            word_count = result.get("word_count", 0)
-            if isinstance(wpm, (int, float)):
-                st.markdown(f"**유창성(Velocity):** WPM {wpm}")
-            fact_scores = result.get("fact_scores") or {}
-            if isinstance(fact_scores, dict):
-                st.markdown(
-                    f"**구조(Text Type) / 정확도(Accuracy):** "
-                    f"Text Type {fact_scores.get('text_type', 0)} / Accuracy {fact_scores.get('accuracy', 0)}"
-                )
-            if result.get("final_grade_score") is not None:
-                st.markdown(f"**최종 종합 점수:** {result.get('final_grade_score')}")
-            if result.get("question_type"):
-                st.markdown(f"**질문 유형 분류:** {result.get('question_type')}")
-            rubric_scores = result.get("rubric_scores") or {}
-            if isinstance(rubric_scores, dict):
-                st.markdown(
-                    f"**세부 점수:** "
-                    f"Fluency {rubric_scores.get('fluency', 0)} / "
-                    f"Lexical {rubric_scores.get('lexical', 0)} / "
-                    f"Logic {rubric_scores.get('logic', 0)} / "
-                    f"Grammar {rubric_scores.get('grammar', 0)}"
-                )
+    _answered_report = count_completed_exam_prefix(mx)
+    has_next = (_answered_report < len(_exam_run)) and not mx.get("exam_finished")
 
-            st.subheader("🚨 시제 적절성 피드백")
-            st.write(result.get("tense_appropriateness_feedback") or result.get("breakdown", "없음"))
+    render_coaching_retry_banner(has_next=has_next)
+    render_coaching_cta_preamble(has_next=has_next)
 
-            # Acting feedback — only surface when there's a real signal (raw
-            # AI text, or the high-WPM heuristic). The generic empty-state
-            # string was removed per the "no boilerplate feedback" rule.
-            acting = (result.get("acting_feedback") or "").strip()
-            if isinstance(wpm, (int, float)) and wpm >= 200:
-                if word_count < 120:
-                    acting = "속도는 매우 빠르지만 암기 발화(Drone) 가능성이 있습니다. 감정선과 호흡, 강조 포인트를 분명히 분배하세요."
-                else:
-                    acting = "초고속 발화 구간에서도 연기력과 감정 전달이 유지되는지 냉정하게 점검했습니다."
-            if acting:
-                st.subheader("🔥 연기력 피드백")
-                st.write(acting)
-
-            _sr = (result.get("summary_speech_rehab") or "").strip()
-            if _sr:
-                st.subheader("💬 총평")
-                st.info(_sr)
-            st.subheader("💊 에릭의 처방전")
-            st.write(result.get("prescription", "처방전을 생성할 수 없습니다."))
-            raw_parse_failed = (result.get("raw_text_parse_failed") or "").strip()
-            if raw_parse_failed:
-                st.error(raw_parse_failed)
-
-            transcript = (result.get("transcript") or "").strip()
-            # Rule-based, category-specific cards: concrete grammar fixes +
-            # alternative-expression upgrades, computed directly from the
-            # restored transcript. Replaces the old generic "표현 다양성"
-            # boilerplate with actionable ❌/✅ pairs.
-            if transcript:
-                render_smart_feedback_block(transcript)
-
-            st.text_area(
-                f"Q{qid} 복원 텍스트",
-                value=transcript or "(비어 있음)",
-                height=120,
-                key=f"transcript_{qid}",
-            )
-
-    if st.button("처음으로 돌아가기"):
-        st.session_state.page = "HOME"
-        mx["mock_page"] = "SURVEY"
-        mx["current_idx"] = 0
-        mx["results"] = []
-        mx["last_result"] = None
-        mx["recordings"] = {}
-        mx["audio_bytes"] = None
-        mx["preview_transcript"] = None
-        mx["question_play_counts"] = {}
-        mx["exam"] = []
-        mx["current_exam"] = []
-        for k in (
-            "exam_finished",
-            "final_report_generated",
-            "overall_estimated_level",
-            "analytics_cache",
-            "downloadable_report_bytes",
-            "_analytics_sig",
-            "_show_exam_celebration",
-            "_final_report_demo",
-            "_demo_preview_loaded",
+    if has_next:
+        col_secondary, col_primary = st.columns([1, 1])
+        with col_primary:
+            if st.button(
+                "다음 단계로 계속하기",
+                type="primary",
+                use_container_width=True,
+                key="report_next_q",
+            ):
+                # ``current_idx`` already advanced right after analysis; do not
+                # increment again (double-advance used to skip a question).
+                reconcile_mock_exam_pointer(mx)
+                mx["audio_bytes"] = None
+                mx["preview_transcript"] = None
+                mx["mock_page"] = "TEST"
+                st.rerun()
+        with col_secondary:
+            if st.button(
+                "홈에서 잠깐 쉬기",
+                use_container_width=True,
+                key="report_restart",
+            ):
+                reset_exam_state(mx, st.session_state)
+                clear_mock_question_tts_keys()
+                st.session_state.page = "HOME"
+                st.query_params.clear()
+                st.query_params["nav"] = "HOME"
+                st.rerun()
+    else:
+        if st.button(
+            "홈에서 잠깐 쉬기",
+            use_container_width=True,
+            key="report_restart",
         ):
-            mx.pop(k, None)
-        clear_mock_question_tts_keys()
-        st.rerun()
-
-    if mx["current_idx"] < len(_exam_run) - 1:
-        if st.button("다음 문제 계속하기"):
-            mx["current_idx"] += 1
-            mx["audio_bytes"] = None
-            mx["preview_transcript"] = None
-            mx["mock_page"] = "TEST"
+            reset_exam_state(mx, st.session_state)
+            clear_mock_question_tts_keys()
+            st.session_state.page = "HOME"
+            st.query_params.clear()
+            st.query_params["nav"] = "HOME"
             st.rerun()
 
-    _render_precision_section(mx)
-
-
-def _render_precision_section(mx: dict) -> None:
+    with st.expander("더 깊은 분석 (선택)", expanded=False):
+        _render_precision_section(mx)
     st.subheader("🧪 에릭의 발화 정밀 처방전")
     st.caption("FACT 기반 냉철 분석 모드: 어휘 · 논리 · 내용 중복 · 문법")
     for idx, item in enumerate(mx["results"]):

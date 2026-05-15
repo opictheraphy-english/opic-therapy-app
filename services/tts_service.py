@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 from io import BytesIO
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import streamlit as st
 

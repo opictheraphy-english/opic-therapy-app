@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from typing import Dict, FrozenSet, List, Tuple
+
+# Multimodal semantic call (mock exam feedback). Optional override: GEMINI_MODEL.
+_DEFAULT_MODEL = "gemini-2.5-flash"
+MODEL_NAME = (os.getenv("GEMINI_MODEL") or "").strip() or _DEFAULT_MODEL
 
 # --- Levels (ordinal scale for calibration; NH band subdivided via novice_band) ---
 LEVEL_ORDER: List[str] = ["NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"]
@@ -102,4 +107,3 @@ MODIFIER_HINTS: FrozenSet[str] = frozenset(
 )
 
 API_TIMEOUT_SECONDS = 18
-MODEL_NAME = "gemini-3-flash"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from services.tts_service import NEURAL2_DANIEL, NEURAL2_EVA
+from utils.local_profile import reset_onboarding_for_rerun
 from utils.session_state import ensure_settings, sync_settings_to_legacy
 
 
@@ -56,4 +57,10 @@ def render_settings() -> None:
     if int(selected_diff) != current_diff:
         sett["difficulty"] = int(selected_diff)
         sync_settings_to_legacy(st.session_state)
+        st.rerun()
+
+    st.divider()
+    st.markdown('<p class="ds-muted" style="margin-top:8px;">앱을 처음 쓰는 분께 안내 화면을 다시 보여 드립니다.</p>', unsafe_allow_html=True)
+    if st.button("온보딩 다시 보기", use_container_width=True, key="settings_reset_onboarding"):
+        reset_onboarding_for_rerun(st.session_state)
         st.rerun()

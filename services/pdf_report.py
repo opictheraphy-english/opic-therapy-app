@@ -154,11 +154,24 @@ def build_exam_pdf(
     story.append(Spacer(1, 0.4 * cm))
 
     story.append(Paragraph("Per-Question Records", h2))
+    from utils.text_utils import is_real_speech_transcript
+
     for row in items:
         qid = row.get("q_id")
         res = row.get("result") or {}
         tx_raw = (res.get("transcript") or "")[:1200]
-        tx = escape(_ascii_safe(tx_raw)) if tx_raw else "(no transcript)"
+        # Trust gate: even in the PDF export we never persist hallucinated
+        # text — readers should see an empty-state marker, not a fabricated
+        # transcript.
+        no_speech_flag = bool(res.get("no_speech_detected")) or (
+            res.get("diagnosis_status") == "no_speech"
+        )
+        if res.get("diagnosis_status") == "analysis_pending":
+            tx = "(AI analysis pending)"
+        elif tx_raw and not no_speech_flag and is_real_speech_transcript(tx_raw):
+            tx = escape(_ascii_safe(tx_raw))
+        else:
+            tx = "(no speech detected)"
         story.append(
             Paragraph(
                 f"<b>Q{qid}</b> · {_ascii_safe(str(row.get('topic', '')))} · <i>{_ascii_safe(str(row.get('type', '')))}</i><br/>"

@@ -22,6 +22,7 @@ from .audio_mime import guess_audio_mime
 from .eval_audio import build_audio_info
 from .eval_config import MODEL_NAME
 from .eval_grading import evaluate_grading_logic as run_hybrid_grading, strip_json_fence
+from utils.text_utils import is_real_speech_transcript
 
 
 logger = logging.getLogger(__name__)
@@ -60,12 +61,23 @@ Task:
 1) Produce a faithful FULL verbatim transcription (English). Do not summarize.
 2) Score the performance using REALISTIC classroom speaking criteria — NOT typing speed or word-count gaming.
 
+ABSOLUTE TRANSCRIPTION RULES — TRUST IS LOST IF YOU VIOLATE THESE:
+- Transcribe ONLY what is actually audible in the attached audio.
+- If the audio is silent, contains only background noise, or has no
+  intelligible speech, set ``transcription`` to an EMPTY STRING (``""``)
+  and set ``no_speech_detected`` to ``true``. ALL scores become 0.
+- DO NOT fabricate, paraphrase, or "fill in" a likely response.
+- DO NOT echo, rephrase, or otherwise reuse any part of the question
+  prompt as the user's transcription.
+- DO NOT introduce yourself, greet the user, or speak as the user.
+- DO NOT output commentary, markdown, or any text outside the JSON object.
+
 Grading philosophy:
 - Natural narration, elaboration, discourse continuity, spontaneity, and grammar matter MORE than raw speed.
 - Penalize filler dependence, shallow repetition, template memorization, broken clauses, and tense instability.
 - Idioms are optional SMALL flair — never sufficient alone for top tiers.
 
-Question prompt for context:
+Question prompt for context (DO NOT echo this text into transcription):
 """ + repr(question_text or "") + f"""
 
 Calibration hint for expectation band: {tgt}
@@ -73,7 +85,8 @@ Calibration hint for expectation band: {tgt}
 
 Return ONLY one JSON object (no markdown fences). Required schema — integers 0–100 inclusive unless noted:
 {{
-  "transcription": "<full verbatim transcript>",
+  "transcription": "<full verbatim transcript, or '' if no speech detected>",
+  "no_speech_detected": false,
   "estimated_level": "<NH|IL|IM1|IM2|IM3|IH|AL>",
 
   "fluency_score": 0,
@@ -94,7 +107,7 @@ Return ONLY one JSON object (no markdown fences). Required schema — integers 0
   "repetition_ratio": 0,
   "abandoned_sentence_ratio": 0,
 
-  "feedback": "<concise Korean coaching paragraph>"
+  "feedback": "<concise Korean coaching paragraph, or empty if no speech>"
 }}
 
 Interpret ratios as severity scales (higher = worse) for repetition/abandonment.
@@ -137,12 +150,6 @@ def _slice_semantic(parsed: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _format_api_exception(exc: BaseException) -> str:
-    name = type(exc).__name__
-    msg = str(exc).strip() or "(메시지 없음)"
-    return f"{name}: {msg}"
-
-
 def _safe_debug_print(message: str) -> None:
     try:
         print(message, flush=True)
@@ -153,6 +160,11 @@ def _safe_debug_print(message: str) -> None:
 
 
 def _list_available_models(api_key: str) -> List[str]:
+    """List Gemini model ids (extra API call). Not used on mock-exam analysis hot path.
+
+    Kept for optional debugging when ``GEMINI_DEBUG_LIST_MODELS=1`` or for
+    ad-hoc tooling; ``analyze_audio_with_ai`` uses a fixed candidate list only.
+    """
     cache_hit = _AVAILABLE_MODELS_CACHE.get(api_key)
     if cache_hit is not None:
         return cache_hit
@@ -182,43 +194,23 @@ def _normalize_model_name(model_name: str) -> str:
     return name
 
 
-def _pick_best_gemini3_flash_model(available_models: List[str]) -> str:
-    if not available_models:
-        return MODEL_NAME
-    normalized = [m.lower() for m in available_models]
-    preferred_tokens = ("gemini-3-flash", "gemini-3-flash-001", "gemini-3-flash-latest")
-    for token in preferred_tokens:
-        for original, lower in zip(available_models, normalized):
-            if token in lower:
-                return original
-    return MODEL_NAME
+def _build_model_candidates() -> List[str]:
+    """Fixed Flash stack for mock exam — no ``models.list`` on the hot path.
 
-
-def _build_model_candidates(available_models: Optional[List[str]]) -> List[str]:
-    normalized_available: List[str] = []
-    for m in available_models or []:
-        nm = _normalize_model_name(m)
-        if nm and nm not in normalized_available:
-            normalized_available.append(nm)
-
-    candidates: List[str] = []
-
-    def add(name: str) -> None:
-        n = _normalize_model_name(name)
-        if n and n not in candidates:
-            candidates.append(n)
-
-    for nm in normalized_available:
-        if "gemini-3-flash" in nm.lower():
-            add(nm)
-    for nm in normalized_available:
-        if "flash" in nm.lower():
-            add(nm)
-    add("gemini-2.5-flash")
-    add("gemini-2.0-flash")
-    add("gemini-1.5-flash")
-    add(MODEL_NAME)
-    return candidates
+    Order: configured ``MODEL_NAME`` (default ``gemini-2.5-flash``, overridable
+    via ``GEMINI_MODEL``), then stable fallbacks. Duplicates removed.
+    """
+    out: List[str] = []
+    for raw in (
+        MODEL_NAME,
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    ):
+        n = _normalize_model_name(raw)
+        if n and n not in out:
+            out.append(n)
+    return out
 
 
 def evaluate_grading_logic(
@@ -237,9 +229,8 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         return {"error": "녹음 바이트가 비어 있습니다.", "diagnosis_status": "api_error"}
 
     try:
-        available_models = _list_available_models(api_key)
-        resolved_model_name = _pick_best_gemini3_flash_model(available_models)
-        model_candidates = _build_model_candidates(available_models)
+        model_candidates = _build_model_candidates()
+        logger.info("Gemini semantic fixed candidate queue: %s", model_candidates)
 
         mime_type = guess_audio_mime(audio_bytes)
         audio_info = build_audio_info(audio_bytes, mime_type)
@@ -264,6 +255,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         last_model_exc: Optional[BaseException] = None
 
         for candidate in model_candidates:
+            logger.info("Gemini semantic attempt model_id=%s", candidate)
             tried_models.append(candidate)
             try:
                 response = client.models.generate_content(
@@ -272,30 +264,47 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
                     config=config,
                 )
                 model_used = candidate
+                logger.info("Gemini semantic success model_id=%s", candidate)
                 break
             except Exception as model_exc:
                 last_model_exc = model_exc
                 err_text = str(model_exc)
+                err_cls = type(model_exc).__name__
+                logger.warning(
+                    "Gemini semantic failure model_id=%s exc_type=%s",
+                    candidate,
+                    err_cls,
+                )
                 if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
+                    logger.warning("Gemini quota on model_id=%s", candidate)
                     return {
-                        "error": "API 할당량 초과. 1분 뒤 다시 시도하세요.",
+                        "error": "API 할당량이 잠시 초과되었습니다. 잠시 후 다시 시도해 주세요.",
                         "diagnosis_status": "api_error",
-                        "model_used": candidate,
-                        "available_models": available_models[:20],
-                        "tried_models": tried_models,
                     }
                 if "404" in err_text or "NOT_FOUND" in err_text:
+                    logger.info(
+                        "Gemini model not found (try next): model_id=%s",
+                        candidate,
+                    )
                     continue
-                raise
+                # 503 / UNAVAILABLE / timeout / overload — try next fixed fallback.
+                logger.warning(
+                    "Gemini transient failure model_id=%s exc_type=%s (try next candidate)",
+                    candidate,
+                    err_cls,
+                )
+                continue
 
         if response is None:
+            logger.error(
+                "Gemini semantic exhausted candidates=%s last_exc_type=%s",
+                tried_models,
+                type(last_model_exc).__name__ if last_model_exc else None,
+            )
             return {
-                "error": "모델 경로를 찾을 수 없습니다. 사용 가능한 모델명을 확인해 주세요.",
+                "error": "AI 분석 연결에 일시적인 문제가 있었습니다. 잠시 후 다시 시도해 주세요.",
                 "diagnosis_status": "api_error",
-                "model_used": resolved_model_name,
-                "available_models": available_models[:20],
-                "tried_models": tried_models,
-                "last_error": f"{type(last_model_exc).__name__}: {last_model_exc}",
+                "model_used": tried_models[-1] if tried_models else MODEL_NAME,
             }
 
         raw_text = (getattr(response, "text", "") or "").strip()
@@ -310,26 +319,43 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
             raw_text = "\n".join(cand_texts).strip()
 
         if not raw_text:
+            logger.error("Gemini returned empty text after success model_id=%s", model_used)
             return {
-                "error": "Gemini 응답이 비어 있습니다.",
+                "error": "AI 응답이 비어 있었습니다. 잠시 후 다시 시도해 주세요.",
                 "diagnosis_status": "api_error",
-                "model_used": model_used or resolved_model_name,
-                "available_models": available_models[:20],
+                "model_used": model_used or MODEL_NAME,
             }
 
         parsed = _extract_json_object(raw_text)
         if parsed is None:
+            # CRITICAL: do NOT fall back to raw_text as the transcript.
+            # When Gemini emits commentary or markdown outside the JSON
+            # envelope (typical hallucination path on silent / corrupted
+            # audio), pasting that raw text into ``transcription`` was the
+            # historical source of fake "Hi, I'm Ava…" self-introduction
+            # transcripts. The pipeline now reports the parse failure
+            # explicitly and surfaces an empty transcript so the view
+            # renders the no-speech empty state instead.
             parsed = {
-                "transcription": strip_json_fence(raw_text),
+                "transcription": "",
+                "no_speech_detected": True,
                 "feedback": "",
                 "raw_parse_fragment": True,
             }
 
-        transcription = (
-            (parsed.get("transcription") or parsed.get("transcript") or "").strip()
+        # Trust gate (single source of truth lives in utils.text_utils):
+        # reject anything that doesn't look like genuine recognized speech
+        # — placeholder phrases, question-echo, JSON fragments, etc.
+        raw_transcription = (
+            (parsed.get("transcription") or parsed.get("transcript") or "")
         )
-        if not transcription:
-            transcription = strip_json_fence(raw_text) or "(전사 결과 없음)"
+        ai_no_speech_flag = bool(parsed.get("no_speech_detected"))
+        if ai_no_speech_flag or not is_real_speech_transcript(raw_transcription):
+            transcription = ""
+            no_speech = True
+        else:
+            transcription = str(raw_transcription).strip()
+            no_speech = False
 
         semantic_slice = _slice_semantic(parsed)
         grading = run_hybrid_grading(audio_info, transcription, question_text, semantic=semantic_slice)
@@ -366,8 +392,15 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         if parsed.get("raw_parse_fragment"):
             parse_failed = raw_text[:1200]
 
+        # ``no_speech`` is its own diagnosis state — the view renders a
+        # calm empty-state card instead of fabricated content, but the
+        # exam continues normally (the user can re-record and analyze
+        # again from the recovery panel).
+        diagnosis_status = "no_speech" if no_speech else "ok"
+
         return {
-            "diagnosis_status": "ok",
+            "diagnosis_status": diagnosis_status,
+            "no_speech_detected": no_speech,
             "transcript": transcription,
             "estimated_level": final_level,
             "estimated_level_display": grading.get("estimated_level_display") or final_level,
@@ -381,7 +414,6 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
             "fact_scores": fact_scores,
             "rubric_scores": rubric_scores,
             "model_used": model_used or "unknown",
-            "available_models": available_models[:20],
             "audio_mime_guess": mime_type,
             "source_audio_size_bytes": len(audio_bytes),
             "question_type": grading.get("question_type", "A"),
@@ -398,8 +430,9 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
             "raw_text_parse_failed": parse_failed,
         }
     except Exception as e:
+        logger.exception("Gemini multimodal pipeline unexpected failure: %s", e)
         return {
-            "error": _format_api_exception(e),
+            "error": "AI 분석 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
             "diagnosis_status": "api_error",
             "model_used": "unknown",
         }

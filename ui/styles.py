@@ -231,6 +231,260 @@ GLOBAL_CSS = """
       margin-bottom: var(--space-2);
     }
 
+    /* --- Onboarding (first entry, scoped) — premium coach intro ---------- */
+    section.main:has(.onb-marker) {
+      background:
+        radial-gradient(ellipse 90% 55% at 50% -10%, rgba(13, 148, 136, 0.11) 0%, transparent 55%),
+        linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f1f5f9 100%) !important;
+    }
+    section.main:has(.onb-marker) div.block-container {
+      max-width: 480px !important;
+      margin: 0 auto !important;
+      padding-top: 1.25rem !important;
+      padding-bottom: 5.5rem !important;
+      padding-left: 1.1rem !important;
+      padding-right: 1.1rem !important;
+    }
+    section.main:has(.onb-marker) .onb-progress {
+      text-align: center;
+      margin: 0 0 1.1rem 0;
+    }
+    section.main:has(.onb-marker) .onb-progress-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    section.main:has(.onb-marker) .onb-progress-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      align-items: center;
+    }
+    section.main:has(.onb-marker) .onb-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.12);
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    section.main:has(.onb-marker) .onb-dot--on {
+      background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+      transform: scale(1.15);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+    }
+    section.main:has(.onb-marker) .onb-hero-premium {
+      border-radius: 24px;
+      padding: 1.65rem 1.35rem 1.5rem 1.35rem;
+      margin-bottom: 1.25rem;
+      background:
+        radial-gradient(ellipse 100% 80% at 100% 0%, rgba(45, 212, 191, 0.18) 0%, transparent 52%),
+        radial-gradient(ellipse 80% 60% at 0% 100%, rgba(13, 148, 136, 0.08) 0%, transparent 50%),
+        linear-gradient(165deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%);
+      border: 1px solid rgba(13, 148, 136, 0.14);
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.07), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    }
+    section.main:has(.onb-marker) .onb-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #0f766e;
+      background: rgba(204, 251, 241, 0.65);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      padding: 6px 12px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    section.main:has(.onb-marker) .onb-title-xl {
+      font-size: clamp(1.55rem, 5.2vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      color: var(--navy);
+      line-height: 1.22;
+      margin: 0 0 14px 0;
+    }
+    section.main:has(.onb-marker) .onb-sub-hero {
+      font-size: 1.02rem;
+      line-height: 1.62;
+      color: var(--text-secondary);
+      margin: 0 0 1.25rem 0;
+      font-weight: 500;
+    }
+    section.main:has(.onb-marker) .onb-mini-mock {
+      border-radius: 18px;
+      padding: 14px 14px 12px 14px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+      margin-top: 4px;
+    }
+    section.main:has(.onb-marker) .onb-mini-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    section.main:has(.onb-marker) .onb-mini-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+    }
+    section.main:has(.onb-marker) .onb-mini-pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #0f766e;
+      background: rgba(204, 251, 241, 0.9);
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(13, 148, 136, 0.2);
+    }
+    section.main:has(.onb-marker) .onb-mini-q {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin: 0 0 12px 0;
+      line-height: 1.45;
+    }
+    section.main:has(.onb-marker) .onb-mini-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    section.main:has(.onb-marker) .onb-mini-chip {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: rgba(241, 245, 249, 0.95);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+    section.main:has(.onb-marker) .onb-mini-chip--rec {
+      background: rgba(254, 243, 199, 0.45);
+      border-color: rgba(245, 158, 11, 0.25);
+    }
+    section.main:has(.onb-marker) .onb-mini-chip--ai {
+      background: rgba(204, 251, 241, 0.55);
+      border-color: rgba(13, 148, 136, 0.22);
+      color: #0f766e;
+    }
+    section.main:has(.onb-marker) .onb-mini-arrow {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      font-weight: 600;
+    }
+    section.main:has(.onb-marker) .onb-mini-foot {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+    }
+    section.main:has(.onb-marker) .onb-mini-dot { opacity: 0.5; }
+    section.main:has(.onb-marker) .onb-block,
+    section.main:has(.onb-marker) .onb-block--tight,
+    section.main:has(.onb-marker) .onb-plan-block {
+      border-radius: 24px;
+      padding: 1.35rem 1.2rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(13, 148, 136, 0.1);
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+    }
+    section.main:has(.onb-marker) .onb-block--tight {
+      padding: 1.1rem 1.1rem 0.85rem 1.1rem;
+    }
+    section.main:has(.onb-marker) .onb-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0 0 10px 0;
+    }
+    section.main:has(.onb-marker) .onb-h2 {
+      font-size: 1.22rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      margin: 0 0 8px 0;
+      line-height: 1.35;
+    }
+    section.main:has(.onb-marker) .onb-muted {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--text-muted);
+      margin: 0 0 4px 0;
+    }
+    section.main:has(.onb-marker) .onb-plan-title {
+      margin-bottom: 12px;
+    }
+    section.main:has(.onb-marker) .onb-plan-card {
+      margin-top: 4px;
+      padding: 16px 14px;
+      border-radius: 18px;
+      background: rgba(204, 251, 241, 0.38);
+      border: 1px solid rgba(13, 148, 136, 0.16);
+    }
+    section.main:has(.onb-marker) .onb-plan-eyebrow {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #0f766e;
+      margin: 0 0 10px 0;
+      letter-spacing: 0.02em;
+    }
+    section.main:has(.onb-marker) .onb-plan-list {
+      margin: 0;
+      padding-left: 1.35rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      font-weight: 500;
+      list-style-type: decimal;
+    }
+    section.main:has(.onb-marker) .onb-plan-list li { margin-bottom: 8px; }
+    section.main:has(.onb-marker) .onb-plan-warm {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin: 1rem 0 0 0;
+      text-align: center;
+      font-weight: 500;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button {
+      border-radius: 18px !important;
+      min-height: 2.85rem !important;
+      font-weight: 600 !important;
+      white-space: pre-line !important;
+      line-height: 1.45 !important;
+      text-align: center !important;
+      padding-top: 0.85rem !important;
+      padding-bottom: 0.85rem !important;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="primary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%) !important;
+      border: none !important;
+      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.28) !important;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="secondary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
+      border: 1.5px solid rgba(13, 148, 136, 0.28) !important;
+      background: rgba(255, 255, 255, 0.85) !important;
+      color: var(--navy) !important;
+    }
+
     /* Hero */
     .home-hero {
       border-radius: var(--radius-lg);
@@ -355,15 +609,435 @@ GLOBAL_CSS = """
     }
     .resume-card .rc-action:active { transform: scale(0.98); }
 
+    /* ==================================================================
+     * Home screen — premium mobile dashboard (Step 2)
+     * ==================================================================
+     * Visual-only redesign. Routing, query params, and session_state are
+     * untouched. Section order on the home view:
+     *   .greeting → .continue-card → .qa-grid → .stats-row
+     * Section labels use .home-section-h (soft, no uppercase tracking).
+     */
+
+    /* --- Section label -------------------------------------------------- */
+    .home-section-h {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.005em;
+      margin: 22px 4px 10px 4px;
+    }
+    .home-section-h .h-soft {
+      margin-left: 6px;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* --- 1) Greeting ---------------------------------------------------- */
+    .greeting {
+      margin: 6px 0 18px 0;
+      padding: 4px 4px 0 4px;
+    }
+    .greeting .gr-hello {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: clamp(1.6rem, 5vw, 2.05rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--navy);
+      line-height: 1.15;
+      margin: 0;
+    }
+    .greeting .gr-wave {
+      display: inline-block;
+      transform-origin: 70% 70%;
+      animation: gr-wave 2.6s ease-in-out 0.6s 2;
+    }
+    @keyframes gr-wave {
+      0%, 60%, 100% { transform: rotate(0deg); }
+      10%, 30%      { transform: rotate(14deg); }
+      20%, 40%      { transform: rotate(-10deg); }
+      50%           { transform: rotate(8deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .greeting .gr-wave { animation: none !important; }
+    }
+    .greeting .gr-sub {
+      margin: 6px 0 0 0;
+      font-size: 1rem;
+      color: var(--text-secondary);
+      font-weight: 450;
+      line-height: 1.55;
+    }
+    .greeting .gr-meta {
+      margin-top: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      padding: 4px 10px 4px 8px;
+      letter-spacing: 0.005em;
+    }
+    .greeting .gr-meta-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+    }
+
+    /* --- 2) Continue Study Card (primary CTA) --------------------------- */
+    .continue-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 22px 22px 20px 22px;
+      border-radius: 22px;
+      margin: 4px 0 22px 0;
+      overflow: hidden;
+    }
+    .continue-card::after {
+      /* Soft mint glow in the top-right — purely decorative. */
+      content: "";
+      position: absolute;
+      top: -36px;
+      right: -28px;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(13, 148, 136, 0.18) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .continue-card--resume {
+      background:
+        linear-gradient(135deg, rgba(13, 148, 136, 0.14) 0%, rgba(255, 255, 255, 0.65) 100%),
+        linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      box-shadow:
+        0 1px 0 rgba(15, 23, 42, 0.03),
+        0 12px 32px rgba(13, 148, 136, 0.10);
+    }
+    .continue-card--start {
+      background:
+        linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(255, 255, 255, 0.6) 100%),
+        linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow:
+        0 1px 0 rgba(15, 23, 42, 0.02),
+        0 10px 28px rgba(15, 23, 42, 0.06);
+    }
+    .continue-card .cc-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .continue-card .cc-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+    }
+    .continue-card .cc-time {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .continue-card .cc-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.015em;
+      line-height: 1.35;
+      position: relative;
+      z-index: 1;
+    }
+    .continue-card .cc-title .cc-of {
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: -0.005em;
+    }
+    .continue-card .cc-meta {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      position: relative;
+      z-index: 1;
+    }
+    .continue-card .cc-meta b {
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .continue-card .cc-progress {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+      margin: 4px 0 2px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .continue-card .cc-progress-fill {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--mint) 0%, #14b8a6 100%);
+      transition: width 0.4s var(--ease-out);
+    }
+    .continue-card .cc-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .continue-card .cc-action {
+      flex: 1;
+      display: inline-block;
+      text-align: center;
+      padding: 13px 14px;
+      border-radius: 14px;
+      text-decoration: none !important;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: -0.005em;
+      transition:
+        transform 0.12s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+    }
+    .continue-card .cc-action.cc-primary {
+      color: #ffffff !important;
+      background: var(--mint);
+      box-shadow: 0 6px 18px rgba(13, 148, 136, 0.30);
+    }
+    .continue-card .cc-action.cc-primary:hover {
+      background: #0b8076;
+      box-shadow: 0 8px 22px rgba(13, 148, 136, 0.36);
+    }
+    .continue-card .cc-action.cc-secondary {
+      color: var(--navy) !important;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-subtle);
+    }
+    .continue-card .cc-action.cc-secondary:hover {
+      background: rgba(15, 23, 42, 0.04);
+    }
+    .continue-card .cc-action:active { transform: scale(0.98); }
+    .continue-card .cc-action:focus-visible {
+      outline: 2px solid rgba(13, 148, 136, 0.35);
+      outline-offset: 2px;
+    }
+
+    /* --- 3) Quick Action Cards ----------------------------------------- */
+    .qa-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 2px 0 4px 0;
+    }
+    @media (min-width: 720px) {
+      .qa-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    .qa-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px 16px 14px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--border-subtle);
+      box-shadow:
+        0 1px 0 rgba(15, 23, 42, 0.02),
+        0 6px 16px rgba(15, 23, 42, 0.04);
+      text-decoration: none !important;
+      color: inherit !important;
+      transition:
+        transform 0.18s var(--ease-out),
+        box-shadow 0.18s ease,
+        border-color 0.2s ease,
+        background 0.2s ease;
+      min-height: 104px;
+    }
+    .qa-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(13, 148, 136, 0.22);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow:
+        0 1px 0 rgba(15, 23, 42, 0.04),
+        0 12px 24px rgba(15, 23, 42, 0.06);
+    }
+    .qa-card:active { transform: scale(0.98); }
+    .qa-card:focus-visible {
+      outline: 2px solid rgba(13, 148, 136, 0.35);
+      outline-offset: 2px;
+    }
+    .qa-card .qa-ico {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 148, 136, 0.10);
+      color: var(--mint);
+      margin-bottom: 2px;
+    }
+    .qa-card .qa-ico svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+    }
+    .qa-card .qa-title {
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+    }
+    .qa-card .qa-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* --- 4) Simple Learning Stats -------------------------------------- */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 2px 0 4px 0;
+    }
+    @media (max-width: 380px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .stats-row .stat-chip:nth-child(3) { grid-column: span 2; }
+    }
+    .stat-chip {
+      padding: 14px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+      text-align: left;
+    }
+    .stat-chip .st-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .stat-chip .st-value {
+      margin-top: 4px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+    }
+    .stat-chip .st-value--time {
+      /* Time strings ("2시간 전") are multi-word — keep them readable. */
+      font-size: 1.05rem;
+      line-height: 1.3;
+    }
+    .stat-chip .st-hint {
+      font-size: 0.72rem;
+      color: var(--text-soft);
+      margin-top: 2px;
+    }
+
+    /* ==================================================================
+     * Mock-exam recovery card — soft amber panel surfaced when Gemini
+     * analysis has failed and the user can safely retry the same question.
+     * ================================================================== */
+    .recovery-card {
+      position: relative;
+      padding: 20px 22px 18px 22px;
+      border-radius: 20px;
+      background:
+        linear-gradient(135deg, rgba(245, 158, 11, 0.10) 0%, rgba(255, 255, 255, 0.6) 100%),
+        linear-gradient(180deg, #fffbeb 0%, #fefce8 100%);
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      box-shadow:
+        0 1px 0 rgba(15, 23, 42, 0.03),
+        0 10px 28px rgba(245, 158, 11, 0.10);
+      margin: 6px 0 16px 0;
+      overflow: hidden;
+    }
+    .recovery-card::after {
+      content: "";
+      position: absolute;
+      top: -34px;
+      right: -30px;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .recovery-card .rv-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #b45309;
+      position: relative;
+      z-index: 1;
+    }
+    .recovery-card .rv-title {
+      margin-top: 8px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.015em;
+      line-height: 1.35;
+      position: relative;
+      z-index: 1;
+    }
+    .recovery-card .rv-body {
+      margin-top: 8px;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      position: relative;
+      z-index: 1;
+    }
+    .recovery-card .rv-meta {
+      margin-top: 12px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .recovery-card .rv-meta .rv-sep {
+      color: var(--text-soft);
+    }
+
     /* ------------------------------------------------------------------
      * Smart feedback cards — grammar fix + alternative expressions
      * ------------------------------------------------------------------ */
-    .grammar-fix {
-      background: rgba(255, 255, 255, 0.7);
+    .grammar-fix,
+    .coach-gf-card {
+      background: rgba(255, 255, 255, 0.88);
       border: 1px solid var(--border-subtle);
       border-radius: 12px;
       padding: 12px 14px;
       margin: 6px 0;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
     }
     .grammar-fix .gf-line {
       display: flex;
@@ -381,9 +1055,9 @@ GLOBAL_CSS = """
       font-weight: 500;
     }
     .grammar-fix .gf-bad-line .gf-text {
-      color: #b91c1c;
+      color: #a16207;
       text-decoration: line-through;
-      text-decoration-color: rgba(185, 28, 28, 0.4);
+      text-decoration-color: rgba(161, 98, 7, 0.35);
     }
     .grammar-fix .gf-good {
       color: var(--mint);
@@ -399,12 +1073,14 @@ GLOBAL_CSS = """
       line-height: 1.5;
     }
 
-    .alt-card {
-      background: rgba(255, 255, 255, 0.7);
+    .alt-card,
+    .coach-alt-card {
+      background: rgba(255, 255, 255, 0.88);
       border: 1px solid var(--border-subtle);
       border-radius: 12px;
       padding: 12px 14px;
       margin: 6px 0;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
     }
     .alt-card .alt-header {
       font-size: 0.95rem;
@@ -504,13 +1180,20 @@ GLOBAL_CSS = """
       border: 1px solid var(--border-subtle);
     }
 
-    /* Floating bottom navigation */
+    /* ==================================================================
+     * Floating bottom navigation — premium pill dock
+     * ==================================================================
+     * Visual-only refresh (Step 1).
+     * Same DOM and same anchor hrefs — only the look-and-feel changes.
+     * Designed to feel calmer and more app-like (Duolingo / Quizlet /
+     * Headspace inspired) without any structural changes.
+     */
     .bottom-nav-dock {
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
-      bottom: max(12px, env(safe-area-inset-bottom, 12px));
-      width: min(560px, calc(100vw - 28px));
+      bottom: max(14px, env(safe-area-inset-bottom, 14px));
+      width: min(540px, calc(100vw - 24px));
       z-index: 10000;
       pointer-events: none;
     }
@@ -519,66 +1202,115 @@ GLOBAL_CSS = """
       display: flex;
       justify-content: space-between;
       align-items: stretch;
-      gap: 4px;
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.68);
-      backdrop-filter: saturate(180%) blur(20px);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.7);
-      border-radius: 22px;
+      gap: 2px;
+      padding: 8px 10px;
+      /* Brighter, more solid glass — feels premium yet still translucent. */
+      background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.86) 100%);
+      backdrop-filter: saturate(180%) blur(24px);
+      -webkit-backdrop-filter: saturate(180%) blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: 28px;
+      /* Layered shadow: tight contact + soft wide ambient + inner highlight. */
       box-shadow:
-        0 4px 24px rgba(15, 23, 42, 0.08),
-        0 1px 0 rgba(255, 255, 255, 0.9) inset;
-      /* No fade-up animation on rerun — the dock should *feel* persistent.
-       * Re-animating it on every nav switch is the strongest "page reloaded"
-       * signal the user sees. */
+        0 1px 2px rgba(15, 23, 42, 0.06),
+        0 8px 28px rgba(15, 23, 42, 0.10),
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 -1px 0 rgba(15, 23, 42, 0.02) inset;
     }
     .bottom-nav-inner a.nav-item {
       flex: 1;
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      padding: 8px 4px;
-      min-height: 52px;
-      border-radius: 16px;
+      gap: 3px;
+      padding: 8px 4px 7px 4px;
+      min-height: 54px;
+      border-radius: 18px;
       text-decoration: none !important;
-      color: var(--text-muted) !important;
-      font-size: 0.62rem;
+      color: var(--text-soft) !important;
+      font-size: 0.6rem;
       font-weight: 600;
       letter-spacing: 0.02em;
-      transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+      transition:
+        color 0.18s ease,
+        background-color 0.22s ease,
+        transform 0.12s ease;
     }
     .bottom-nav-inner a.nav-item .nav-ico {
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 22px;
+      height: 22px;
       color: var(--text-soft);
-      transition: color 0.2s ease;
+      transition: color 0.18s ease, transform 0.18s ease;
     }
+    .bottom-nav-inner a.nav-item .nav-ico svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 1.9;
+    }
+
+    /* Quiet hover — keep the resting state restrained, never chatty. */
     .bottom-nav-inner a.nav-item:hover {
-      color: var(--navy) !important;
-      background: rgba(15, 23, 42, 0.04);
+      color: var(--text) !important;
+      background: rgba(15, 23, 42, 0.035);
     }
-    .bottom-nav-inner a.nav-item:hover .nav-ico { color: var(--navy); }
+    .bottom-nav-inner a.nav-item:hover .nav-ico {
+      color: var(--text);
+    }
+
+    /* Active tab — soft mint pill with a tiny dot indicator below the icon.
+     * The dot is the single most premium "you are here" cue and is hidden on
+     * inactive items so it never adds visual noise. */
     .bottom-nav-inner a.nav-item.active {
       color: var(--mint) !important;
-      background: var(--mint-muted);
+      background: linear-gradient(180deg,
+        rgba(13, 148, 136, 0.14) 0%,
+        rgba(13, 148, 136, 0.09) 100%);
+      box-shadow: 0 1px 0 rgba(13, 148, 136, 0.10) inset;
     }
     .bottom-nav-inner a.nav-item.active .nav-ico {
       color: var(--mint);
+      transform: translateY(-1px);
+    }
+    .bottom-nav-inner a.nav-item.active .nav-ico svg {
+      stroke-width: 2.2;
+    }
+
+    .bottom-nav-inner a.nav-item:focus-visible {
+      outline: 2px solid rgba(13, 148, 136, 0.35);
+      outline-offset: 2px;
     }
     .bottom-nav-inner a.nav-item:active {
-      transform: scale(0.97);
+      transform: scale(0.96);
     }
+
     .nav-label {
       line-height: 1.2;
-      max-width: 64px;
+      max-width: 68px;
       text-align: center;
     }
 
-    .page-bottom-space { height: 96px; }
+    /* Tighten label sizing on very narrow screens so 6 tabs still breathe. */
+    @media (max-width: 360px) {
+      .bottom-nav-inner { padding: 6px 6px; gap: 0; border-radius: 24px; }
+      .bottom-nav-inner a.nav-item { font-size: 0.55rem; padding: 8px 2px 6px 2px; }
+    }
+
+    /* Respect reduced-motion preference — disable scale/translate effects. */
+    @media (prefers-reduced-motion: reduce) {
+      .bottom-nav-inner a.nav-item,
+      .bottom-nav-inner a.nav-item .nav-ico { transition: none !important; }
+      .bottom-nav-inner a.nav-item:active { transform: none !important; }
+      .bottom-nav-inner a.nav-item.active .nav-ico { transform: none !important; }
+    }
+
+    .page-bottom-space { height: 100px; }
 
     @keyframes dsFadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -634,6 +1366,950 @@ GLOBAL_CSS = """
     @keyframes wave {0%,100%{height:8px;opacity:.55}50%{height:38px;opacity:1}}
 
     .focus-shell { background: rgba(15, 23, 42, 0.55); border-radius: var(--radius-lg); padding: var(--space-2); }
+
+    /* ==================================================================
+     * Pattern screen (UI redesign step 3) — premium mobile learning UX.
+     *
+     * Scoped under ``.pat-screen`` so Streamlit overrides (st.tabs,
+     * st.expander, st.button) never leak to the rest of the app. The
+     * pattern-specific classes (.pat-card, .pat-en, …) are namespaced
+     * by prefix and unique to this view.
+     * ================================================================== */
+
+    .pat-screen {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 4px;
+    }
+
+    /* --- Hero (greeting + subtitle) ----------------------------------- */
+    .pat-hero {
+      background: linear-gradient(140deg, rgba(204, 251, 241, 0.55) 0%, rgba(255, 255, 255, 0.9) 60%);
+      border: 1px solid rgba(13, 148, 136, 0.14);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      margin: 4px 0 16px;
+      box-shadow: var(--shadow-card);
+    }
+    .pat-hero .pat-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0;
+    }
+    .pat-hero .pat-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin: 6px 0 6px 0;
+    }
+    .pat-hero .pat-sub {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    /* --- Streamlit tab bar (묘사 · 루틴 · 경험 · …) --------------------- */
+    /* Scoped pill bar — clean, no underline, mint highlight on the active
+     * tab. Default Streamlit tabs look like an admin tool; this is the
+     * single biggest visual win on the pattern screen. */
+    .pat-screen [data-testid="stTabs"] [role="tablist"] {
+      gap: 6px;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      box-shadow: var(--shadow-card);
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+    }
+    .pat-screen [data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar {
+      display: none;
+    }
+    .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"] {
+      flex: 0 0 auto;
+      padding: 8px 16px !important;
+      border-radius: 999px !important;
+      font-weight: 600 !important;
+      font-size: 0.88rem !important;
+      color: var(--text-secondary) !important;
+      background: transparent !important;
+      border: none !important;
+      transition: background 0.18s var(--ease-out), color 0.18s var(--ease-out);
+      min-height: auto !important;
+    }
+    .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+      color: var(--mint) !important;
+      background: rgba(13, 148, 136, 0.06) !important;
+    }
+    .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+      color: #ffffff !important;
+      background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
+      box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+    }
+    /* Kill the default Streamlit bottom underline / highlight bar. */
+    .pat-screen [data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    .pat-screen [data-testid="stTabs"] [data-baseweb="tab-border"] {
+      display: none !important;
+    }
+    .pat-screen [data-testid="stTabs"] [data-baseweb="tab-list"] {
+      border-bottom: none !important;
+    }
+    .pat-screen [data-testid="stTabs"] [role="tabpanel"] {
+      padding-top: 18px;
+    }
+
+    /* --- Section accordion (st.expander) ------------------------------ */
+    /* Each category section is rendered with st.expander. We restyle the
+     * details/summary so the section feels like a soft category card
+     * instead of Streamlit's default chevron-with-border. */
+    .pat-screen div[data-testid="stExpander"] {
+      margin: 0 0 10px 0;
+    }
+    .pat-screen div[data-testid="stExpander"] details {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+    }
+    .pat-screen div[data-testid="stExpander"] details[open] {
+      border-color: rgba(13, 148, 136, 0.22);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    .pat-screen div[data-testid="stExpander"] summary {
+      padding: 12px 14px !important;
+      font-weight: 600 !important;
+      font-size: 0.95rem !important;
+      color: var(--navy) !important;
+      letter-spacing: -0.005em;
+      border-radius: var(--radius-md) !important;
+    }
+    .pat-screen div[data-testid="stExpander"] summary:hover {
+      background: rgba(13, 148, 136, 0.04) !important;
+    }
+    .pat-screen div[data-testid="stExpander"] details[open] summary {
+      border-bottom: 1px solid var(--border-subtle);
+      border-bottom-left-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+    }
+    .pat-screen div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+      padding: 12px 14px 4px 14px !important;
+    }
+
+    /* --- Pattern detail stack (UI redesign step 5) -------------------- */
+    .pat-detail-hero {
+      position: relative;
+      background: linear-gradient(155deg, rgba(13, 148, 136, 0.12) 0%, rgba(255, 255, 255, 0.96) 55%, rgba(204, 251, 241, 0.35) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 20px 18px 18px 20px;
+      margin: 0 0 14px 0;
+      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.07);
+      overflow: hidden;
+    }
+    .pat-detail-hero::after {
+      content: "";
+      position: absolute;
+      right: -24px; top: -24px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(45, 212, 191, 0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .pat-detail-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0 0 6px 0;
+    }
+    .pat-detail-pattern {
+      font-size: 1.22rem;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px 0;
+    }
+    .pat-detail-meaning {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.5;
+      margin: 0 0 10px 0;
+    }
+    .pat-detail-usage {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0;
+    }
+    .pat-detail-usage .pat-usage-meta {
+      color: var(--mint);
+      font-weight: 600;
+    }
+
+    .pat-learn-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px 14px 16px;
+      margin: 0 0 10px 0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+    .pat-learn-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(13, 148, 136, 0.75);
+      margin: 0 0 4px 0;
+    }
+    .pat-learn-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
+    }
+    .pat-learn-body { margin: 0; }
+    .pat-learn-en {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--navy);
+      line-height: 1.55;
+      margin: 0;
+    }
+    .pat-learn-en--long {
+      font-weight: 500;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    .pat-learn-ko {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin: 8px 0 0 0;
+    }
+    .pat-learn-tip {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .pat-learn-ih-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 10px 0 0 0;
+    }
+
+    .pat-learn-card--short {
+      border-left: 3px solid rgba(13, 148, 136, 0.45);
+    }
+    .pat-learn-card--opic {
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, #ffffff 100%);
+      border-color: rgba(15, 23, 42, 0.06);
+    }
+    .pat-learn-card--ih {
+      background: linear-gradient(125deg, rgba(204, 251, 241, 0.55) 0%, rgba(255, 255, 255, 0.98) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.28);
+      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.1);
+    }
+    .pat-learn-card--tip {
+      background: rgba(255, 251, 235, 0.65);
+      border-color: rgba(251, 191, 36, 0.25);
+    }
+
+    .pat-practice-shell {
+      margin: 4px 0 6px 0;
+      padding: 14px 16px 4px 16px;
+      background: rgba(15, 23, 42, 0.03);
+      border: 1px dashed rgba(13, 148, 136, 0.35);
+      border-radius: var(--radius-md);
+    }
+    .pat-practice-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0 0 4px 0;
+    }
+    .pat-practice-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0 0 0 0;
+    }
+    .pat-screen div[data-testid="stTextArea"] textarea {
+      border-radius: var(--radius-sm) !important;
+      border-color: rgba(13, 148, 136, 0.22) !important;
+      font-size: 0.88rem !important;
+    }
+
+    .pat-ex-wrap--tail {
+      margin-top: 8px;
+    }
+
+    /* --- Pattern card (legacy compact; step 5 uses pat-detail-hero) --- */
+    .pat-screen .pat-card {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 14px 14px 18px;
+      margin: 0 0 10px 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: box-shadow 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+    }
+    .pat-screen .pat-card::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 14px; bottom: 14px;
+      width: 3px;
+      border-radius: 3px;
+      background: linear-gradient(180deg, var(--mint) 0%, rgba(13, 148, 136, 0.4) 100%);
+      opacity: 0.85;
+    }
+    .pat-screen .pat-card:hover {
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+      transform: translateY(-1px);
+    }
+    .pat-screen .pat-en {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: var(--navy);
+      line-height: 1.4;
+      letter-spacing: -0.005em;
+    }
+    .pat-screen .pat-ko {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+
+    /* --- Examples block ---------------------------------------------- */
+    .pat-screen .pat-ex-wrap {
+      margin: 10px 0 0 0;
+      padding: 10px 12px;
+      background: rgba(248, 250, 252, 0.85);
+      border: 1px solid rgba(15, 23, 42, 0.04);
+      border-radius: var(--radius-sm);
+    }
+    .pat-screen .pat-ex-label {
+      display: inline-block;
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin-bottom: 4px;
+    }
+    .pat-screen .pat-ex-wrap ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .pat-screen .pat-ex-wrap li {
+      position: relative;
+      padding: 4px 0 4px 14px;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: var(--text);
+    }
+    .pat-screen .pat-ex-wrap li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 13px;
+      width: 5px; height: 5px;
+      border-radius: 999px;
+      background: var(--mint);
+      opacity: 0.55;
+    }
+    .pat-screen .pat-ex-wrap--extra {
+      margin-top: 6px;
+      background: rgba(204, 251, 241, 0.32);
+      border-color: rgba(13, 148, 136, 0.14);
+    }
+
+    /* --- "예문 더보기 / 접기" toggle button -------------------------- */
+    .pat-screen .stButton > button {
+      margin-top: 8px !important;
+      min-height: 1.9rem !important;
+      padding: 4px 14px !important;
+      border-radius: 999px !important;
+      font-size: 0.78rem !important;
+      font-weight: 600 !important;
+      color: var(--mint) !important;
+      background: rgba(204, 251, 241, 0.55) !important;
+      border: 1px solid rgba(13, 148, 136, 0.25) !important;
+      box-shadow: none !important;
+    }
+    .pat-screen .stButton > button:hover {
+      background: rgba(204, 251, 241, 0.9) !important;
+      border-color: var(--mint) !important;
+    }
+
+    /* --- Mobile tweaks ----------------------------------------------- */
+    @media (max-width: 480px) {
+      .pat-screen .pat-hero { padding: 16px 16px; }
+      .pat-screen .pat-hero .pat-title { font-size: 1.4rem; }
+      .pat-screen .pat-card { padding: 12px 12px 12px 16px; }
+      .pat-screen .pat-detail-hero { padding: 16px 14px; }
+      .pat-screen .pat-detail-pattern { font-size: 1.08rem; }
+      .pat-screen .pat-learn-card { padding: 12px 14px; }
+      .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"] {
+        padding: 7px 13px !important;
+        font-size: 0.82rem !important;
+      }
+    }
+
+    /* ==================================================================
+     * Mock exam screen (UI redesign step 4) — premium speaking studio.
+     *
+     * Strategy: ``.mx-*`` custom HTML uses unique class names so it
+     * never collides with anything else; the Streamlit-widget overrides
+     * (st.button, st.progress, st.expander) are scoped via
+     * ``section.main:has(.mx-marker)`` so they only activate while the
+     * mock-exam view has placed its marker in the DOM. This keeps the
+     * design intentional even though the audio recorder and TTS player
+     * render inside iframes we cannot style directly.
+     * ================================================================== */
+
+    /* --- Top progress strip ------------------------------------------ */
+    .mx-progress {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 4px 0 14px 0;
+    }
+    .mx-progress-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mx-progress-eyebrow {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+    }
+    .mx-progress-count {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--navy);
+    }
+    .mx-progress-count .mx-progress-of {
+      color: var(--text-soft);
+      font-weight: 700;
+    }
+    .mx-progress-chip {
+      align-self: center;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: var(--mint-muted);
+      color: var(--mint);
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      max-width: 56vw;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .mx-progress-bar {
+      height: 6px;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.06);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 0 0 18px 0;
+    }
+    .mx-progress-fill {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #14b8a6 0%, var(--mint) 100%);
+      border-radius: 999px;
+      transition: width 0.35s var(--ease-out);
+    }
+
+    /* --- Question card ----------------------------------------------- */
+    .mx-question-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 22px 22px;
+      margin: 0 0 18px 0;
+      box-shadow: var(--shadow-card);
+    }
+    .mx-question-type {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(13, 148, 136, 0.08);
+      color: var(--mint);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .mx-question-topic {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.015em;
+      margin: 10px 0 6px 0;
+      line-height: 1.35;
+    }
+    .mx-question-hint {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0;
+    }
+    .mx-question-hint strong {
+      color: var(--navy);
+      font-weight: 600;
+    }
+
+    /* --- Listen stage (TTS player wrapper) --------------------------- */
+    .mx-listen-stage {
+      background: rgba(248, 250, 252, 0.85);
+      border: 1px solid rgba(15, 23, 42, 0.04);
+      border-radius: var(--radius-md);
+      padding: 14px 14px 6px 14px;
+      margin: 0 0 16px 0;
+    }
+    .mx-stage-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .mx-listen-stage .mx-stage-eyebrow { color: var(--mint); }
+
+    /* --- Record stage (the screen's emotional center) ---------------- */
+    .mx-record-stage {
+      position: relative;
+      background: linear-gradient(160deg, #0f172a 0%, #134e4a 55%, #0d9488 130%);
+      border-radius: var(--radius-lg);
+      padding: 24px 22px 18px 22px;
+      margin: 0 0 18px 0;
+      color: #ecfdf5;
+      box-shadow: 0 14px 36px rgba(13, 148, 136, 0.18), 0 2px 8px rgba(15, 23, 42, 0.18);
+      overflow: hidden;
+    }
+    .mx-record-stage::before {
+      /* Soft glowing orb behind the recorder to give the dark panel a
+       * sense of life without animating anything expensive. */
+      content: "";
+      position: absolute;
+      top: -40px; right: -30px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(204, 251, 241, 0.28) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .mx-record-eyebrow {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(204, 251, 241, 0.85);
+      margin: 0;
+    }
+    .mx-record-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 6px 0 6px 0;
+      color: #ffffff;
+      letter-spacing: -0.015em;
+    }
+    .mx-record-hint {
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: rgba(236, 253, 245, 0.78);
+      margin: 0 0 14px 0;
+    }
+    .mx-record-saved {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(204, 251, 241, 0.18);
+      border: 1px solid rgba(204, 251, 241, 0.25);
+      color: #d1fae5;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+    }
+    .mx-record-saved::before {
+      content: "";
+      display: block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
+    }
+    .mx-record-empty {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px dashed rgba(204, 251, 241, 0.28);
+      font-size: 0.82rem;
+      color: rgba(236, 253, 245, 0.78);
+      line-height: 1.5;
+    }
+
+    /* --- Status banners (info / warn / error inside the mock screen) - */
+    .mx-status {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      margin: 0 0 14px 0;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .mx-status-icon { font-size: 1rem; line-height: 1.2; }
+    .mx-status--info {
+      background: rgba(204, 251, 241, 0.45);
+      border-color: rgba(13, 148, 136, 0.18);
+      color: #0f5f57;
+    }
+    .mx-status--warn {
+      background: rgba(254, 243, 199, 0.6);
+      border-color: rgba(202, 138, 4, 0.22);
+      color: #78350f;
+    }
+    .mx-status--error {
+      background: rgba(254, 226, 226, 0.55);
+      border-color: rgba(220, 38, 38, 0.22);
+      color: #7f1d1d;
+    }
+
+    /* --- Streamlit widget overrides (scoped via :has) ----------------- *
+     * These rules only activate when the mock view places its marker
+     * in the DOM. Other pages stay untouched.
+     * ----------------------------------------------------------------- */
+
+    /* Hide Streamlit's default progress bar — we render our own ``.mx-progress-bar``. */
+    section.main:has(.mx-marker) [data-testid="stProgress"],
+    section.main:has(.mx-marker) [data-testid="stProgressBar"] {
+      display: none !important;
+    }
+
+    /* Primary CTA ("AI 테라피 진단받기" / "다시 분석하기") — full-width
+     * mint pill with confident lift. Streamlit decorates the disabled
+     * state automatically; we keep its opacity logic but soften the
+     * background so the disabled state doesn't look broken. */
+    section.main:has(.mx-marker) .stButton > button {
+      min-height: 3rem !important;
+      padding: 0.65rem 1.2rem !important;
+      border-radius: 14px !important;
+      font-size: 0.95rem !important;
+      font-weight: 700 !important;
+      letter-spacing: -0.005em;
+      border: 1px solid var(--border-subtle) !important;
+      background: rgba(255, 255, 255, 0.92) !important;
+      color: var(--navy) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+      transition: transform 0.16s var(--ease-out), box-shadow 0.2s var(--ease-out),
+                  background 0.2s var(--ease-out) !important;
+    }
+    section.main:has(.mx-marker) .stButton > button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(13, 148, 136, 0.18) !important;
+      border-color: rgba(13, 148, 136, 0.35) !important;
+    }
+    section.main:has(.mx-marker) .stButton > button[kind="primary"] {
+      background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
+      color: #ffffff !important;
+      border-color: transparent !important;
+      box-shadow: 0 10px 24px rgba(13, 148, 136, 0.28) !important;
+    }
+    section.main:has(.mx-marker) .stButton > button[kind="primary"]:hover:not(:disabled) {
+      box-shadow: 0 14px 32px rgba(13, 148, 136, 0.35) !important;
+    }
+    section.main:has(.mx-marker) .stButton > button:disabled {
+      opacity: 0.55 !important;
+      cursor: not-allowed !important;
+      transform: none !important;
+    }
+
+    /* Per-question expander — match the pattern screen's card aesthetic. */
+    section.main:has(.mx-marker) div[data-testid="stExpander"] {
+      margin: 0 0 10px 0;
+    }
+    section.main:has(.mx-marker) div[data-testid="stExpander"] details {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+    section.main:has(.mx-marker) div[data-testid="stExpander"] details[open] {
+      border-color: rgba(13, 148, 136, 0.22);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    section.main:has(.mx-marker) div[data-testid="stExpander"] summary {
+      padding: 12px 14px !important;
+      font-weight: 600 !important;
+      font-size: 0.92rem !important;
+      color: var(--navy) !important;
+    }
+
+    /* Status widget (``st.status``) — used during analysis. Soften its
+     * default look so it feels like a calm progress card, not an alert. */
+    section.main:has(.mx-marker) [data-testid="stStatus"] {
+      border-radius: var(--radius-md) !important;
+      border: 1px solid var(--border-subtle) !important;
+      background: rgba(255, 255, 255, 0.92) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+    }
+
+    /* --- Report screen --------------------------------------------- */
+    .mx-report-hero {
+      background: linear-gradient(140deg, rgba(204, 251, 241, 0.5) 0%, rgba(255, 255, 255, 0.92) 65%);
+      border: 1px solid rgba(13, 148, 136, 0.14);
+      border-radius: var(--radius-lg);
+      padding: 22px 22px;
+      margin: 4px 0 18px 0;
+      box-shadow: var(--shadow-card);
+    }
+    .mx-report-hero .mx-rh-eyebrow {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0;
+    }
+    .mx-report-hero .mx-rh-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      margin: 6px 0 0 0;
+      line-height: 1.3;
+    }
+    .mx-report-hero .mx-rh-transcript {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.6;
+      border-left: 3px solid var(--mint);
+    }
+    .mx-report-hero .mx-rh-meta {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .mx-report-hero .mx-rh-chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    /* --- Coaching experience (mock report, step 6) ------------------- */
+    section.main:has(.mx-marker) .mx-coach-hero {
+      background: linear-gradient(135deg, rgba(240, 253, 250, 0.95) 0%, rgba(255, 255, 255, 0.98) 55%, rgba(204, 251, 241, 0.45) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.18);
+      border-radius: var(--radius-lg);
+      padding: 20px 20px 18px 20px;
+      margin: 0 0 14px 0;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    }
+    section.main:has(.mx-marker) .mx-coach-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0 0 6px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-hero-title {
+      font-size: 1.28rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.025em;
+      line-height: 1.3;
+      margin: 0 0 8px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-hero-sub {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-section {
+      margin: 18px 0 6px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-sec-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(13, 148, 136, 0.75);
+      margin: 0 0 4px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-sec-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0 0 10px 0;
+      letter-spacing: -0.02em;
+    }
+    section.main:has(.mx-marker) .mx-coach-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    section.main:has(.mx-marker) .mx-coach-chip {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(13, 148, 136, 0.14);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      max-width: 100%;
+    }
+    section.main:has(.mx-marker) .mx-coach-chip-ico {
+      flex: 0 0 auto;
+      color: var(--mint);
+      font-weight: 800;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    section.main:has(.mx-marker) .mx-coach-chip-txt {
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    section.main:has(.mx-marker) .mx-coach-native .mx-coach-sec-title {
+      margin-bottom: 4px;
+    }
+    section.main:has(.mx-marker) .mx-coach-native-body {
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: var(--text);
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(125deg, rgba(224, 242, 254, 0.55) 0%, rgba(255, 255, 255, 0.95) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      margin: 0 0 4px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-flow-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    section.main:has(.mx-marker) .mx-coach-flow-card {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      background: rgba(248, 250, 252, 0.95);
+      border: 1px solid var(--border-subtle);
+    }
+    section.main:has(.mx-marker) .mx-coach-flow-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--mint);
+      margin: 0 0 6px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-flow-body {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-cta-preamble {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 14px 12px 6px 12px;
+      line-height: 1.55;
+    }
+    section.main:has(.mx-marker) .mx-coach-mini-scores {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px 0;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+    section.main:has(.mx-marker) .mx-coach-mini-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(204, 251, 241, 0.45);
+      border: 1px solid rgba(13, 148, 136, 0.2);
+      font-weight: 700;
+      color: var(--navy);
+    }
+    section.main:has(.mx-marker) .mx-coach-mini-rest {
+      font-weight: 500;
+    }
+    section.main:has(.mx-marker) .mx-coach-retry-banner {
+      margin: 20px 0 8px 0;
+      padding: 16px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(204, 251, 241, 0.55) 0%, rgba(236, 253, 245, 0.9) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--text-primary);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .mx-section-h {
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 22px 0 10px 0;
+    }
+
+    /* --- Mobile tweaks ----------------------------------------------- */
+    @media (max-width: 480px) {
+      .mx-question-card { padding: 18px 16px; }
+      .mx-question-topic { font-size: 1.05rem; }
+      .mx-record-stage { padding: 20px 16px 14px 16px; }
+      .mx-record-title { font-size: 1.05rem; }
+      .mx-report-hero { padding: 18px 16px; }
+      .mx-report-hero .mx-rh-title { font-size: 1.12rem; }
+    }
 """
 
 

@@ -1,4 +1,19 @@
-"""Landing page — premium clinical hero + status + features."""
+"""Home — premium mobile learning dashboard.
+
+Visual-only redesign (Step 2). Four sections, every section is a single,
+cleanly bounded block of HTML so the screen feels app-like rather than
+admin-y:
+
+  1) Greeting           — warm hello, no marketing copy.
+  2) Continue Study     — the screen's visual focus. Two states:
+                            • resume an in-progress mock exam, or
+                            • start fresh / pick up the last finished one.
+  3) Quick Actions      — 4 compact cards that fan out to the main tabs.
+  4) Simple Stats       — 3 honest, derived numbers (no new tracking).
+
+Routing, query params, and session_state are untouched — every CTA is a
+plain ``<a href="?nav=...">`` anchor, identical to the rest of the app.
+"""
 
 from __future__ import annotations
 
@@ -7,226 +22,332 @@ from typing import Any, Dict, Optional
 
 import streamlit as st
 
+from utils.exam_state import (
+    count_completed_exam_prefix,
+    has_resumable_exam,
+    reconcile_mock_exam_pointer,
+)
 from utils.local_profile import human_time_ago, load_user_progress
 from utils.session_state import ensure_mock, ensure_settings, sync_settings_to_legacy
 
 
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
+
 def render_home() -> None:
     sync_settings_to_legacy(st.session_state)
     mx = ensure_mock(st.session_state)
+    if mx.get("current_exam"):
+        reconcile_mock_exam_pointer(mx)
     sett = ensure_settings(st.session_state)
     prog_disk = load_user_progress()
 
-    # Resume-mode banner — surfaced before the metric tiles so users always
-    # see a one-tap "continue mock" path. Snapshot lives in user_progress.json
-    # and is written every time the script reruns after a state change.
-    _render_resume_card(prog_disk, mx)
-
-    agg = mx.get("analytics_cache") or {}
-    level_display = agg.get("overall_display") or mx.get("overall_estimated_level") or "—"
-    n_done = len(mx.get("results") or [])
-    diff = int(sett.get("difficulty", 5))
-    exam_done = bool(mx.get("exam_finished"))
-
     gid = st.session_state.get("guest_id") or ""
-    um = st.session_state.get("user_mode")
-    um_label = "게스트"
+    um = st.session_state.get("user_mode") or ""
+
+    # 1) Greeting
+    _render_greeting(gid, um)
+
+    # 2) Continue Study — the visual focus of the screen.
+    snap = _detect_in_progress_snapshot(prog_disk, mx)
+    if snap is not None:
+        _render_resume_card(snap)
+    else:
+        _render_start_card(prog_disk, sett)
+
+    # 3) Quick Action Cards
+    _render_quick_actions()
+
+    # 4) Simple Learning Stats
+    _render_simple_stats(prog_disk, mx)
+
+
+# ---------------------------------------------------------------------------
+# 1) Greeting
+# ---------------------------------------------------------------------------
+
+def _render_greeting(gid: str, um: str) -> None:
+    """Warm, single-line hello. Profile mode shown as a soft pill chip."""
+    badge_label = "게스트 모드"
     if um == "login_placeholder":
-        um_label = "클라우드 연동 예정"
-    profile_hint = (
-        f'<p style="font-size:0.75rem;color:#94a3b8;margin:10px 0 0 0;">로컬 프로필 · {html.escape(gid)} · {um_label}</p>'
+        badge_label = "클라우드 연동 예정"
+    meta_html = (
+        f'<div class="gr-meta"><span class="gr-meta-dot"></span>{html.escape(badge_label)}</div>'
         if gid
         else ""
     )
     st.markdown(
         f"""
-        <section class="home-hero">
-          <div class="ds-hero-tag">OPIc Speech Therapy</div>
-          <h1 class="ds-display">AI OPIc Speech Therapy</h1>
-          <p class="ds-subtitle">프리미엄 발화 분석과 재활 훈련을 한 화면에서. 의료 AI 다큐멘터리 수준의 진단 경험을 목표로 합니다.</p>
-          {profile_hint}
+        <section class="greeting" aria-label="환영 인사">
+          <h1 class="gr-hello">안녕하세요 <span class="gr-wave" aria-hidden="true">👋</span></h1>
+          <p class="gr-sub">오늘도 꾸준히 연습해볼까요?</p>
+          {meta_html}
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="ds-section-title">오늘의 진단 상태</div>', unsafe_allow_html=True)
-    st.markdown(
-        f"""
-        <div class="home-metrics">
-          <div class="metric-tile">
-            <div class="metric-label">예상 레벨</div>
-            <div class="metric-value">{html.escape(str(level_display))}</div>
-            <div class="metric-hint">종합 리포트 기준 추정</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-label">진행 문항</div>
-            <div class="metric-value">{n_done} / 15</div>
-            <div class="metric-hint">{"세션 완료" if exam_done else "모의고사 진행 중"}</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-label">목표 난이도</div>
-            <div class="metric-value">Lv.{diff}</div>
-            <div class="metric-hint">설정에서 변경 가능</div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    st.markdown('<div class="ds-section-title">핵심 기능</div>', unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div class="feature-grid">
-        """
-        + _feature_link(
-            "?nav=MOCK",
-            "정밀 진단",
-            "실전형 모의고사와 문항별 발화 분석 리포트.",
-        )
-        + _feature_link(
-            "?nav=PATTERN",
-            "패턴 쉐도잉",
-            "한 줄 듣기 · 빠른 반복 청취 (패턴 페이지).",
-        )
-        + _feature_link(
-            "?nav=SCRIPTS",
-            "개인 처방",
-            "등급·문항 기반 스크립트 훈련 (점진 공개).",
-        )
-        + """
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="ds-section-title">최근 학습 기록</div>', unsafe_allow_html=True)
-    card = prog_disk.get("last_activity_card") if isinstance(prog_disk, dict) else None
-    if isinstance(card, dict) and card.get("estimated_level"):
-        lvl = html.escape(str(card.get("estimated_level") or "—"))
-        top = html.escape(str(card.get("topic") or "—"))
-        ago = html.escape(human_time_ago(card.get("activity_at")))
-        label = html.escape(str(card.get("label") or "최근 모의고사"))
-        st.markdown(
-            f"""
-            <div class="glass-card-quiet" style="margin-bottom:14px;">
-              <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;">{label}</div>
-              <div style="display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;margin-top:10px;">
-                <span style="font-size:1.5rem;font-weight:800;color:#0f172a;">{lvl}</span>
-                <span style="font-size:0.95rem;color:#475569;">{top}</span>
-                <span style="font-size:0.85rem;color:#94a3b8;">{ago}</span>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    rows = mx.get("results") or []
-    if rows:
-        tail = rows[-5:]
-        inner = ""
-        for item in reversed(tail):
-            qid = item.get("q_id", "—")
-            topic = html.escape(str(item.get("topic") or "Topic"))
-            inner += f'<div class="recent-row">Q{html.escape(str(qid))} · {topic}</div>'
-        st.markdown(f'<div class="recent-list">{inner}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(
-            '<div class="recent-list"><div class="recent-empty">모의고사를 시작하면 문항 기록이 여기에 쌓입니다. 기록은 이 기기에 저장됩니다.</div></div>',
-            unsafe_allow_html=True,
-        )
-
-
-def _feature_link(href: str, title: str, body: str) -> str:
-    return f"""
-        <a href="{html.escape(href, quote=True)}" style="text-decoration:none;color:inherit;display:block;">
-          <div class="feature-tile">
-            <div class="ft-title">{html.escape(title)}</div>
-            <div class="ft-body">{html.escape(body)}</div>
-          </div>
-        </a>
-    """
-
+# ---------------------------------------------------------------------------
+# 2) Continue Study Card
+# ---------------------------------------------------------------------------
 
 def _detect_in_progress_snapshot(
     prog_disk: Optional[Dict[str, Any]],
     mx: Dict[str, Any],
 ) -> Optional[Dict[str, Any]]:
-    """Pick the freshest non-empty mid-exam state between disk + in-memory.
+    """Pick the freshest non-empty mid-exam state between in-memory + disk.
 
-    Falls back to the live ``mx`` dict when the user just generated the exam
-    and the disk write hasn't landed yet. Returns ``None`` when there's
-    nothing to resume (no exam, or exam already finished).
+    Prefers the live ``mx`` because it represents the user's most recent
+    action — disk is only flushed at the end of a rerun and may lag by
+    one event during fast back-to-back navigation. Falls back to the
+    on-disk ``mock_snapshot`` when ``mx`` has been freshly reset
+    (e.g. brand-new Streamlit session before the eager disk-restore
+    in ``app.py`` runs — though that path is also covered now). Returns
+    ``None`` when there is nothing to resume.
+
+    The "is this resumable?" check is delegated to
+    :func:`utils.exam_state.has_resumable_exam` so home, mock view, and
+    router never disagree on whether to surface the resume CTA.
     """
-    candidate: Dict[str, Any] = {}
+    if isinstance(mx, dict) and has_resumable_exam(mx):
+        return {
+            k: mx.get(k)
+            for k in (
+                "current_exam",
+                "current_idx",
+                "results",
+                "exam_finished",
+                "mock_page",
+                "exam_started_at",
+                "exam_last_seen_at",
+            )
+        }
+
     if isinstance(prog_disk, dict):
         snap = prog_disk.get("mock_snapshot")
-        if isinstance(snap, dict):
-            candidate = dict(snap)
+        if isinstance(snap, dict) and has_resumable_exam(snap):
+            return dict(snap)
 
-    if not candidate and isinstance(mx, dict):
-        candidate = {k: mx.get(k) for k in (
-            "current_exam",
-            "current_idx",
-            "results",
-            "exam_finished",
-            "mock_page",
-            "exam_started_at",
-            "exam_last_seen_at",
-        )}
-
-    if not isinstance(candidate.get("current_exam"), list):
-        return None
-    if not candidate["current_exam"]:
-        return None
-    if candidate.get("exam_finished"):
-        return None
-
-    total = len(candidate["current_exam"])
-    idx = int(candidate.get("current_idx") or 0)
-    results_done = len(candidate.get("results") or [])
-    if results_done >= total and not candidate.get("exam_finished"):
-        # All answers in but the celebration hasn't been recorded yet —
-        # treat as finished so we don't show stale resume CTA.
-        return None
-    if idx >= total and results_done >= total:
-        return None
-
-    return candidate
+    return None
 
 
-def _render_resume_card(
-    prog_disk: Optional[Dict[str, Any]],
-    mx: Dict[str, Any],
-) -> None:
-    snap = _detect_in_progress_snapshot(prog_disk, mx)
-    if snap is None:
-        return
-
-    total = len(snap.get("current_exam") or [])
-    idx = int(snap.get("current_idx") or 0)
-    next_q = min(idx + 1, total)
+def _render_resume_card(snap: Dict[str, Any]) -> None:
+    """Premium mint hero card — resume mid-exam."""
+    exam = snap.get("current_exam") or []
+    total = len(exam)
+    completed = count_completed_exam_prefix(snap)
+    idx_next = min(max(completed, 0), max(total - 1, 0)) if total else 0
     last_seen = snap.get("exam_last_seen_at") or snap.get("exam_started_at")
     last_label = human_time_ago(last_seen) if last_seen else "방금 전"
 
     topic = ""
     try:
-        topic = str((snap.get("current_exam") or [])[idx].get("topic") or "")
+        if exam and completed < total:
+            topic = str(exam[idx_next].get("topic") or "")
+        elif exam:
+            topic = str(exam[-1].get("topic") or "")
     except Exception:
         topic = ""
     topic_safe = html.escape(topic) if topic else ""
 
+    progress_pct = max(0, min(100, int(round((completed / total) * 100)))) if total else 0
+
     st.markdown(
         f"""
-        <section class="resume-card" role="region" aria-label="모의고사 이어하기">
-          <div class="rc-eyebrow">이어하기 가능</div>
-          <div class="rc-title">Q{next_q} / {total} · 마지막 학습 {html.escape(last_label)}</div>
-          {'<div class="rc-meta">최근 주제: ' + topic_safe + '</div>' if topic_safe else ''}
-          <div class="rc-actions">
-            <a class="rc-action rc-primary" href="?nav=MOCK&amp;mock=TEST">이어하기</a>
-            <a class="rc-action rc-secondary" href="?nav=MOCK&amp;mock=SURVEY">처음부터 다시</a>
+        <section class="continue-card continue-card--resume" role="region"
+                 aria-label="모의고사 이어하기">
+          <div class="cc-row-top">
+            <div class="cc-eyebrow">이어하기 가능</div>
+            <div class="cc-time">{html.escape(last_label)}</div>
+          </div>
+          <div class="cc-title">Q{completed} <span class="cc-of">/ {total}</span>까지 학습했어요</div>
+          {('<div class="cc-meta">' + topic_safe + '</div>') if topic_safe else ''}
+          <div class="cc-progress" aria-hidden="true">
+            <span class="cc-progress-fill" style="width:{progress_pct}%"></span>
+          </div>
+          <div class="cc-actions">
+            <a class="cc-action cc-primary" href="?nav=MOCK&amp;mock=TEST">이어하기</a>
+            <a class="cc-action cc-secondary" href="?nav=MOCK&amp;mock=SURVEY&amp;reset=1">처음부터 다시</a>
           </div>
         </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_start_card(
+    prog_disk: Dict[str, Any],
+    sett: Dict[str, Any],
+) -> None:
+    """Card shown when nothing is mid-exam.
+
+    Two flavors:
+      • returning user (we have a finished/last-activity snapshot) — invite
+        them to keep going and offer the last report as a secondary jump.
+      • brand-new user — invite to take the first diagnostic.
+    """
+    card = prog_disk.get("last_activity_card") if isinstance(prog_disk, dict) else None
+    has_history = isinstance(card, dict) and bool(card.get("estimated_level"))
+    diff = int(sett.get("difficulty", 5))
+
+    if has_history:
+        eyebrow = "오늘의 학습"
+        title = "이어서 실력을 다져볼까요?"
+        sub_bits = [
+            f"최근 추정 <b>{html.escape(str(card.get('estimated_level')))}</b>",
+            f"목표 난이도 <b>Lv.{diff}</b>",
+        ]
+        sub_html = " · ".join(sub_bits)
+        primary_label = "모의고사 시작"
+        primary_href = "?nav=MOCK"
+        secondary_label = "최근 리포트"
+        secondary_href = (
+            "?nav=MOCK&amp;mock=FINAL"
+            if card.get("exam_finished")
+            else "?nav=MOCK&amp;mock=REPORT"
+        )
+    else:
+        eyebrow = "환영합니다"
+        title = "5분이면 첫 진단을 끝낼 수 있어요"
+        sub_html = (
+            "먼저 가벼운 설문으로 난이도를 정해볼게요. "
+            f"목표 난이도 <b>Lv.{diff}</b>"
+        )
+        primary_label = "진단 시작"
+        primary_href = "?nav=MOCK"
+        secondary_label = "패턴 둘러보기"
+        secondary_href = "?nav=PATTERN"
+
+    st.markdown(
+        f"""
+        <section class="continue-card continue-card--start" role="region"
+                 aria-label="학습 시작">
+          <div class="cc-row-top">
+            <div class="cc-eyebrow">{html.escape(eyebrow)}</div>
+          </div>
+          <div class="cc-title">{html.escape(title)}</div>
+          <div class="cc-meta">{sub_html}</div>
+          <div class="cc-actions">
+            <a class="cc-action cc-primary" href="{primary_href}">{html.escape(primary_label)}</a>
+            <a class="cc-action cc-secondary" href="{secondary_href}">{html.escape(secondary_label)}</a>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 3) Quick Action Cards
+# ---------------------------------------------------------------------------
+
+# Tiny inline SVGs — same stroke style as the bottom-nav icons so the home
+# screen feels consistent with the dock.
+_QA_ICONS: Dict[str, str] = {
+    "wave": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M2 12h2"/><path d="M6 8v8"/>'
+        '<path d="M10 4v16"/><path d="M14 8v8"/><path d="M18 5v14"/>'
+        '<path d="M22 12h2"/></svg>'
+    ),
+    "file": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true">'
+        '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>'
+        '<polyline points="14 2 14 8 20 8"/>'
+        '<line x1="16" y1="13" x2="8" y2="13"/>'
+        '<line x1="16" y1="17" x2="8" y2="17"/></svg>'
+    ),
+    "play": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="3"/>'
+        '<path d="m10 8 6 4-6 4V8z"/></svg>'
+    ),
+    "chart": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M3 3v18h18"/>'
+        '<rect x="7" y="13" width="3" height="5" rx="1"/>'
+        '<rect x="12" y="9" width="3" height="9" rx="1"/>'
+        '<rect x="17" y="5" width="3" height="13" rx="1"/></svg>'
+    ),
+}
+
+
+def _render_quick_actions() -> None:
+    items = (
+        ("?nav=PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기"),
+        ("?nav=SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기"),
+        ("?nav=LECTURES", "play", "강의 보기", "출제 유형 강의"),
+        ("?nav=MOCK", "chart", "학습 기록", "최근 리포트 다시 보기"),
+    )
+    cards = []
+    for href, ico, title, sub in items:
+        cards.append(
+            f'<a class="qa-card" href="{href}" aria-label="{html.escape(title)}">'
+            f'<span class="qa-ico">{_QA_ICONS.get(ico, "")}</span>'
+            f'<span class="qa-title">{html.escape(title)}</span>'
+            f'<span class="qa-sub">{html.escape(sub)}</span>'
+            "</a>"
+        )
+    st.markdown(
+        '<div class="home-section-h">빠른 학습</div>'
+        f'<div class="qa-grid">{"".join(cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4) Simple Learning Stats
+# ---------------------------------------------------------------------------
+
+def _render_simple_stats(prog_disk: Dict[str, Any], mx: Dict[str, Any]) -> None:
+    """Three honest, derived numbers. No new tracking introduced."""
+    results = mx.get("results") or []
+    questions_done = (
+        count_completed_exam_prefix(mx)
+        if isinstance(mx, dict) and mx.get("current_exam")
+        else len(results)
+    )
+
+    completed_exams = 0
+    last_at: Optional[str] = None
+    if isinstance(prog_disk, dict):
+        card = prog_disk.get("last_activity_card") or {}
+        if isinstance(card, dict):
+            if card.get("exam_finished"):
+                completed_exams = 1
+            last_at = card.get("activity_at")
+        last_at = last_at or prog_disk.get("updated_at")
+
+    last_label = human_time_ago(last_at) if last_at else "—"
+    q_hint = "진행 중" if questions_done else "아직 시작 전"
+
+    st.markdown(
+        f"""
+        <div class="home-section-h">학습 현황</div>
+        <div class="stats-row">
+          <div class="stat-chip">
+            <div class="st-label">응시한 문항</div>
+            <div class="st-value">{questions_done}</div>
+            <div class="st-hint">{q_hint}</div>
+          </div>
+          <div class="stat-chip">
+            <div class="st-label">완료한 모의고사</div>
+            <div class="st-value">{completed_exams}</div>
+            <div class="st-hint">전체 회차</div>
+          </div>
+          <div class="stat-chip">
+            <div class="st-label">마지막 학습</div>
+            <div class="st-value st-value--time">{html.escape(last_label)}</div>
+            <div class="st-hint">로컬 기기 기준</div>
+          </div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
