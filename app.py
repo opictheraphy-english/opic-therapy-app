@@ -14,7 +14,9 @@ Navigation contract:
   tab** and Streamlit reruns in-place.
 
 First entry: after the guest/login entry gate, a short onboarding flow runs
-until ``onboarding_completed`` is set (local ``app_session.json``).
+until ``onboarding_completed`` is set (local ``app_session.json``). Returning
+users see a one-time-per-session splash on Home only (``splash_seen_this_session``,
+not persisted).
 
 (``views/`` 패키지 사용 — Streamlit 예약 디렉터리명 ``pages/`` 는 쓰지 않습니다.)
 """
@@ -22,6 +24,7 @@ until ``onboarding_completed`` is set (local ``app_session.json``).
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 import streamlit as st
@@ -174,6 +177,20 @@ def _page_footer() -> None:
 
 
 if page == "HOME":
+    # Session-only splash before Home (never written to disk).
+    if not st.session_state.get("splash_seen_this_session"):
+        from views.splash import render_splash_screen
+
+        if not st.session_state.get("_splash_once"):
+            render_splash_screen()
+            st.session_state._splash_once = True
+            st.rerun()
+        render_splash_screen()
+        time.sleep(1.2)
+        st.session_state.splash_seen_this_session = True
+        st.session_state.pop("_splash_once", None)
+        st.rerun()
+
     from views.home import render_home
 
     render_home()

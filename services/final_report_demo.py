@@ -98,6 +98,29 @@ def seed_demo_final_report(mx: Dict[str, Any]) -> None:
     mx["mock_page"] = "FINAL"
     mx["_show_exam_celebration"] = False
     mx["_final_report_demo"] = True
+    mx.setdefault("attempt_no", 1)
+    mx["survey_completed"] = True
+    # Minimal valid survey so "새 모의고사 시작하기" can regenerate a set in demo mode.
+    mx.setdefault(
+        "survey_results",
+        {
+            "work": "사업·회사원",
+            "housing": "홀로 거주",
+            "leisure": [
+                "영화 보기",
+                "공원 가기",
+                "캠핑 하기",
+                "게임 하기",
+                "박물관 가기",
+                "공연 보기",
+                "콘서트 보기",
+            ],
+            "interests": ["음악 감상하기", "요리하기"],
+            "sports": ["조깅", "걷기"],
+            "travel": ["국내 여행"],
+            "difficulty": 5,
+        },
+    )
     for k in (
         "final_report_generated",
         "overall_estimated_level",

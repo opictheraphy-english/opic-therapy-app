@@ -485,6 +485,89 @@ GLOBAL_CSS = """
       color: var(--navy) !important;
     }
 
+    /* --- Session splash (before Home, scoped) ----------------------------- */
+    section.main:has(.splash-marker) {
+      background:
+        radial-gradient(ellipse 85% 50% at 50% 0%, rgba(13, 148, 136, 0.14) 0%, transparent 52%),
+        linear-gradient(180deg, #fafaf9 0%, #f4f4f5 50%, #f1f5f9 100%) !important;
+    }
+    section.main:has(.splash-marker) div.block-container {
+      max-width: 480px !important;
+      margin: 0 auto !important;
+      padding-top: min(12vh, 5.5rem) !important;
+      padding-bottom: 4rem !important;
+      padding-left: 1.1rem !important;
+      padding-right: 1.1rem !important;
+    }
+    section.main:has(.splash-marker) .splash-root {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: min(72vh, 520px);
+    }
+    section.main:has(.splash-marker) .splash-card {
+      width: 100%;
+      border-radius: 24px;
+      padding: 2rem 1.5rem 1.75rem 1.5rem;
+      text-align: center;
+      background:
+        radial-gradient(ellipse 100% 70% at 100% 0%, rgba(45, 212, 191, 0.2) 0%, transparent 48%),
+        linear-gradient(165deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%);
+      border: 1px solid rgba(13, 148, 136, 0.16);
+      box-shadow: 0 14px 44px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+    }
+    section.main:has(.splash-marker) .splash-brand {
+      font-size: clamp(1.65rem, 6vw, 2.1rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin: 0 0 6px 0;
+      background: linear-gradient(135deg, #0f766e 0%, #14b8a6 45%, #2dd4bf 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    section.main:has(.splash-marker) .splash-sub {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 0 0 1.25rem 0;
+    }
+    section.main:has(.splash-marker) .splash-line {
+      font-size: 1.08rem;
+      line-height: 1.55;
+      font-weight: 600;
+      color: var(--navy);
+      margin: 0 0 1.5rem 0;
+    }
+    section.main:has(.splash-marker) .splash-loading {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin: 0 0 14px 0;
+      font-weight: 500;
+    }
+    section.main:has(.splash-marker) .splash-dots {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    section.main:has(.splash-marker) .splash-dots span {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0d9488 0%, #5eead4 100%);
+      opacity: 0.35;
+      animation: splash-dot 1.05s ease-in-out infinite;
+    }
+    section.main:has(.splash-marker) .splash-dots span:nth-child(2) { animation-delay: 0.18s; }
+    section.main:has(.splash-marker) .splash-dots span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes splash-dot {
+      0%, 80%, 100% { transform: scale(0.92); opacity: 0.35; }
+      40% { transform: scale(1.15); opacity: 1; }
+    }
+
     /* Hero */
     .home-hero {
       border-radius: var(--radius-lg);

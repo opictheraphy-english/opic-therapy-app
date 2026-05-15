@@ -50,6 +50,7 @@ from utils.exam_state import (
     classify_analysis_error,
     clear_pending_recovery,
     count_completed_exam_prefix,
+    format_mock_attempt_label,
     has_pending_recovery_for,
     has_resumable_exam,
     mark_pending_recovery,
@@ -129,7 +130,11 @@ def render_mock_flow() -> None:
         st.rerun()
 
     if mx.get("exam_finished") or mx.get("mock_page") == "FINAL":
-        render_top_bar("종합 리포트", back_href="?nav=HOME", eyebrow="모의고사")
+        render_top_bar(
+            "종합 리포트",
+            back_href="?nav=HOME",
+            eyebrow=format_mock_attempt_label(mx),
+        )
         from views.final_report import render_final_report
 
         render_final_report(mx)
@@ -288,6 +293,8 @@ def _render_survey(mx: dict) -> None:
             "travel": travel,
             "difficulty": int(settings_session()["difficulty"]),
         }
+        mx["survey_completed"] = True
+        mx.setdefault("attempt_no", 1)
         _exam = generate_test_set(
             mx["survey_results"],
             difficulty=int(settings_session()["difficulty"]),
@@ -343,7 +350,7 @@ def _render_test(mx: dict) -> None:
     render_top_bar(
         f"Q{q_id} · {q.get('topic', '')}".strip(" ·"),
         back_href="?nav=MOCK&mock=SURVEY",
-        eyebrow=f"모의고사 · {q_id}/{total}",
+        eyebrow=format_mock_attempt_label(mx, q_id=int(q_id), total=int(total)),
     )
 
     # Marker — activates the ``section.main:has(.mx-marker)`` Streamlit-widget
@@ -904,11 +911,46 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
             st.code(err_msg, language="text")
 
 
+def _render_precision_section(mx: dict) -> None:
+    """Render optional precision analysis section safely."""
+    results = mx.get("results") or mx.get("answers") or []
+    if not results:
+        return
+
+    with st.expander("정밀 분석", expanded=False):
+        st.caption("문항별 세부 분석을 확인할 수 있어요.")
+        for idx, item in enumerate(results, start=1):
+            if not isinstance(item, dict):
+                continue
+            res = item.get("result") if isinstance(item.get("result"), dict) else {}
+            src = res if res else item
+            status = (
+                str(src.get("analysis_status") or src.get("diagnosis_status") or item.get("analysis_status") or "")
+            )
+            level = (
+                src.get("estimated_level_display")
+                or src.get("estimated_level")
+                or item.get("estimated_level_display")
+                or item.get("estimated_level")
+                or "분석 대기"
+            )
+            transcript = str(src.get("transcript") or item.get("transcript") or "")
+
+            qnum = item.get("q_id", idx)
+            st.markdown(f"**Q{qnum}. {level}**")
+            if status in ["pending", "analysis_pending", "api_error", "failed"]:
+                st.info("AI 분석 대기 중입니다. 나중에 다시 시도할 수 있어요.")
+            elif transcript:
+                st.caption(transcript[:300])
+            else:
+                st.caption("표시할 답변 내용이 없습니다.")
+
+
 def _render_report(mx: dict) -> None:
     render_top_bar(
         "말하기 코칭",
         back_href="?nav=MOCK&mock=TEST",
-        eyebrow="모의고사 · 코칭",
+        eyebrow=f"{format_mock_attempt_label(mx)} · 코칭",
     )
 
     # Marker for the scoped Streamlit-widget overrides (button + expander).

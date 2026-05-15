@@ -36,6 +36,8 @@ These four states are mutually exclusive in practice:
 
 from __future__ import annotations
 
+import secrets
+from copy import deepcopy
 from typing import Any, Dict, List, MutableMapping, Optional
 
 from utils.local_profile import iso_now
@@ -54,6 +56,9 @@ _RESET_DEFAULTS: Dict[str, Any] = {
     "exam": [],
     "current_exam": [],
     "survey_results": {},
+    "survey_completed": False,
+    "attempt_no": 1,
+    "completed_attempts": [],
     "current_idx": 0,
     "results": [],
     "last_result": None,
@@ -100,14 +105,6 @@ def reset_exam_state(
     """
     for key, default in _RESET_DEFAULTS.items():
         mx[key] = default if not isinstance(default, (list, dict)) else type(default)()
-    # ``current_exam`` etc. are list defaults — give each a fresh empty
-    # container so we never accidentally share mutable defaults across resets.
-    mx["exam"] = []
-    mx["current_exam"] = []
-    mx["results"] = []
-    mx["recordings"] = {}
-    mx["question_play_counts"] = {}
-    mx["survey_results"] = {}
 
     for key in _POP_KEYS:
         mx.pop(key, None)
@@ -415,3 +412,107 @@ def is_completed_exam(snap: Dict[str, Any]) -> bool:
     if not isinstance(snap, dict):
         return False
     return bool(snap.get("exam_finished"))
+
+
+def format_mock_attempt_label(
+    mx: Dict[str, Any],
+    *,
+    q_id: Optional[int] = None,
+    total: Optional[int] = None,
+) -> str:
+    """Human-readable attempt label for top bars (e.g. ``2회 모의고사 · Q1 / 15``)."""
+    n = int(mx.get("attempt_no") or 1)
+    base = f"{n}회 모의고사"
+    if q_id is not None and total is not None and int(total) > 0:
+        return f"{base} · Q{q_id} / {total}"
+    return base
+
+
+def start_new_mock_attempt(mx: Dict[str, Any], ss: MutableMapping[str, Any]) -> bool:
+    """Archive the finished attempt (if any) and start a fresh exam using saved survey.
+
+    Does not clear ``survey_results`` or ``onboarding``. Does not set
+    ``_suppress_disk_restore`` so the next ``sync_user_progress`` can persist
+    the new in-progress snapshot.
+    """
+    if not mx.get("exam_finished"):
+        return False
+    survey = mx.get("survey_results")
+    if not isinstance(survey, dict) or not survey:
+        return False
+
+    from services.mock_exam.mock_exam_test_set_generator import generate_test_set
+    from utils.session_state import settings_session
+
+    prev_no = int(mx.get("attempt_no") or 1)
+    completed: List[Any] = list(mx.get("completed_attempts") or [])
+    if not isinstance(completed, list):
+        completed = []
+
+    rows = mx.get("results") or []
+    if isinstance(rows, list) and rows:
+        try:
+            results_copy = deepcopy(rows)
+        except Exception:
+            results_copy = list(rows)
+        try:
+            agg_copy = deepcopy(mx.get("analytics_cache")) if mx.get("analytics_cache") is not None else None
+        except Exception:
+            agg_copy = None
+        completed.append(
+            {
+                "attempt_no": prev_no,
+                "results": results_copy,
+                "analytics_cache": agg_copy,
+                "overall_estimated_level": mx.get("overall_estimated_level"),
+                "final_report_generated": bool(mx.get("final_report_generated")),
+                "completed_at": iso_now(),
+            }
+        )
+
+    mx["completed_attempts"] = completed
+    mx["attempt_no"] = prev_no + 1
+
+    clear_pending_recovery(mx)
+    for key in _POP_KEYS:
+        mx.pop(key, None)
+    for k in (
+        "final_report_generated",
+        "overall_estimated_level",
+        "analytics_cache",
+        "downloadable_report_bytes",
+        "_analytics_sig",
+        "_show_exam_celebration",
+    ):
+        mx.pop(k, None)
+    mx.pop("_final_report_demo", None)
+    mx.pop("_demo_preview_loaded", None)
+
+    mx["exam_finished"] = False
+    mx["results"] = []
+    mx["last_result"] = None
+    mx["recordings"] = {}
+    mx["question_play_counts"] = {}
+    mx["exam_listen_nonce"] = secrets.token_hex(8)
+    mx["analysis_status"] = ""
+    mx["analysis_done"] = False
+    mx["analysis_error_msg"] = ""
+    mx["analysis_result"] = None
+    mx["audio_bytes"] = None
+    mx["preview_transcript"] = None
+    mx["mock_page"] = "TEST"
+    mx["current_idx"] = 0
+
+    diff = int(survey.get("difficulty") or int(settings_session().get("difficulty", 5)))
+    new_exam = generate_test_set(survey, difficulty=diff)
+    mx["current_exam"] = new_exam
+    mx["exam"] = new_exam
+
+    _now = iso_now()
+    mx["exam_started_at"] = _now
+    mx["exam_last_seen_at"] = _now
+    mx["survey_completed"] = True
+
+    reconcile_mock_exam_pointer(mx)
+    ss.pop("_progress_sig", None)
+    return True

@@ -13,7 +13,8 @@ import streamlit as st
 
 from components.smart_feedback import render_smart_feedback_block
 from services.exam_analytics import compute_exam_aggregates, detect_risk_flags, summary_rows_for_table
-from utils.exam_state import reset_exam_state
+from utils.exam_state import reset_exam_state, start_new_mock_attempt
+from utils.local_profile import sync_user_progress
 from utils.text_utils import (
     DISCOURSE_MARKERS,
     NO_SPEECH_EMPTY_TEXT,
@@ -29,6 +30,8 @@ except ImportError:
 
     def build_exam_pdf(*_a, **_kw):  # type: ignore[misc]
         return None
+
+from services.tts_service import clear_mock_question_tts_keys
 
 _REPORT_CSS = """
 <style>
@@ -161,6 +164,36 @@ def render_final_report(mx: Dict[str, Any]) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    st.divider()
+    att = int(mx.get("attempt_no") or 1)
+    st.caption(f"{att}회 모의고사 · 종합 리포트")
+    b_new, b_home, b_refresh = st.columns([1.2, 1, 0.9])
+    with b_new:
+        if st.button("새 모의고사 시작하기", type="primary", use_container_width=True, key="mx_final_new_attempt"):
+            if start_new_mock_attempt(mx, st.session_state):
+                clear_mock_question_tts_keys()
+                sync_user_progress(st.session_state)
+                try:
+                    st.query_params.clear()
+                    st.query_params["nav"] = "MOCK"
+                    st.query_params["mock"] = "TEST"
+                except Exception:
+                    pass
+                st.rerun()
+            else:
+                st.error("설문 데이터가 없거나 종료된 시험이 아니면 새 시험을 시작할 수 없습니다.")
+    with b_home:
+        if st.button("홈으로 가기", use_container_width=True, key="mx_final_go_home"):
+            reset_exam_state(mx, st.session_state)
+            st.session_state.page = "HOME"
+            st.query_params.clear()
+            st.query_params["nav"] = "HOME"
+            st.rerun()
+    with b_refresh:
+        if st.button("리포트 다시 보기", use_container_width=True, key="mx_final_refresh"):
+            st.rerun()
+    st.divider()
 
     # --- Section B: table ---
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -381,14 +414,3 @@ def render_final_report(mx: Dict[str, Any]) -> None:
 
     dc3.button("🔗 결과 공유하기", disabled=True, use_container_width=True)
     dc3.caption("추후: 공유 링크 · 클라우드 저장 · 강사 검수 연동 예정")
-
-    if st.button("🏠 홈으로 돌아가기", use_container_width=True):
-        # Centralized reset — wipes exam state AND suppresses the on-disk
-        # snapshot from rehydrating the just-completed session on the next
-        # rerun (the old partial-cleanup helper used to leak ``current_exam``
-        # and ``exam_started_at`` back into HOME's resume detector).
-        reset_exam_state(mx, st.session_state)
-        st.session_state.page = "HOME"
-        st.query_params.clear()
-        st.query_params["nav"] = "HOME"
-        st.rerun()

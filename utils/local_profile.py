@@ -22,6 +22,9 @@ MOCK_SNAPSHOT_KEYS = (
     "analytics_cache",
     "overall_estimated_level",
     "final_report_generated",
+    "attempt_no",
+    "completed_attempts",
+    "survey_completed",
     "current_idx",
     "mock_page",
     "survey_results",
@@ -218,6 +221,8 @@ def _progress_signature(ss: MutableMapping[str, Any]) -> str:
             len(mx.get("current_exam") or []),
             bool(mx.get("exam_finished")),
             bool(mx.get("analytics_cache")),
+            str(mx.get("attempt_no") or 1),
+            str(len(mx.get("completed_attempts") or [])),
             mx.get("exam_started_at") or "",
             (pd or {}).get("_pattern_last_visit_at") or "",
         )
