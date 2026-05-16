@@ -13,7 +13,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from typing import Any, Dict, List, Optional
+
+from services.evaluation import ai_diag
 
 from google import genai
 from google.genai import types as genai_types
@@ -249,7 +252,11 @@ def evaluate_grading_logic(
 
 def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, difficulty: int = 5):
     if not audio_bytes:
+        ai_diag.log_pipeline_end(outcome="no_audio_bytes")
         return {"error": "녹음 바이트가 비어 있습니다.", "diagnosis_status": "api_error"}
+
+    ai_diag.update_diag_context(audio_bytes_len=len(audio_bytes))
+    ai_diag.log_pipeline_start()
 
     try:
         model_candidates = _build_model_candidates()
@@ -277,22 +284,34 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         tried_models: List[str] = []
         last_model_exc: Optional[BaseException] = None
 
-        for candidate in model_candidates:
+        for fallback_index, candidate in enumerate(model_candidates):
+            ai_diag.update_diag_context(fallback_index=fallback_index)
+            ai_diag.log_semantic_start(model_id=candidate)
             logger.info("Gemini semantic attempt model_id=%s", candidate)
             tried_models.append(candidate)
+            t0 = time.perf_counter()
             try:
                 response = client.models.generate_content(
                     model=candidate,
                     contents=contents,
                     config=config,
                 )
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
                 model_used = candidate
+                ai_diag.log_semantic_success(model_id=candidate, elapsed_ms=elapsed_ms)
                 logger.info("Gemini semantic success model_id=%s", candidate)
                 break
             except Exception as model_exc:
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
                 last_model_exc = model_exc
                 err_text = str(model_exc)
                 err_cls = type(model_exc).__name__
+                ai_diag.log_semantic_failure(
+                    model_id=candidate,
+                    elapsed_ms=elapsed_ms,
+                    error_type=err_cls,
+                    error_message=err_text,
+                )
                 logger.warning(
                     "Gemini semantic failure model_id=%s exc_type=%s",
                     candidate,
@@ -300,6 +319,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
                 )
                 if "429" in err_text or "RESOURCE_EXHAUSTED" in err_text:
                     logger.warning("Gemini quota on model_id=%s", candidate)
+                    ai_diag.log_pipeline_end(outcome="quota_429")
                     return {
                         "error": "API 할당량이 잠시 초과되었습니다. 잠시 후 다시 시도해 주세요.",
                         "diagnosis_status": "api_error",
@@ -324,6 +344,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
                 tried_models,
                 type(last_model_exc).__name__ if last_model_exc else None,
             )
+            ai_diag.log_pipeline_end(outcome="exhausted_candidates")
             return {
                 "error": "AI 분석 연결에 일시적인 문제가 있었습니다. 잠시 후 다시 시도해 주세요.",
                 "diagnosis_status": "api_error",
@@ -343,6 +364,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
 
         if not raw_text:
             logger.error("Gemini returned empty text after success model_id=%s", model_used)
+            ai_diag.log_pipeline_end(outcome="empty_response_text")
             return {
                 "error": "AI 응답이 비어 있었습니다. 잠시 후 다시 시도해 주세요.",
                 "diagnosis_status": "api_error",
@@ -421,6 +443,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         # again from the recovery panel).
         diagnosis_status = "no_speech" if no_speech else "ok"
 
+        ai_diag.log_pipeline_end(outcome=diagnosis_status)
         return {
             "diagnosis_status": diagnosis_status,
             "no_speech_detected": no_speech,
@@ -456,6 +479,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         }
     except Exception as e:
         logger.exception("Gemini multimodal pipeline unexpected failure: %s", e)
+        ai_diag.log_pipeline_end(outcome="exception")
         return {
             "error": "AI 분석 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
             "diagnosis_status": "api_error",

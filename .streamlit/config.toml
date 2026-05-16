@@ -4,3 +4,12 @@ gatherUsageStats = false
 # Single entry (app.py) + custom bottom nav — hide Streamlit multipage sidebar UI.
 [client]
 showSidebarNavigation = false
+
+# Launch: always use light theme (ignore OS/browser dark mode for Streamlit chrome).
+[theme]
+base = "light"
+primaryColor = "#14B8A6"
+backgroundColor = "#F8FAF9"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#111827"
+font = "sans serif"

@@ -25,7 +25,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Mapping, Optional, Tuple
+
+from services.evaluation import ai_diag
 
 # NOTE: The Gemini pipeline is imported **lazily** below.
 #
@@ -162,6 +164,7 @@ def analyze_audio_with_retry(
     difficulty: int = 5,
     *,
     on_status: Optional[Callable[[str, str], None]] = None,
+    diag: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str, int]:
     """Smart-retry wrapper.
 
@@ -202,11 +205,18 @@ def analyze_audio_with_retry(
     # *inside* the function means importing this facade module stays cheap.
     _engine_analyze_audio, _ = _load_engine()
 
+    ctx = dict(diag or {})
+    ctx.setdefault("caller", "analyze_audio_with_retry")
+    ctx["audio_bytes_len"] = len(audio_bytes or b"")
+    ai_diag.set_diag_context(ctx)
+    ai_diag.log_retry_start()
+
     last_error = ""
     attempts = 0
 
     for attempt_idx in range(_MAX_ATTEMPTS):
         attempts = attempt_idx + 1
+        ai_diag.update_diag_context(retry_attempt=attempts)
 
         if attempt_idx > 0:
             _emit(
@@ -253,6 +263,7 @@ def analyze_audio_with_retry(
             _GEMINI_LOCK.release()
 
         if result is not None and not last_error:
+            ai_diag.log_retry_success(attempts=attempts)
             return result, "", attempts
 
         if not is_transient_error(last_error):
@@ -263,6 +274,7 @@ def analyze_audio_with_retry(
                 _MAX_ATTEMPTS,
                 last_error,
             )
+            ai_diag.log_retry_failure(attempts=attempts, error_message=last_error)
             return None, last_error, attempts
 
         logger.warning(
@@ -277,6 +289,7 @@ def analyze_audio_with_retry(
         attempts,
         last_error,
     )
+    ai_diag.log_retry_failure(attempts=attempts, error_message=last_error)
     return None, last_error, attempts
 
 

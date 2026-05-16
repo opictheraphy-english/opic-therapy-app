@@ -4,6 +4,7 @@ GLOBAL_CSS = """
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     :root {
+      color-scheme: light only;
       --mint: #0d9488;
       --mint-soft: #ccfbf1;
       --mint-muted: rgba(13, 148, 136, 0.12);
@@ -12,11 +13,11 @@ GLOBAL_CSS = """
       --bg-warm: #fafaf9;
       --bg-page: linear-gradient(180deg, #fafaf9 0%, #f4f4f5 48%, #f1f5f9 100%);
       --surface: rgba(255, 255, 255, 0.72);
-      --border-subtle: rgba(15, 23, 42, 0.08);
-      --text: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #64748b;
-      --text-soft: #94a3b8;
+      --border-subtle: rgba(17, 24, 39, 0.08);
+      --text: #111827;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --text-soft: #9ca3af;
       --danger-soft: #fecaca;
       --danger-text: #b91c1c;
       --radius-lg: 20px;
@@ -37,12 +38,27 @@ GLOBAL_CSS = """
      * (?nav=...) don't flash white between the old page unload and the new
      * Streamlit shell paint. */
     html, body {
-      background: #f4f4f5 !important;
-      background-color: #f4f4f5 !important;
+      background: #f8faf9 !important;
+      background-color: #f8faf9 !important;
+      color: #111827 !important;
+      color-scheme: light only !important;
+    }
+
+    [data-testid="stAppViewContainer"] {
+      background: #f8faf9 !important;
+      color: #111827 !important;
+      color-scheme: light only !important;
     }
 
     .stApp {
       background: var(--bg-page) !important;
+      color: #111827 !important;
+      color-scheme: light only !important;
+    }
+
+    main, section.main, .block-container {
+      background: transparent !important;
+      color: #111827 !important;
     }
 
     /* Single-app routing: no reserved Streamlit sidebar (bottom nav is primary). */
@@ -2432,6 +2448,171 @@ GLOBAL_CSS = """
       .mx-record-title { font-size: 1.05rem; }
       .mx-report-hero { padding: 18px 16px; }
       .mx-report-hero .mx-rh-title { font-size: 1.12rem; }
+    }
+
+    /* ==================================================================
+     * Launch light-theme lock — readable UI when OS/browser prefers dark
+     * ================================================================== */
+    @media (prefers-color-scheme: dark) {
+      html, body,
+      [data-testid="stAppViewContainer"],
+      .stApp,
+      main,
+      section.main,
+      .block-container {
+        background-color: #f8faf9 !important;
+        color: #111827 !important;
+        color-scheme: light only !important;
+      }
+    }
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] .main {
+      color-scheme: light only !important;
+    }
+
+    /* Streamlit / BaseWeb form controls */
+    input,
+    textarea,
+    select,
+    [data-baseweb="input"] input,
+    [data-baseweb="textarea"] textarea,
+    [data-baseweb="select"] > div,
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextInput"] > div > div,
+    div[data-testid="stTextArea"] textarea,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stSelectbox"] > div,
+    div[data-testid="stMultiSelect"] > div {
+      background-color: #ffffff !important;
+      color: #111827 !important;
+      border-color: #d1d5db !important;
+      -webkit-text-fill-color: #111827 !important;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #9ca3af !important;
+      opacity: 1 !important;
+      -webkit-text-fill-color: #9ca3af !important;
+    }
+
+    /* Custom cards — explicit light surfaces (mode / topic / home / recovery) */
+    .continue-card,
+    .continue-card--resume,
+    .continue-card--start,
+    .mx-mode-card,
+    .mx-landing-card,
+    .mx-question-card,
+    .mx-report-hero,
+    .recovery-card,
+    .topbar,
+    .section-card,
+    .final-hero,
+    .grammar-fix,
+    .coach-gf-card,
+    section.main:has(.mx-marker) .mx-coach-hero,
+    section.main:has(.mx-marker) [data-testid="stStatus"] {
+      color: #111827 !important;
+    }
+
+    .continue-card .cc-meta,
+    .continue-card .cc-time,
+    .ds-muted,
+    .mx-report-hero .mx-rh-transcript,
+    .recovery-card .rv-body,
+    .recovery-card .rv-meta {
+      color: #6b7280 !important;
+    }
+
+    .continue-card .cc-title,
+    .continue-card .cc-eyebrow,
+    .mx-mode-title,
+    .mx-mode-subtitle,
+    .mx-report-hero .mx-rh-title,
+    .recovery-card .rv-title {
+      color: #111827 !important;
+    }
+
+    .continue-card--resume,
+    .continue-card--start,
+    .mx-mode-card,
+    .mx-landing-card {
+      background: #ffffff !important;
+      border: 1px solid rgba(17, 24, 39, 0.08) !important;
+    }
+
+    /* Bottom nav — stay light with readable inactive labels */
+    .opic-bottom-nav {
+      background: #ffffff !important;
+      border: 1px solid rgba(17, 24, 39, 0.08) !important;
+      box-shadow:
+        0 1px 2px rgba(17, 24, 39, 0.06),
+        0 8px 24px rgba(17, 24, 39, 0.08) !important;
+    }
+
+    a.opic-bottom-nav__item {
+      color: #6b7280 !important;
+    }
+
+    a.opic-bottom-nav__item:hover {
+      color: #111827 !important;
+      background: rgba(17, 24, 39, 0.04) !important;
+    }
+
+    .opic-bottom-nav__item--active,
+    a.opic-bottom-nav__item.opic-bottom-nav__item--active {
+      color: #14b8a6 !important;
+      background: rgba(20, 184, 166, 0.12) !important;
+    }
+
+    .opic-bottom-nav__ico,
+    .opic-bottom-nav__label {
+      color: inherit !important;
+    }
+
+    /* Streamlit widgets — keep buttons readable on light surfaces */
+    .stButton > button,
+    div[data-testid="stButton"] > button {
+      background: rgba(255, 255, 255, 0.95) !important;
+      color: #111827 !important;
+      border-color: rgba(17, 24, 39, 0.12) !important;
+    }
+
+    div[data-testid="stButton"] > button[kind="primary"],
+    div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
+      color: #ffffff !important;
+      border-color: rgba(13, 148, 136, 0.35) !important;
+    }
+
+    /* Expanders, alerts, captions */
+    [data-testid="stExpander"] details {
+      background: #ffffff !important;
+      color: #111827 !important;
+      border-color: rgba(17, 24, 39, 0.08) !important;
+    }
+
+    [data-testid="stAlert"],
+    div[data-testid="stNotification"] {
+      color: #111827 !important;
+    }
+
+    .stMarkdown p,
+    .stMarkdown li,
+    .stMarkdown span,
+    label[data-testid="stWidgetLabel"] p {
+      color: inherit;
+    }
+
+    /* Recording panel keeps intentional dark studio styling */
+    .mx-record-stage,
+    .mx-record-stage .mx-record-title,
+    .mx-record-stage .mx-record-hint,
+    .mx-record-stage .mx-record-eyebrow,
+    .mx-record-stage .mx-record-saved,
+    .mx-record-stage .mx-record-empty {
+      color: inherit;
     }
 """
 

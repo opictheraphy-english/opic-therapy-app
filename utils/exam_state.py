@@ -109,6 +109,11 @@ def reset_exam_state(
     for key in _POP_KEYS:
         mx.pop(key, None)
 
+    mx.pop("mock_mode", None)
+    mx.pop("mock_mode_label", None)
+    mx.pop("_resume_confirmed", None)
+    ss.pop("mock_mode", None)
+
     # One-shot guard: ``maybe_restore_mock_from_disk`` checks this and skips
     # rehydration for this session. The very next ``sync_user_progress`` call
     # writes the cleared snapshot, so subsequent sessions also see an empty
@@ -154,6 +159,7 @@ def build_analysis_pending_result(
         "시험 흐름은 그대로 이어가며, 이후 다시 분석을 시도할 수 있어요."
     )
     return {
+        "analysis_status": "pending",
         "diagnosis_status": "analysis_pending",
         "analysis_pending": True,
         "analysis_error_kind": error_kind,
@@ -267,11 +273,24 @@ def has_pending_recovery_for(mx: Dict[str, Any], q_id: int) -> bool:
 # regressions.
 
 
+def _row_counts_as_answered(row: Dict[str, Any]) -> bool:
+    """True when a result row represents a saved answer that may advance the exam."""
+    res = row.get("result") if isinstance(row.get("result"), dict) else row
+    if not isinstance(res, dict):
+        return bool(row)
+    ast = str(res.get("analysis_status") or "").lower()
+    dst = str(res.get("diagnosis_status") or "").lower()
+    if ast in ("no_speech", "no_audio", "failed") or dst in ("no_speech", "no_audio"):
+        return False
+    return True
+
+
 def _prefix_completed_matching_exam_order(exam: List[Any], results: List[Any]) -> int:
     """Count how many leading ``exam[i]`` slots have a matching ``results[i].q_id``.
 
     Duplicate or out-of-order rows (historical bugs) stop the prefix at the
     first mismatch so ``이어하기`` never skips a real unanswered question.
+    Rows marked ``no_speech`` do not advance the prefix (re-record required).
     """
     if not isinstance(exam, list) or not isinstance(results, list):
         return 0
@@ -288,6 +307,8 @@ def _prefix_completed_matching_exam_order(exam: List[Any], results: List[Any]) -
         except (TypeError, ValueError):
             break
         if rq != eq:
+            break
+        if not _row_counts_as_answered(row):
             break
         prefix += 1
     return prefix
@@ -330,11 +351,10 @@ def dedupe_consecutive_mock_results(mx: Dict[str, Any]) -> None:
 
 
 def upsert_mock_exam_result(mx: Dict[str, Any], row: Dict[str, Any]) -> None:
-    """Append a per-question result, or replace the last row if it is the same ``q_id``.
+    """Append a per-question result, or replace an existing row with the same ``q_id``.
 
-    Prevents a second successful analysis for the same question from
-    creating a duplicate ``results`` entry (which used to desync
-    ``current_idx`` and collide Streamlit widget keys).
+    Prevents duplicate rows on retry, Streamlit reruns, and final-report
+  re-analysis for the same question.
     """
     results = mx.setdefault("results", [])
     if not isinstance(results, list):
@@ -345,15 +365,187 @@ def upsert_mock_exam_result(mx: Dict[str, Any], row: Dict[str, Any]) -> None:
     except (TypeError, ValueError):
         results.append(row)
         return
-    if results and isinstance(results[-1], dict):
+    for i, existing in enumerate(results):
+        if not isinstance(existing, dict):
+            continue
         try:
-            last_id = int(results[-1].get("q_id", -1))
+            if int(existing.get("q_id", -1)) == qid:
+                results[i] = row
+                return
         except (TypeError, ValueError):
-            last_id = -1
-        if last_id == qid:
-            results[-1] = row
-            return
+            continue
     results.append(row)
+
+
+def _result_row(
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    return {
+        "q_id": int(q_id),
+        "question_index": int(question_index),
+        "question": q.get("question", ""),
+        "type": q.get("type", ""),
+        "topic": q.get("topic", ""),
+        "audio_key": audio_key,
+        "result": result,
+    }
+
+
+def save_answer_placeholder_before_ai(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    audio_bytes: bytes,
+) -> None:
+    """Persist recording + pending result row **before** calling Gemini."""
+    rec = mx.setdefault("recordings", {})
+    if not isinstance(rec, dict):
+        rec = {}
+        mx["recordings"] = rec
+    rec[audio_key] = audio_bytes
+    mx["audio_bytes"] = audio_bytes
+
+    pending = build_analysis_pending_result(q, "unknown", 0)
+    pending["analysis_status"] = "pending"
+    pending["saved_before_ai"] = True
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=pending,
+        ),
+    )
+
+
+def apply_completed_analysis_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    result: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Update the existing row for this question with a completed analysis."""
+    stored = dict(result)
+    stored["analysis_status"] = "completed"
+    if stored.get("diagnosis_status") not in ("no_speech", "no_audio"):
+        stored["diagnosis_status"] = stored.get("diagnosis_status") or "ok"
+    stored.pop("analysis_pending", None)
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=stored,
+        ),
+    )
+    return stored
+
+
+def apply_no_speech_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+) -> Dict[str, Any]:
+    """Mark answer as no-speech — does not advance exam pointer."""
+    res = {
+        "analysis_status": "no_speech",
+        "diagnosis_status": "no_speech",
+        "no_speech_detected": True,
+        "transcript": "",
+        "estimated_level": "측정 불가",
+        "estimated_level_display": "측정 불가",
+        "summary_speech_rehab": "음성이 감지되지 않았어요. 다시 녹음해 주세요.",
+        "prescription": "마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
+        "wpm": 0,
+        "sentence_count": 0,
+        "word_count": 0,
+        "fact_scores": {"text_type": 0.0, "accuracy": 0.0},
+        "rubric_scores": {"fluency": 0, "lexical": 0, "logic": 0, "grammar": 0},
+    }
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=res,
+        ),
+    )
+    return res
+
+
+def apply_pending_analysis_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    error_message: str,
+    attempts: int,
+    transcript: str = "",
+) -> Dict[str, Any]:
+    """Keep saved answer; mark analysis as pending (API/parse/exception path)."""
+    err_kind = classify_analysis_error(error_message)
+    pending = build_analysis_pending_result(q, err_kind, attempts)
+    pending["analysis_status"] = "pending"
+    if transcript:
+        pending["transcript"] = transcript.strip()
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=pending,
+        ),
+    )
+    return pending
+
+
+def find_result_row(mx: Dict[str, Any], q_id: int) -> Optional[Dict[str, Any]]:
+    for item in mx.get("results") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            if int(item.get("q_id", -1)) == int(q_id):
+                return item
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def stored_audio_for_row(mx: Dict[str, Any], row: Dict[str, Any]) -> Optional[bytes]:
+    audio_key = (row.get("audio_key") or "").strip()
+    if audio_key:
+        blob = (mx.get("recordings") or {}).get(audio_key)
+        if blob:
+            return blob
+    try:
+        qid = int(row.get("q_id", -1))
+    except (TypeError, ValueError):
+        return None
+    return (mx.get("recordings") or {}).get(f"q_{qid}") or mx.get("audio_bytes")
 
 
 def reconcile_mock_exam_pointer(mx: Dict[str, Any]) -> int:

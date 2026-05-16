@@ -101,7 +101,7 @@ def _router_debug(tag: str, ss: Any, nav_p: str | None, mock_p: str | None) -> N
 
 
 _ALLOWED_PAGES = {"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS"}
-_ALLOWED_MOCK_SUBPAGES = {"SURVEY", "TEST", "REPORT", "FINAL"}
+_ALLOWED_MOCK_SUBPAGES = {"PICK", "SURVEY", "TEST", "REPORT", "FINAL"}
 
 nav_param = _q_one("nav")
 mock_param = _q_one("mock")

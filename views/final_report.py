@@ -286,14 +286,23 @@ def render_final_report(mx: Dict[str, Any]) -> None:
             st.markdown("##### [B] 나의 답변 (Transcript)")
             tx_raw = (res.get("transcript") or "").strip()
             tx_is_real = False
-            if res.get("diagnosis_status") == "analysis_pending":
+            _pending = (
+                res.get("diagnosis_status") == "analysis_pending"
+                or str(res.get("analysis_status") or "").lower() == "pending"
+            )
+            if _pending:
                 st.markdown(
-                    f'<div class="mono-tx" style="opacity:.9;">'
-                    f'⏳ {html.escape((res.get("summary_speech_rehab") or "").strip() or "AI 분석 대기")}'
-                    f'<br/><span style="font-size:0.9em;">{html.escape((res.get("prescription") or "").strip())}</span>'
-                    f"</div>",
+                    '<div class="mono-tx" style="opacity:.9;">'
+                    "<b>AI 분석 대기 중</b><br/>"
+                    "이 문항의 답변은 저장되었지만, 분석이 아직 완료되지 않았습니다."
+                    "</div>",
                     unsafe_allow_html=True,
                 )
+                if st.button("AI 분석 다시 시도", key=f"final_retry_analysis_q{qid}"):
+                    from views.mock_exam import retry_stored_answer_analysis
+
+                    retry_stored_answer_analysis(mx, int(qid))
+                    st.rerun()
             else:
                 tx_no_speech = bool(res.get("no_speech_detected")) or (
                     res.get("diagnosis_status") == "no_speech"
@@ -321,7 +330,10 @@ def render_final_report(mx: Dict[str, Any]) -> None:
                     )
 
             st.markdown("##### [C] 에이바(Ava)의 상세 피드백")
-            st.info(res.get("semantic_feedback") or res.get("summary_speech_rehab") or "—")
+            if _pending:
+                st.info("AI 분석이 완료되면 이 영역에 상세 피드백이 표시됩니다.")
+            else:
+                st.info(res.get("semantic_feedback") or res.get("summary_speech_rehab") or "—")
             sem = res.get("semantic_dimensions") or {}
             chips = []
             for k in ("narrative_depth", "discourse_continuity", "elaboration_quality", "spontaneity_score", "naturalness"):
