@@ -7,20 +7,22 @@ examples → IH → tip → practice); visuals live in ``ui/styles.py`` under
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, List
 
 import streamlit as st
 
+from components.collapsible_section import render_collapsible_section
 from components.pattern_card_compact import render_compact_pattern_card
-from config.pattern_ui_mapping import build_pattern_tabs_model
+from config.pattern_ui_mapping import TAB_DEFINITIONS, build_pattern_tabs_model
 from utils.local_profile import touch_pattern_visit
 from utils.session_state import ensure_pattern, sync_settings_to_legacy
+from utils.streamlit_ui import ascii_widget_key, clean_visible_label
 
+# Visible labels only — never use these strings as Streamlit widget keys.
+PATTERN_TABS: tuple[tuple[str, str], ...] = tuple(TAB_DEFINITIONS)
 
-def _safe_key(s: str, max_len: int = 48) -> str:
-    x = re.sub(r"[^a-zA-Z0-9가-힣_-]", "_", (s or "").strip())
-    return (x[:max_len]) or "x"
+_PATTERN_TAB_IDS: tuple[str, ...] = tuple(tid for tid, _ in PATTERN_TABS)
+_PATTERN_TAB_LABEL_BY_ID: Dict[str, str] = {tid: label for tid, label in PATTERN_TABS}
 
 
 def _render_hero() -> None:
@@ -36,41 +38,39 @@ def _render_hero() -> None:
 
 
 def _render_pattern_tab_bar(tabs_model: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Session-state tab pills — avoids Streamlit 1.50 st.tabs leaking internal key text."""
-    tab_ids = [t["tab_id"] for t in tabs_model]
+    """Horizontal radio tabs — visible Korean labels, ASCII-only internal keys."""
+    valid_ids = {t["tab_id"] for t in tabs_model}
     if "pattern_active_tab" not in st.session_state:
-        st.session_state.pattern_active_tab = tab_ids[0]
-    if st.session_state.pattern_active_tab not in tab_ids:
-        st.session_state.pattern_active_tab = tab_ids[0]
+        st.session_state.pattern_active_tab = _PATTERN_TAB_IDS[0]
+    active = str(st.session_state.pattern_active_tab or "")
+    if active not in valid_ids:
+        st.session_state.pattern_active_tab = _PATTERN_TAB_IDS[0]
+        active = _PATTERN_TAB_IDS[0]
 
-    st.markdown('<div class="pat-tab-row" role="tablist" aria-label="패턴 유형">', unsafe_allow_html=True)
-    cols = st.columns(len(tabs_model))
-    for col, tab in zip(cols, tabs_model):
-        tid = tab["tab_id"]
-        label = tab["label"]
-        is_active = st.session_state.pattern_active_tab == tid
-        with col:
-            if st.button(
-                label,
-                key=f"pat_tab_{tid}",
-                type="primary" if is_active else "secondary",
-                use_container_width=True,
-            ):
-                st.session_state.pattern_active_tab = tid
-                st.rerun()
+    st.markdown('<div class="pat-tab-radio" role="tablist" aria-label="패턴 유형">', unsafe_allow_html=True)
+    st.radio(
+        "패턴 유형",
+        options=list(_PATTERN_TAB_IDS),
+        format_func=lambda tab_id: _PATTERN_TAB_LABEL_BY_ID.get(tab_id, tab_id),
+        horizontal=True,
+        key="pattern_active_tab",
+        label_visibility="collapsed",
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
+    active = str(st.session_state.pattern_active_tab)
     return next(
-        (t for t in tabs_model if t["tab_id"] == st.session_state.pattern_active_tab),
+        (t for t in tabs_model if t["tab_id"] == active),
         tabs_model[0],
     )
 
 
 def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[str, Any]]) -> None:
-    cnt = len(patterns)
+    """Section accordion — no ``st.expander`` (Korean labels leak as key…_arrow_*)."""
     if not patterns:
         return
-    with st.expander(f"{title}  ·  {cnt}", expanded=False):
+
+    def _body() -> None:
         for i, pat in enumerate(patterns):
             ex_kw: Dict[str, Any] = {}
             if tab_id in ("experience", "comparison"):
@@ -79,15 +79,22 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
                 pat, tab_id=tab_id, sec_uid=sec_uid, idx=i, **ex_kw
             )
 
+    st.markdown('<div class="pat-sec-toggle-wrap">', unsafe_allow_html=True)
+    render_collapsible_section(
+        title or "섹션",
+        sec_uid,
+        _body,
+        count=len(patterns),
+        css_scope="pat-sec",
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
 
 def render_patterns() -> None:
     sync_settings_to_legacy(st.session_state)
     ensure_pattern(st.session_state)
     touch_pattern_visit(st.session_state)
 
-    # Open the scoped wrapper — every .pat-screen rule in ui/styles.py only
-    # activates while this div is in the DOM, so the tab/expander/button
-    # overrides never bleed into HOME, MOCK, SETTINGS, etc.
     st.markdown('<div class="pat-screen">', unsafe_allow_html=True)
 
     _render_hero()
@@ -104,9 +111,10 @@ def render_patterns() -> None:
         st.caption("내용 없음")
     else:
         for si, sec in enumerate(sections):
-            title = sec.get("title") or ""
+            title = clean_visible_label(str(sec.get("title") or ""), "섹션")
             patterns: List[Dict[str, Any]] = sec.get("patterns") or []
-            sec_uid = _safe_key(f"{tid}_{sec.get('section_id') or si}")
+            sec_id = str(sec.get("section_id") or si)
+            sec_uid = ascii_widget_key(tid, sec_id)
             _render_section(tid, sec_uid, title, patterns)
 
     st.markdown("</div>", unsafe_allow_html=True)

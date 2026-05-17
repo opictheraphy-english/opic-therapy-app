@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from config.pattern_roles import normalize_role
+from utils.streamlit_ui import ascii_widget_key, is_leaked_internal_label
 
 _ROOT = Path(__file__).resolve().parent.parent
 _PATTERN_AUDIO_DIR = _ROOT / "assets" / "pattern_audio"
@@ -51,17 +52,20 @@ _IH_CONNECTOR_HINT = (
 )
 
 
-def _safe_fragment(s: str, max_len: int = 56) -> str:
-    x = re.sub(r"[^a-zA-Z0-9가-힣_-]", "_", (s or "").strip())
-    return (x[:max_len]) or "x"
-
-
 def _pattern_line(pat: Dict[str, Any]) -> str:
-    return (pat.get("pattern_en") or pat.get("pattern") or "").strip() or "—"
+    for field in ("pattern_en", "pattern", "template", "title"):
+        raw = (pat.get(field) or "").strip()
+        if raw and not is_leaked_internal_label(raw):
+            return raw
+    return "패턴 문장 없음"
 
 
 def _meaning_line(pat: Dict[str, Any]) -> str:
-    return (pat.get("meaning") or "").strip() or "—"
+    for field in ("meaning", "meaning_ko", "ko", "label_ko"):
+        raw = (pat.get(field) or "").strip()
+        if raw and not is_leaked_internal_label(raw):
+            return raw
+    return "의미 없음"
 
 
 def _examples_dicts(pat: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -170,8 +174,8 @@ def render_compact_pattern_card(
         if additional_example_count is not None
         else ADDITIONAL_EXAMPLE_SLICE
     )
-    pid = (pat.get("pattern_id") or "").strip() or f"{tab_id}_{idx}"
-    row_key = _safe_fragment(f"{tab_id}_{sec_uid}_{pid}_{idx}")
+    pid = (pat.get("pattern_id") or "").strip() or f"p{idx}"
+    row_key = ascii_widget_key("pat", tab_id, sec_uid, pid, idx)
     expand_key = f"pat_ex_expand_{row_key}"
 
     tpl = _pattern_line(pat)

@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import streamlit as st
+
+from components.collapsible_section import render_collapsible_section
 
 _RUBRIC_LABELS = {
     "fluency": "유창성 · 리듬",
@@ -30,40 +32,27 @@ def _first_sentence(text: str, *, max_len: int = 140) -> str:
     return cut
 
 
-def coaching_headline_subtitle(result: Dict[str, Any]) -> tuple[str, str]:
-    """Warm headline + short subtitle for the overall coaching hero."""
+def coaching_headline_subtitle(
+    result: Dict[str, Any],
+    transcript: str = "",
+) -> tuple[str, str]:
+    """Varied coach summary (title + 2–3 sentences)."""
+    from utils.coaching_feedback import (
+        build_coach_headline,
+        merge_alt_hits,
+        merge_grammar_hits,
+    )
+
+    t = (transcript or result.get("transcript") or "").strip()
+    g = merge_grammar_hits(t, result)
+    a = merge_alt_hits(t, result)
+    if t or result:
+        return build_coach_headline(result, t, g, a)
+
     summary = (result.get("summary_speech_rehab") or "").strip()
-    sem = (result.get("semantic_feedback") or "").strip()
-    level = (result.get("estimated_level_display") or result.get("estimated_level") or "").strip()
-    wpm = result.get("wpm")
-    wc = result.get("word_count") or 0
-
     if summary:
-        sub = _first_sentence(summary, max_len=160)
-        title = "오늘 답변, 전체적으로 좋은 흐름이었어요 👏"
-        if any(x in summary for x in ("아쉽", "부족", "개선", "주의", "문제")):
-            title = "오늘 답변을 꼼꼼히 들었어요 — 여기서 한 단계만 올려볼까요?"
-        return title, sub
-
-    if sem:
-        return "코치가 들은 인상을 정리했어요", _first_sentence(sem, max_len=160)
-
-    if level and level.upper() in {"IH", "AL"}:
-        return f"{level} 구간에서 좋은 신호가 보였어요 ✨", "톤과 연결만 조금 다듬으면 더 자연스러워요."
-
-    try:
-        w = float(wpm) if wpm is not None else 0.0
-    except (TypeError, ValueError):
-        w = 0.0
-    try:
-        words = int(wc)
-    except (TypeError, ValueError):
-        words = 0
-
-    if 85 <= w <= 165 and words >= 60:
-        return "말의 속도와 분량이 안정적이었어요 👏", "이 속도는 청자가 따라가기 편한 편이에요."
-
-    return "답변 잘 들었어요 — 함께 다듬어 봐요", "아래 카드에서 잘한 점과 바로 써먹을 팁을 모아 두었어요."
+        return "답변을 들었어요", _first_sentence(summary, max_len=200)
+    return "답변 잘 들었어요", "아래에서 문법·표현·구조를 정리했어요."
 
 
 def collect_strong_points(result: Dict[str, Any]) -> List[str]:
@@ -107,7 +96,8 @@ def collect_strong_points(result: Dict[str, Any]) -> List[str]:
             out.append("문장을 묶어 말하려는 시도가 보였어요.")
 
     if not out:
-        out.append("천천히 말하려는 태도가 좋았어요. 다음엔 연결어만 살짝 얹어 보세요.")
+        out.append("질문 주제에 맞게 답을 시작했어요.")
+        out.append("다음엔 이유나 예시를 한 문장만 더 붙여 보세요.")
     return out[:5]
 
 
@@ -168,11 +158,15 @@ def flow_coaching_bodies(result: Dict[str, Any]) -> List[tuple[str, str]]:
     return pairs
 
 
-def render_overall_coaching_hero(result: Dict[str, Any], qid: int) -> None:
-    title, sub = coaching_headline_subtitle(result)
+def render_overall_coaching_hero(
+    result: Dict[str, Any],
+    qid: int,
+    transcript: str = "",
+) -> None:
+    title, sub = coaching_headline_subtitle(result, transcript)
     st.markdown(
         f"""
-        <section class="mx-coach-hero" aria-label="총평 코칭">
+        <section class="mx-coach-hero" aria-label="코치 총평">
           <p class="mx-coach-eyebrow">Q{qid} · 코치 총평</p>
           <h2 class="mx-coach-hero-title">{html.escape(title)}</h2>
           <p class="mx-coach-hero-sub">{html.escape(sub)}</p>
@@ -180,6 +174,151 @@ def render_overall_coaching_hero(result: Dict[str, Any], qid: int) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def _render_coach_section_header(eyebrow: str, title: str) -> None:
+    from utils.streamlit_ui import clean_visible_label
+
+    safe_eyebrow = clean_visible_label(eyebrow, "코칭")
+    safe_title = clean_visible_label(title, "피드백")
+    st.markdown(
+        f"""
+        <section class="mx-coach-section" aria-label="{html.escape(safe_eyebrow)}">
+          <p class="mx-coach-sec-eyebrow">{html.escape(safe_eyebrow)}</p>
+          <h3 class="mx-coach-sec-title">{html.escape(safe_title)}</h3>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_structure_section(transcript: str) -> None:
+    from utils.coaching_feedback import build_structure_feedback
+
+    struct = build_structure_feedback(transcript)
+    good_li = "".join(f"<li>{html.escape(x)}</li>" for x in struct.get("good", []))
+    miss_li = "".join(f"<li>{html.escape(x)}</li>" for x in struct.get("missing", []))
+    next_li = "".join(f"<li>{html.escape(x)}</li>" for x in struct.get("next", []))
+    _render_coach_section_header("답변 구조", "내용 전개를 이렇게 보면 좋아요")
+    st.markdown(
+        f"""
+        <div class="mx-coach-struct">
+          <p class="mx-coach-struct-label">Good</p>
+          <ul class="mx-coach-struct-list">{good_li or "<li>핵심 주제로 답을 시작했어요</li>"}</ul>
+          <p class="mx-coach-struct-label">Missing</p>
+          <ul class="mx-coach-struct-list mx-coach-struct-miss">{miss_li or "<li>구체적인 이유·예시를 한 문장 더</li>"}</ul>
+          <p class="mx-coach-struct-label">Next</p>
+          <ul class="mx-coach-struct-list">{next_li}</ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_improved_example_section(
+    transcript: str,
+    grammar_hits: List[Dict[str, str]],
+    alt_hits: List[Dict[str, Any]],
+) -> None:
+    from utils.coaching_feedback import build_improved_answer_example
+
+    example = build_improved_answer_example(transcript, grammar_hits, alt_hits)
+    _render_coach_section_header("자연스러운 답변 예시", "이렇게 다시 말해볼 수 있어요")
+    st.markdown(
+        f'<div class="mx-coach-example-body">{html.escape(example)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_mission_section(
+    transcript: str,
+    grammar_hits: List[Dict[str, str]],
+    alt_hits: List[Dict[str, Any]],
+) -> None:
+    from utils.coaching_feedback import build_next_missions
+
+    missions = build_next_missions(transcript, grammar_hits, alt_hits)
+    items = "".join(
+        f'<li class="mx-coach-mission-item">{html.escape(m)}</li>' for m in missions
+    )
+    _render_coach_section_header("다음 답변 미션", "바로 다음 연습에 써 보세요")
+    st.markdown(
+        f'<ol class="mx-coach-mission-list">{items}</ol>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_structured_coaching_report(
+    result: Dict[str, Any],
+    transcript: str,
+    qid: int,
+    *,
+    show_hero: bool = True,
+) -> None:
+    """Sections A–G from existing analysis + local post-processing (no LLM)."""
+    from components.smart_feedback import (
+        render_alternative_expressions,
+        render_grammar_corrections,
+    )
+    from utils.coaching_feedback import (
+        grammar_empty_message,
+        merge_alt_hits,
+        merge_grammar_hits,
+    )
+
+    t = (transcript or "").strip()
+    g_hits = merge_grammar_hits(t, result)
+    a_hits = merge_alt_hits(t, result)
+
+    if show_hero:
+        render_overall_coaching_hero(result, qid, t)
+
+    _render_coach_section_header("문법 교정", "바로 고치면 좋은 표현")
+    render_grammar_corrections(
+        t,
+        title="",
+        show_heading=False,
+        hits=g_hits,
+        empty_message=grammar_empty_message(a_hits),
+    )
+
+    _render_coach_section_header("표현 업그레이드", "한 단계 더 자연스럽게")
+    alt_empty = (
+        "눈에 띄는 평이한 표현은 적었어요. 다음엔 구체적인 형용사를 한 번 더 써 보세요."
+        if not a_hits
+        else None
+    )
+    render_alternative_expressions(
+        t,
+        title="",
+        show_heading=False,
+        hits=a_hits,
+        empty_message=alt_empty,
+    )
+
+    _render_structure_section(t)
+    _render_improved_example_section(t, g_hits, a_hits)
+    render_pronunciation_section(result)
+    _render_mission_section(t, g_hits, a_hits)
+
+    _sum = (result.get("summary_speech_rehab") or "").strip()
+    _sem = (result.get("semantic_feedback") or "").strip()
+    long_ai = _sum if len(_sum) > 160 else ""
+    if not long_ai and len(_sem) > 200:
+        long_ai = _sem
+    if long_ai:
+
+        def _ai_full_summary_body() -> None:
+            st.write(long_ai)
+
+        render_collapsible_section(
+            "AI 총평 전문 보기",
+            f"coach_ai_full_q{int(qid)}",
+            _ai_full_summary_body,
+            toggle_open_label="펼치기",
+            toggle_close_label="접기",
+            css_scope="mx-col",
+        )
 
 
 def render_strong_points_cards(result: Dict[str, Any]) -> None:
@@ -231,11 +370,9 @@ def render_pronunciation_section(result: Dict[str, Any]) -> None:
     if not pron:
         return
 
-    feedback = (result.get("pronunciation_feedback") or "").strip()
-    if not feedback:
-        from services.evaluation.eval_grading import _pronunciation_feedback
-        pron_floats = {k: float(v) for k, v in pron.items()}
-        feedback = _pronunciation_feedback(pron_floats)
+    from utils.coaching_feedback import pronunciation_comment
+
+    feedback = pronunciation_comment(result)
 
     labels = {
         "pronunciation_clarity": "발음 명확도",
@@ -383,22 +520,13 @@ def render_history_expander_coaching(item: Dict[str, Any]) -> None:
         return
 
     if result.get("diagnosis_status") == "ok" and transcript_is_real:
-        render_strong_points_cards(result)
         st.text_area(
             f"Q{qid} 복원 텍스트",
             value=transcript,
             height=100,
             key=f"transcript_{qid}",
         )
-        render_grammar_and_expression_coaching(transcript)
-        render_native_upgrade_section(result)
-        render_flow_coaching_section(result)
-        _sr = (result.get("summary_speech_rehab") or "").strip()
-        if _sr and len(_sr) > 160:
-            with st.expander("이 문항 AI 총평 전문", expanded=False):
-                st.write(_sr)
-        elif _sr:
-            st.caption(_sr[:200] + ("…" if len(_sr) > 200 else ""))
+        render_structured_coaching_report(result, transcript, int(qid or 0), show_hero=True)
     elif transcript_is_real:
         st.text_area(
             f"Q{qid} 복원 텍스트",
@@ -406,7 +534,7 @@ def render_history_expander_coaching(item: Dict[str, Any]) -> None:
             height=100,
             key=f"transcript_{qid}",
         )
-        render_grammar_and_expression_coaching(transcript)
+        render_structured_coaching_report(result, transcript, int(qid or 0), show_hero=True)
     else:
         st.markdown(
             f'<div class="mx-status mx-status--warn">'
@@ -417,40 +545,17 @@ def render_history_expander_coaching(item: Dict[str, Any]) -> None:
         )
 
 
-def render_grammar_and_expression_coaching(transcript: str) -> Dict[str, int]:
-    """Section headers + grammar / alt cards (headings handled here)."""
-    from components.smart_feedback import render_alternative_expressions, render_grammar_corrections
+def render_grammar_and_expression_coaching(
+    transcript: str,
+    result: Optional[Dict[str, Any]] = None,
+    qid: int = 0,
+) -> Dict[str, int]:
+    """Backward-compatible wrapper — prefer render_structured_coaching_report."""
+    render_structured_coaching_report(result or {}, transcript, qid, show_hero=False)
+    from utils.coaching_feedback import merge_alt_hits, merge_grammar_hits
 
-    st.markdown(
-        """
-        <section class="mx-coach-section" aria-label="문법 교정">
-          <p class="mx-coach-sec-eyebrow">문법 교정</p>
-          <h3 class="mx-coach-sec-title">바로 고치면 좋은 표현</h3>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    g = render_grammar_corrections(
-        transcript,
-        title="",
-        show_heading=False,
-        empty_message="자주 나오는 문법 슬립은 없었어요. 이 흐름을 유지해 보세요.",
-    )
-    st.markdown(
-        """
-        <section class="mx-coach-section" aria-label="더 나은 표현">
-          <p class="mx-coach-sec-eyebrow">더 자연스러운 표현</p>
-          <h3 class="mx-coach-sec-title">한 단계 업그레이드</h3>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    a = render_alternative_expressions(
-        transcript,
-        title="",
-        show_heading=False,
-        empty_message="교체가 필요한 평이한 표현은 없었어요.",
-    )
+    g = len(merge_grammar_hits(transcript, result))
+    a = len(merge_alt_hits(transcript, result))
     return {"grammar": g, "alternatives": a}
 
 
@@ -469,4 +574,5 @@ __all__ = [
     "render_native_upgrade_section",
     "render_overall_coaching_hero",
     "render_strong_points_cards",
+    "render_structured_coaching_report",
 ]

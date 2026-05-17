@@ -11,10 +11,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from components.collapsible_section import render_collapsible_section
 from components.smart_feedback import render_smart_feedback_block
 from services.exam_analytics import compute_exam_aggregates, detect_risk_flags, summary_rows_for_table
 from utils.exam_state import reset_exam_state, start_new_mock_attempt
 from utils.local_profile import sync_user_progress
+from utils.streamlit_ui import clean_visible_label
 from utils.text_utils import (
     DISCOURSE_MARKERS,
     NO_SPEECH_EMPTY_TEXT,
@@ -278,10 +280,12 @@ def render_final_report(mx: Dict[str, Any]) -> None:
         topic = row.get("topic") or ""
         typ = row.get("type") or ""
         res = row.get("result") or {}
-        label = f"Q{qid} · {topic} · {typ}"
-        with st.expander(label, expanded=False):
+        label = clean_visible_label(f"Q{qid} · {topic} · {typ}", f"Q{qid}")
+
+        def _final_row_body(r: Dict[str, Any] = row, q: Any = qid) -> None:
+            res = r.get("result") or {}
             st.markdown("##### [A] 질문 내용")
-            st.write(row.get("question") or "—")
+            st.write(r.get("question") or "—")
 
             st.markdown("##### [B] 나의 답변 (Transcript)")
             tx_raw = (res.get("transcript") or "").strip()
@@ -298,10 +302,10 @@ def render_final_report(mx: Dict[str, Any]) -> None:
                     "</div>",
                     unsafe_allow_html=True,
                 )
-                if st.button("AI 분석 다시 시도", key=f"final_retry_analysis_q{qid}"):
+                if st.button("AI 분석 다시 시도", key=f"final_retry_analysis_q{q}"):
                     from views.mock_exam import retry_stored_answer_analysis
 
-                    retry_stored_answer_analysis(mx, int(qid))
+                    retry_stored_answer_analysis(mx, int(q))
                     st.rerun()
             else:
                 tx_no_speech = bool(res.get("no_speech_detected")) or (
@@ -388,6 +392,13 @@ def render_final_report(mx: Dict[str, Any]) -> None:
                     st.warning(r)
             else:
                 st.success("특이 위험 패턴이 감지되지 않았습니다.")
+
+        render_collapsible_section(
+            label,
+            f"final_q{qid}",
+            _final_row_body,
+            css_scope="mx-col",
+        )
 
     # --- Downloads ---
     st.divider()

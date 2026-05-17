@@ -146,6 +146,8 @@ def analyze_audio_with_ai(
     question_text: str,
     api_key: str,
     difficulty: int = 5,
+    *,
+    mime_guess: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Single-shot Gemini analysis (no retry, no lock).
 
@@ -154,7 +156,13 @@ def analyze_audio_with_ai(
     :func:`analyze_audio_with_retry` instead.
     """
     _engine_analyze_audio, _ = _load_engine()
-    return _engine_analyze_audio(audio_bytes, question_text, api_key, difficulty)
+    return _engine_analyze_audio(
+        audio_bytes,
+        question_text,
+        api_key,
+        difficulty,
+        mime_guess=mime_guess,
+    )
 
 
 def analyze_audio_with_retry(
@@ -163,6 +171,7 @@ def analyze_audio_with_retry(
     api_key: str,
     difficulty: int = 5,
     *,
+    mime_guess: Optional[str] = None,
     on_status: Optional[Callable[[str, str], None]] = None,
     diag: Optional[Mapping[str, Any]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str, int]:
@@ -244,7 +253,11 @@ def analyze_audio_with_retry(
             _emit("running", "AI가 발화를 진단 중입니다…")
             try:
                 response = _engine_analyze_audio(
-                    audio_bytes, question_text, api_key, difficulty
+                    audio_bytes,
+                    question_text,
+                    api_key,
+                    difficulty,
+                    mime_guess=mime_guess,
                 )
             except Exception as exc:
                 last_error = f"{type(exc).__name__}: {exc}"

@@ -22,16 +22,20 @@ import secrets
 import streamlit as st
 
 from components.audio_player import render_exam_question_audio_player
+from components.collapsible_section import render_collapsible_section
+from components.ai_analysis_waiting import finish_analysis_waiting_ui, render_ai_analysis_waiting
+from components.recording_timer import (
+    arm_recording_mic,
+    reset_recording_timer,
+    render_recording_timer,
+    start_recording_timer,
+    stop_recording_timer,
+)
 from components.coaching_experience import (
     render_coaching_cta_preamble,
     render_coaching_retry_banner,
-    render_flow_coaching_section,
-    render_grammar_and_expression_coaching,
     render_history_expander_coaching,
-    render_native_upgrade_section,
-    render_overall_coaching_hero,
-    render_pronunciation_section,
-    render_strong_points_cards,
+    render_structured_coaching_report,
 )
 from components.topbar import render_top_bar
 from services.evaluation_service import analyze_audio_with_retry
@@ -45,10 +49,17 @@ from services.tts_service import (
     tts_audio_cached,
 )
 from utils.exam_state import (
+    NO_AUDIO_ERROR_SENTINEL,
     NO_SPEECH_ERROR_SENTINEL,
+    NEEDS_REVIEW_ERROR_SENTINEL,
+    NON_ENGLISH_ERROR_SENTINEL,
+    UNCLEAR_SPEECH_ERROR_SENTINEL,
     apply_completed_analysis_result,
-    apply_no_speech_result,
+    apply_needs_review_result,
+    apply_non_english_result,
+    apply_no_audio_result,
     apply_pending_analysis_result,
+    apply_unclear_speech_result,
     build_analysis_pending_result,
     classify_analysis_error,
     clear_pending_recovery,
@@ -69,6 +80,20 @@ from utils.exam_state import (
 from utils.local_profile import force_restore_mock_from_disk, iso_now, sync_user_progress
 from utils.secrets import get_gemini_api_key
 from utils.session_state import mock_session, settings_session, sync_settings_to_legacy
+from utils.streamlit_ui import clean_visible_label
+from utils import audio_pipeline_diag
+from utils.speech_recording import (
+    MIN_RECORDED_AUDIO_BYTES,
+    classify_post_analysis_issue,
+    classify_pre_analysis_blob,
+    has_substantial_recording,
+    recording_byte_length,
+    render_language_mismatch_preview,
+    render_recording_debug_block,
+    resolve_mime_for_analysis,
+    resolve_mime_for_debug,
+    speech_issue_copy,
+)
 from utils.text_utils import (
     DISCOURSE_MARKERS,
     PRECISION_MAP,
@@ -213,6 +238,7 @@ def _get_mock_page(mx: dict) -> str:
 
 def reset_to_learning_portal() -> None:
     """Return to the learning portal without deleting saved results."""
+    reset_recording_timer()
     mx = mock_session()
     st.session_state["practice_portal_selected"] = False
     st.session_state["mock_mode"] = None
@@ -322,7 +348,8 @@ def _sync_portal_mode_to_mx(mx: dict, mode: str) -> None:
 def _render_dev_portal_debug(mx: dict) -> None:
     if not st.session_state.get("show_dev_debug"):
         return
-    with st.expander("개발용 상태 확인", expanded=False):
+
+    def _dev_state_body() -> None:
         st.json(
             {
                 "page": st.session_state.get("page"),
@@ -334,6 +361,13 @@ def _render_dev_portal_debug(mx: dict) -> None:
                 "current_question_index": mx.get("current_idx"),
             }
         )
+
+    render_collapsible_section(
+        "개발용 상태 확인",
+        "mx_dev_state",
+        _dev_state_body,
+        css_scope="mx-col",
+    )
 
 
 def _render_coaching_flow(mx: dict) -> None:
@@ -783,8 +817,6 @@ def _render_topic_question_body(topic: dict, question: dict, q_idx: int) -> str:
 
 
 def _render_detailed_coaching_for_result(lr: dict, q_label: int, heard_raw: str) -> None:
-    render_overall_coaching_hero(lr, int(q_label))
-    render_strong_points_cards(lr)
     _wpm = lr.get("wpm")
     _sent = lr.get("sentence_count", 0)
     _words = lr.get("word_count", 0)
@@ -812,23 +844,18 @@ def _render_detailed_coaching_for_result(lr: dict, q_label: int, heard_raw: str)
         height=140,
         key=f"tp_restored_transcript_q_{q_label}",
     )
-    render_grammar_and_expression_coaching(heard_raw)
-    render_native_upgrade_section(lr)
-    render_flow_coaching_section(lr)
-    render_pronunciation_section(lr)
-    _sum_rehab = (lr.get("summary_speech_rehab") or "").strip()
-    if _sum_rehab and len(_sum_rehab) > 160:
-        with st.expander("AI 총평 전문", expanded=False):
-            st.write(_sum_rehab)
+    render_structured_coaching_report(lr, heard_raw, int(q_label), show_hero=True)
 
 
 def _topic_back_to_select_topic() -> None:
+    reset_recording_timer()
     st.session_state["topic_practice_question_index"] = 0
     st.session_state["topic_practice_results"] = []
     st.session_state["topic_practice_step"] = "select_topic"
 
 
 def _topic_go_next_question(mx: dict) -> None:
+    reset_recording_timer()
     idx = _topic_practice_question_index()
     mx["audio_bytes"] = None
     mx.pop("preview_transcript", None)
@@ -838,6 +865,75 @@ def _topic_go_next_question(mx: dict) -> None:
         st.session_state["topic_practice_question_index"] = idx + 1
         st.session_state["topic_practice_step"] = "practice"
     st.rerun()
+
+
+def _render_answer_recording_stage(
+    mx: dict,
+    *,
+    question_key: str,
+    mic_key: str,
+    audio_key: str,
+    recordings: dict | None = None,
+) -> bytes | None:
+    """Mic recorder + 2-minute timer (mock, coaching, topic practice)."""
+    from streamlit_mic_recorder import mic_recorder
+
+    rec = recordings if recordings is not None else mx.setdefault("recordings", {})
+    saved = mx.get("audio_bytes") or rec.get(audio_key)
+
+    render_recording_timer(question_key, has_saved_audio=bool(saved))
+
+    audio = None
+    mic_armed = bool(st.session_state.get("recording_mic_armed"))
+    timer_active = bool(st.session_state.get("recording_timer_active"))
+
+    if not saved and not mic_armed:
+        if st.button(
+            "🎤 답변 시작 (클릭)",
+            key=f"timer_arm_{mic_key}",
+            use_container_width=True,
+            type="primary",
+        ):
+            arm_recording_mic(question_key)
+            st.rerun()
+    elif not saved and mic_armed and not timer_active:
+        if st.button(
+            "⏺️ 말하기 (마이크)",
+            key=f"mic_timer_start_{mic_key}",
+            use_container_width=True,
+            type="primary",
+        ):
+            start_recording_timer(question_key)
+            st.rerun()
+    elif saved or timer_active:
+        mic_start = (
+            "⏺️ 말하기 (마이크)"
+            if timer_active
+            else "🎤 다시 녹음 (클릭)"
+        )
+        audio = mic_recorder(
+            start_prompt=mic_start,
+            stop_prompt="⏹️ 녹음 완료 (클릭)",
+            key=mic_key,
+        )
+    if audio and audio.get("bytes"):
+        rec[audio_key] = audio["bytes"]
+        mx["audio_bytes"] = audio["bytes"]
+        fmt = (audio.get("format") or audio.get("mime") or "").strip()
+        if fmt:
+            mx.setdefault("recording_mime_by_key", {})[audio_key] = fmt
+        stop_recording_timer()
+        saved = audio["bytes"]
+        mime_logged = resolve_mime_for_analysis(
+            saved, mx=mx, audio_key=audio_key
+        )
+        audio_pipeline_diag.log_captured(
+            q_index=int(mx.get("current_idx") or 0),
+            audio_bytes=saved,
+            mime_type=mime_logged,
+        )
+
+    return saved
 
 
 def _render_topic_api_delay_recovery_card(
@@ -913,7 +1009,11 @@ def _run_topic_practice_analysis(
     """Topic-practice analysis — same pipeline as coaching mock; separate result store."""
     from utils.topic_practice_state import (
         apply_topic_completed_result,
+        apply_topic_needs_review_result,
+        apply_topic_non_english_result,
+        apply_topic_no_audio_result,
         apply_topic_no_speech_result,
+        apply_topic_unclear_speech_result,
         apply_topic_pending_result,
         get_topic_recordings,
         save_topic_placeholder_before_ai,
@@ -930,6 +1030,7 @@ def _run_topic_practice_analysis(
 
     st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = True
     try:
+        stop_recording_timer()
         mx["analysis_result"] = None
         mx["analysis_error_msg"] = ""
         mx["analysis_done"] = False
@@ -940,6 +1041,31 @@ def _run_topic_practice_analysis(
         blob = mx.get("audio_bytes") or recordings.get(audio_key)
         if not blob:
             st.error("오디오 데이터가 유실되었습니다. 다시 녹음해주세요.")
+            return
+
+        tp_nbytes = recording_byte_length(blob)
+        if classify_pre_analysis_blob(blob) == "no_audio":
+            if not from_retry:
+                save_topic_placeholder_before_ai(
+                    topic_id=topic_id,
+                    topic_title=topic_title,
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    audio_bytes=blob,
+                )
+            ns = apply_topic_no_audio_result(
+                topic_id=topic_id,
+                topic_title=topic_title,
+                question_index=q_idx,
+                question=question,
+                audio_key=audio_key,
+                source_audio_size_bytes=tp_nbytes,
+            )
+            mx["analysis_result"] = ns
+            mx["last_result"] = ns
+            st.session_state["topic_practice_step"] = "feedback"
+            st.rerun()
             return
 
         if not from_retry:
@@ -958,44 +1084,50 @@ def _run_topic_practice_analysis(
         attempts = 0
         question_en = str(question.get("question_en") or "")
 
-        try:
-            with st.status("AI가 발화를 진단 중입니다…", expanded=False) as status:
-                def _on_status(stage: str, label: str) -> None:
-                    try:
-                        status.update(label=label)
-                    except Exception:
-                        logger.debug("status.update raised; ignoring (stage=%s)", stage)
+        submission_id = secrets.token_hex(4)
+        wait_slot = st.empty()
 
-                result, last_error, attempts = analyze_audio_with_retry(
-                    blob,
-                    question_en,
-                    api_key,
-                    difficulty,
-                    on_status=_on_status,
-                    diag={
-                        "submission_id": secrets.token_hex(4),
-                        "question_index": q_idx,
-                        "question_id": question_id,
-                        "mock_mode": "topic_practice",
-                        "mock_page": mx.get("mock_page"),
-                        "caller": "mock_exam._run_topic_practice_analysis",
-                    },
-                )
-                try:
-                    if _is_analysis_failed(result, last_error):
-                        status.update(
-                            label="답변은 저장되었습니다. 분석은 잠시 후 다시 시도할 수 있어요.",
-                            state="error",
-                        )
-                    else:
-                        status.update(label="진단 완료", state="complete")
-                except Exception:
-                    pass
+        def _show_analysis_wait(label: str = "AI가 발화를 진단 중입니다…") -> None:
+            with wait_slot.container():
+                render_ai_analysis_waiting(submission_id, stage_label=label)
+
+        try:
+            _show_analysis_wait()
+
+            def _on_status(stage: str, label: str) -> None:
+                _show_analysis_wait(label)
+
+            mime_for_gemini = resolve_mime_for_analysis(
+                blob, mx=mx, audio_key=audio_key
+            )
+            audio_pipeline_diag.log_before_gemini(
+                q_index=q_idx,
+                audio_bytes=blob,
+                mime_type=mime_for_gemini,
+            )
+            result, last_error, attempts = analyze_audio_with_retry(
+                blob,
+                question_en,
+                api_key,
+                difficulty,
+                mime_guess=mime_for_gemini,
+                on_status=_on_status,
+                diag={
+                    "submission_id": submission_id,
+                    "question_index": q_idx,
+                    "question_id": question_id,
+                    "mock_mode": "topic_practice",
+                    "mock_page": mx.get("mock_page"),
+                    "caller": "mock_exam._run_topic_practice_analysis",
+                },
+            )
         except Exception as exc:
             logger.exception("Topic practice Gemini failure topic=%s q=%s", topic_id, question_id)
             last_error = f"{type(exc).__name__}: {exc}"
             result = None
             attempts = max(attempts, 1)
+        finally:
+            finish_analysis_waiting_ui(wait_slot, submission_id)
 
         if _is_analysis_failed(result, last_error):
             pending = apply_topic_pending_result(
@@ -1013,25 +1145,68 @@ def _run_topic_practice_analysis(
             st.rerun()
             return
 
-        _pipeline_no_speech = bool(result.get("no_speech_detected")) or (
-            result.get("diagnosis_status") == "no_speech"
+        speech_issue = classify_post_analysis_issue(blob, result)
+        audio_pipeline_diag.log_no_speech_gate(
+            q_index=q_idx,
+            audio_bytes=blob,
+            transcript=(result or {}).get("transcript") or "",
+            trust_result=audio_pipeline_diag.trust_result_label(result),
+            status=speech_issue,
         )
-        _transcript_raw = (result.get("transcript") or "").strip()
-        _transcript_is_real = bool(_transcript_raw) and is_real_speech_transcript(_transcript_raw)
-        if _pipeline_no_speech or not _transcript_is_real:
-            ns = apply_topic_no_speech_result(
-                topic_id=topic_id,
-                topic_title=topic_title,
-                question_index=q_idx,
-                question=question,
-                audio_key=audio_key,
+        if speech_issue != "ok":
+            mime_guess = resolve_mime_for_debug(
+                blob, mx=mx, audio_key=audio_key, result=result
             )
+            if speech_issue == "no_audio":
+                ns = apply_topic_no_audio_result(
+                    topic_id=topic_id,
+                    topic_title=topic_title,
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=tp_nbytes,
+                )
+            elif speech_issue == "non_english":
+                preview = (result or {}).get("non_english_preview") or ""
+                kind = (result or {}).get("language_mismatch_kind") or "korean"
+                ns = apply_topic_non_english_result(
+                    topic_id=topic_id,
+                    topic_title=topic_title,
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=tp_nbytes,
+                    audio_mime_guess=mime_guess,
+                    non_english_preview=preview,
+                    language_mismatch_kind=kind,
+                )
+            elif speech_issue == "needs_review":
+                ns = apply_topic_needs_review_result(
+                    topic_id=topic_id,
+                    topic_title=topic_title,
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=tp_nbytes,
+                    audio_mime_guess=mime_guess,
+                )
+            else:
+                ns = apply_topic_unclear_speech_result(
+                    topic_id=topic_id,
+                    topic_title=topic_title,
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=tp_nbytes,
+                    audio_mime_guess=mime_guess,
+                )
             mx["analysis_result"] = ns
             mx["last_result"] = ns
             st.session_state["topic_practice_step"] = "feedback"
             st.rerun()
             return
 
+        _transcript_raw = (result.get("transcript") or "").strip()
         result_to_store = cache_analysis_payload(result)
         result_to_store = apply_topic_completed_result(
             topic_id=topic_id,
@@ -1085,23 +1260,20 @@ def render_topic_practice_question_page(mx: dict) -> None:
         '<p class="mx-record-eyebrow">답변 녹음</p>'
         '<div class="mx-record-title">마이크 버튼을 눌러 답변을 시작하세요</div>'
         '<p class="mx-record-hint">'
-        '준비가 되면 <b>답변 시작</b>을 누르고, 마치면 <b>녹음 완료</b>를 눌러 저장합니다.'
+        '먼저 <b>답변 시작</b>으로 녹음 준비를 한 뒤, <b>말하기(마이크)</b>로 타이머를 시작하고 녹음·<b>녹음 완료</b>로 저장합니다.'
         '</p>',
         unsafe_allow_html=True,
     )
 
-    from streamlit_mic_recorder import mic_recorder
-
-    audio = mic_recorder(
-        start_prompt="🎤 답변 시작 (클릭)",
-        stop_prompt="⏹️ 녹음 완료 (클릭)",
-        key=f"tp_rec_{topic_id}_{question_id}",
-    )
     recordings = get_topic_recordings()
-    if audio and audio.get("bytes"):
-        recordings[audio_key] = audio["bytes"]
-        mx["audio_bytes"] = audio["bytes"]
-    saved_audio = mx.get("audio_bytes") or recordings.get(audio_key)
+    timer_key = f"tp_{topic_id}_{question_id}"
+    saved_audio = _render_answer_recording_stage(
+        mx,
+        question_key=timer_key,
+        mic_key=f"tp_rec_{topic_id}_{question_id}",
+        audio_key=audio_key,
+        recordings=recordings,
+    )
 
     if saved_audio:
         st.markdown(
@@ -1158,36 +1330,77 @@ def render_topic_practice_feedback(mx: dict) -> None:
 
     _is_pending = _is_pending_result(lr)
     _heard_raw = (lr.get("transcript") or "").strip()
-    _no_speech = bool(lr.get("no_speech_detected")) or lr.get("diagnosis_status") == "no_speech"
-    _has_real_speech = (
-        bool(_heard_raw) and not _no_speech and is_real_speech_transcript(_heard_raw)
-    )
+    _has_real_speech = bool(_heard_raw) and is_real_speech_transcript(_heard_raw)
     _latest_ok_coaching = (
         _has_real_speech
         and lr.get("diagnosis_status") == "ok"
         and not _is_pending
     )
     q_label = q_idx + 1
+    _speech_issue = "ok"
 
     if _is_pending:
         _topic_sync_audio_to_mx(mx, audio_key)
         _render_topic_api_delay_recovery_card(mx, topic_id, topic, question, q_idx, audio_key)
-    elif _no_speech or not _has_real_speech:
-        st.markdown(
-            f"""
-            <section class="mx-report-hero">
-              <p class="mx-rh-eyebrow">Q{q_label} · 음성 미감지</p>
-              <div class="mx-rh-title">음성이 감지되지 않았어요 🙏</div>
-              <div class="mx-rh-transcript">
-                이번 답변에서는 인식된 발화가 없습니다. 마이크가 켜져 있는지 확인하고
-                다시 한 번 또렷한 목소리로 답변해 보세요.
-              </div>
-            </section>
-            """,
-            unsafe_allow_html=True,
+    elif not _has_real_speech:
+        _topic_sync_audio_to_mx(mx, audio_key)
+        _speech_issue = _render_speech_issue_hero(
+            mx, audio_key, lr, q_label=q_label, q_index=q_idx
         )
     elif _latest_ok_coaching:
         _render_detailed_coaching_for_result(lr, q_label, _heard_raw)
+
+    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
+    if _speech_issue in ("unclear_speech", "needs_review", "non_english"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button(
+                "같은 질문 다시 말하기",
+                use_container_width=True,
+                key=f"tp_retry_same_{topic_id}_{q_idx}",
+            ):
+                reset_recording_timer()
+                mx["audio_bytes"] = None
+                mx.pop("preview_transcript", None)
+                rec = get_topic_recordings()
+                rec.pop(audio_key, None)
+                st.session_state["topic_practice_step"] = "practice"
+                st.rerun()
+        with c2:
+            api_key = get_gemini_api_key()
+            if st.button(
+                "다시 분석하기",
+                use_container_width=True,
+                disabled=in_flight or not api_key,
+                key=f"tp_reanalyze_{topic_id}_{q_idx}",
+            ):
+                if not api_key:
+                    st.error("Gemini API Key가 없어 다시 시도할 수 없습니다.")
+                else:
+                    _run_topic_practice_analysis(
+                        mx,
+                        topic_id,
+                        topic,
+                        question,
+                        q_idx,
+                        audio_key,
+                        api_key,
+                        from_retry=True,
+                    )
+        with c3:
+            next_lbl = (
+                "연습 완료하기"
+                if q_idx >= _TOPIC_PRACTICE_QUESTION_COUNT - 1
+                else "다음 질문으로"
+            )
+            if st.button(
+                next_lbl,
+                type="primary",
+                use_container_width=True,
+                key=f"tp_feedback_next_{topic_id}_{q_idx}",
+            ):
+                _topic_go_next_question(mx)
+        return
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -1196,6 +1409,7 @@ def render_topic_practice_feedback(mx: dict) -> None:
             use_container_width=True,
             key=f"tp_retry_same_{topic_id}_{q_idx}",
         ):
+            reset_recording_timer()
             mx["audio_bytes"] = None
             mx.pop("preview_transcript", None)
             rec = get_topic_recordings()
@@ -1370,8 +1584,90 @@ def _is_pending_result(res: dict) -> bool:
     return res.get("diagnosis_status") == "analysis_pending" or bool(res.get("analysis_pending"))
 
 
+def _resolve_speech_issue_kind(lr: dict, mx: dict, audio_key: str) -> str:
+    """Map stored result + preserved audio to ``no_audio`` | ``unclear_speech`` | ``no_speech``."""
+    dst = str(lr.get("diagnosis_status") or "").lower()
+    ast = str(lr.get("analysis_status") or "").lower()
+    if dst == "no_audio" or ast == "no_audio":
+        return "no_audio"
+    if dst == "unclear_speech" or ast == "unclear_speech":
+        return "unclear_speech"
+    if dst in ("non_english", "language_mismatch") or ast == "non_english":
+        return "non_english"
+    if dst == "needs_review" or ast == "needs_review":
+        return "needs_review"
+    blob = mx.get("audio_bytes") or (mx.get("recordings") or {}).get(audio_key)
+    nbytes = int(lr.get("source_audio_size_bytes") or 0) or recording_byte_length(blob)
+    if dst == "no_speech" or ast == "no_speech" or lr.get("no_speech_detected"):
+        return (
+            "unclear_speech"
+            if has_substantial_recording(blob) or nbytes >= MIN_RECORDED_AUDIO_BYTES
+            else "no_speech"
+        )
+    if not is_real_speech_transcript((lr.get("transcript") or "").strip()):
+        return (
+            "unclear_speech"
+            if has_substantial_recording(blob) or nbytes >= MIN_RECORDED_AUDIO_BYTES
+            else "no_audio"
+        )
+    return "ok"
+
+
+def _render_speech_issue_hero(
+    mx: dict,
+    audio_key: str,
+    lr: dict,
+    *,
+    q_label: int | None = None,
+    blob: bytes | None = None,
+    q_index: int | None = None,
+) -> str:
+    """Recovery / feedback card for no-audio vs unclear speech. Returns issue kind."""
+    issue = _resolve_speech_issue_kind(lr, mx, audio_key)
+    if issue == "ok":
+        issue = "no_speech"
+    if issue == "non_english":
+        from utils.language_detection import language_mismatch_body, language_mismatch_title
+
+        kind = str(lr.get("language_mismatch_kind") or "korean")
+        eyebrow, title, body = (
+            "언어 안내",
+            language_mismatch_title(kind),
+            language_mismatch_body(kind),
+        )
+    else:
+        eyebrow, title, body = speech_issue_copy(issue)
+    nbytes = int(lr.get("source_audio_size_bytes") or 0) or recording_byte_length(
+        blob or mx.get("audio_bytes") or (mx.get("recordings") or {}).get(audio_key)
+    )
+    q_part = f"Q{q_label} · " if q_label is not None else ""
+    meta_html = ""
+    if issue in ("unclear_speech", "needs_review", "non_english") and nbytes > 0:
+        meta_html = (
+            f'<div class="mx-rh-meta">'
+            f'<span class="mx-rh-chip">녹음 저장됨 · {html.escape(f"{nbytes:,}")} bytes</span>'
+            f"</div>"
+        )
+    st.markdown(
+        f"""
+        <section class="mx-report-hero" role="alert">
+          <p class="mx-rh-eyebrow">{html.escape(q_part)}{html.escape(eyebrow)}</p>
+          <div class="mx-rh-title">{html.escape(title)}</div>
+          <div class="mx-rh-transcript">{html.escape(body)}</div>
+          {meta_html}
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    if issue == "non_english":
+        render_language_mismatch_preview(lr)
+    render_recording_debug_block(mx, audio_key, lr, q_index=q_index, blob=blob)
+    return issue
+
+
 def _go_to_next_question(mx: dict, q_id: int) -> None:
     """Advance after a saved answer (pending or completed) without losing data."""
+    reset_recording_timer()
     reconcile_mock_exam_pointer(mx)
     mx["audio_bytes"] = None
     mx["preview_transcript"] = None
@@ -1619,6 +1915,7 @@ def _render_survey(mx: dict) -> None:
                 "직업/신분",
                 ["사업·회사원", "교직자", "학생(학위 과정 중)", "군인", "일하지 않음"],
                 label_visibility="collapsed",
+                key="survey_work",
             )
 
             st.markdown("<p class='survey-label'>2. 현재 귀하는 어디에 살고 계십니까?</p>", unsafe_allow_html=True)
@@ -1626,52 +1923,115 @@ def _render_survey(mx: dict) -> None:
                 "주거",
                 ["홀로 거주", "가족과 함께 거주", "친구/룸메이트와 거주"],
                 label_visibility="collapsed",
+                key="survey_housing",
             )
 
-            with st.expander("3) 여가 활동", expanded=True):
-                leisure = st.multiselect(
+            _leisure_opts = [
+                "영화 보기",
+                "클럽/나이트클럽 가기",
+                "공연 보기",
+                "콘서트 보기",
+                "박물관 가기",
+                "공원 가기",
+                "캠핑 하기",
+                "해변 가기",
+                "게임 하기",
+                "SNS/블로그에 글 올리기",
+                "피규어 만들기",
+            ]
+            if "survey_leisure" not in st.session_state:
+                st.session_state["survey_leisure"] = ["영화 보기", "공원 가기"]
+
+            def _survey_leisure_body() -> None:
+                st.multiselect(
                     "여가 활동",
-                    [
-                        "영화 보기",
-                        "클럽/나이트클럽 가기",
-                        "공연 보기",
-                        "콘서트 보기",
-                        "박물관 가기",
-                        "공원 가기",
-                        "캠핑 하기",
-                        "해변 가기",
-                        "게임 하기",
-                        "SNS/블로그에 글 올리기",
-                        "피규어 만들기",
-                    ],
-                    default=["영화 보기", "공원 가기"],
+                    _leisure_opts,
+                    default=st.session_state.get("survey_leisure", ["영화 보기", "공원 가기"]),
                     key="survey_leisure",
                 )
 
+            render_collapsible_section(
+                "3) 여가 활동",
+                "survey_leisure",
+                _survey_leisure_body,
+                default_open=True,
+                css_scope="mx-survey",
+            )
+            leisure = list(st.session_state.get("survey_leisure") or [])
+
         with col_right:
-            with st.expander("4) 취미/관심사", expanded=True):
-                interests = st.multiselect(
+            if "survey_interests" not in st.session_state:
+                st.session_state["survey_interests"] = ["음악 감상하기", "요리하기"]
+
+            def _survey_interests_body() -> None:
+                st.multiselect(
                     "취미/관심사",
                     ["음악 감상하기", "악기 연주하기", "요리하기", "혼자 노래 부르기", "글쓰기", "그림 그리기"],
-                    default=["음악 감상하기", "요리하기"],
+                    default=st.session_state.get("survey_interests", []),
                     key="survey_interests",
                 )
 
-            with st.expander("5) 운동", expanded=True):
-                sports = st.multiselect(
+            render_collapsible_section(
+                "4) 취미/관심사",
+                "survey_interests",
+                _survey_interests_body,
+                default_open=True,
+                css_scope="mx-survey",
+            )
+            interests = list(st.session_state.get("survey_interests") or [])
+
+            if "survey_sports" not in st.session_state:
+                st.session_state["survey_sports"] = ["조깅", "걷기"]
+
+            def _survey_sports_body() -> None:
+                st.multiselect(
                     "운동",
-                    ["조깅", "걷기", "자전거", "수영", "테니스", "축구", "농구", "야구", "골프", "헬스(Gym)", "요가", "운동을 전혀 하지 않음"],
-                    default=["조깅", "걷기"],
+                    [
+                        "조깅",
+                        "걷기",
+                        "자전거",
+                        "수영",
+                        "테니스",
+                        "축구",
+                        "농구",
+                        "야구",
+                        "골프",
+                        "헬스(Gym)",
+                        "요가",
+                        "운동을 전혀 하지 않음",
+                    ],
+                    default=st.session_state.get("survey_sports", []),
                     key="survey_sports",
                 )
 
-            with st.expander("6) 여행", expanded=True):
-                travel = st.multiselect(
+            render_collapsible_section(
+                "5) 운동",
+                "survey_sports",
+                _survey_sports_body,
+                default_open=True,
+                css_scope="mx-survey",
+            )
+            sports = list(st.session_state.get("survey_sports") or [])
+
+            if "survey_travel" not in st.session_state:
+                st.session_state["survey_travel"] = ["국내 여행"]
+
+            def _survey_travel_body() -> None:
+                st.multiselect(
                     "여행",
                     ["국내 여행", "해외 여행", "집에서 보내는 휴가(스테이케이션)"],
-                    default=["국내 여행"],
+                    default=st.session_state.get("survey_travel", []),
                     key="survey_travel",
                 )
+
+            render_collapsible_section(
+                "6) 여행",
+                "survey_travel",
+                _survey_travel_body,
+                default_open=True,
+                css_scope="mx-survey",
+            )
+            travel = list(st.session_state.get("survey_travel") or [])
 
     selected_count = len(leisure) + len(interests) + len(sports) + len(travel)
     st.info(f"현재 선택한 항목 개수: **{selected_count} / 12**")
@@ -1979,22 +2339,18 @@ def _render_test(mx: dict) -> None:
         '<p class="mx-record-eyebrow">답변 녹음</p>'
         '<div class="mx-record-title">마이크 버튼을 눌러 답변을 시작하세요</div>'
         '<p class="mx-record-hint">'
-        '준비가 되면 <b>답변 시작</b>을 누르고, 마치면 <b>녹음 완료</b>를 눌러 저장합니다.'
+        '먼저 <b>답변 시작</b>으로 녹음 준비를 한 뒤, <b>말하기(마이크)</b>로 타이머를 시작하고 녹음·<b>녹음 완료</b>로 저장합니다.'
         '</p>',
         unsafe_allow_html=True,
     )
 
-    from streamlit_mic_recorder import mic_recorder
-
-    audio = mic_recorder(
-        start_prompt="🎤 답변 시작 (클릭)",
-        stop_prompt="⏹️ 녹음 완료 (클릭)",
-        key=f"rec_{q_id}",
+    timer_key = f"mock_{audio_key}"
+    saved_audio = _render_answer_recording_stage(
+        mx,
+        question_key=timer_key,
+        mic_key=f"rec_{q_id}",
+        audio_key=audio_key,
     )
-    if audio and audio.get("bytes"):
-        mx["recordings"][audio_key] = audio["bytes"]
-        mx["audio_bytes"] = audio["bytes"]
-    saved_audio = mx["audio_bytes"] or mx["recordings"].get(audio_key)
 
     if saved_audio:
         st.markdown(
@@ -2067,6 +2423,7 @@ def _run_analysis(
 
     st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = True
     try:
+        stop_recording_timer()
         mx["analysis_result"] = None
         mx["analysis_error_msg"] = ""
         mx["analysis_done"] = False
@@ -2074,41 +2431,56 @@ def _run_analysis(
         mx["preview_transcript"] = None
 
         blob = mx["audio_bytes"] or mx["recordings"].get(audio_key)
+        q_index = int(mx.get("current_idx") or 0)
         if not blob:
             st.error("오디오 데이터가 유실되었습니다. 다시 녹음해주세요.")
-            missing_audio_result = {
-                "analysis_status": "no_audio",
-                "diagnosis_status": "no_audio",
-                "error": "오디오 데이터 유실",
-                "transcript": "",
-                "estimated_level": "측정 불가",
-                "estimated_level_display": "측정 불가",
-                "summary_speech_rehab": "녹음 데이터가 전달되지 않아 분석을 진행할 수 없었습니다.",
-                "prescription": "브라우저 마이크 권한 허용 후 3초 이상 다시 녹음해 주세요.",
-                "wpm": 0,
-                "sentence_count": 0,
-                "word_count": 0,
-                "fact_scores": {"text_type": 0, "accuracy": 0},
-            }
-            mx["analysis_result"] = missing_audio_result
-            mx["last_result"] = missing_audio_result
-            upsert_mock_exam_result(
+            apply_no_audio_result(
                 mx,
-                {
-                    "q_id": q["id"],
-                    "question": q["question"],
-                    "type": q["type"],
-                    "topic": q.get("topic", ""),
-                    "audio_key": audio_key,
-                    "result": missing_audio_result,
-                },
+                q,
+                q_id=int(q_id),
+                question_index=q_index,
+                audio_key=audio_key,
+                source_audio_size_bytes=0,
             )
-            _nav_after_question_analysis(mx, q["id"])
-            reconcile_mock_exam_pointer(mx)
-            mx["analysis_done"] = True
+            mark_pending_recovery(
+                mx,
+                q_id=int(q_id),
+                audio_key=audio_key,
+                error_message=NO_AUDIO_ERROR_SENTINEL,
+                attempts=0,
+            )
+            st.rerun()
             return
 
-        q_index = int(mx.get("current_idx") or 0)
+        nbytes = recording_byte_length(blob)
+        if classify_pre_analysis_blob(blob) == "no_audio":
+            if not from_retry:
+                save_answer_placeholder_before_ai(
+                    mx,
+                    q,
+                    q_id=int(q_id),
+                    question_index=q_index,
+                    audio_key=audio_key,
+                    audio_bytes=blob,
+                )
+            apply_no_audio_result(
+                mx,
+                q,
+                q_id=int(q_id),
+                question_index=q_index,
+                audio_key=audio_key,
+                source_audio_size_bytes=nbytes,
+            )
+            mark_pending_recovery(
+                mx,
+                q_id=int(q_id),
+                audio_key=audio_key,
+                error_message=NO_AUDIO_ERROR_SENTINEL,
+                attempts=0,
+            )
+            st.rerun()
+            return
+
         if not from_retry:
             save_answer_placeholder_before_ai(
                 mx,
@@ -2124,47 +2496,51 @@ def _run_analysis(
         last_error = ""
         attempts = 0
 
+        submission_id = secrets.token_hex(4)
+        wait_slot = st.empty()
+
+        def _show_analysis_wait(label: str = "AI가 발화를 진단 중입니다…") -> None:
+            with wait_slot.container():
+                render_ai_analysis_waiting(submission_id, stage_label=label)
+
         try:
-            with st.status("AI가 발화를 진단 중입니다…", expanded=False) as status:
+            _show_analysis_wait()
 
-                def _on_status(stage: str, label: str) -> None:
-                    try:
-                        status.update(label=label)
-                    except Exception:
-                        logger.debug("status.update raised; ignoring (stage=%s)", stage)
+            def _on_status(stage: str, label: str) -> None:
+                _show_analysis_wait(label)
 
-                result, last_error, attempts = analyze_audio_with_retry(
-                    blob,
-                    q["question"],
-                    api_key,
-                    difficulty,
-                    on_status=_on_status,
-                    diag={
-                        "submission_id": secrets.token_hex(4),
-                        "question_index": q_index,
-                        "question_id": q_id,
-                        "mock_mode": _mock_mode(mx),
-                        "attempt_id": mx.get("attempt_no"),
-                        "mock_page": mx.get("mock_page"),
-                        "caller": "mock_exam._run_analysis",
-                    },
-                )
-
-                try:
-                    if _is_analysis_failed(result, last_error):
-                        status.update(
-                            label="답변은 저장되었습니다. 분석은 잠시 후 다시 시도할 수 있어요.",
-                            state="error",
-                        )
-                    else:
-                        status.update(label="진단 완료", state="complete")
-                except Exception:
-                    pass
+            mime_for_gemini = resolve_mime_for_analysis(
+                blob, mx=mx, audio_key=audio_key
+            )
+            audio_pipeline_diag.log_before_gemini(
+                q_index=q_index,
+                audio_bytes=blob,
+                mime_type=mime_for_gemini,
+            )
+            result, last_error, attempts = analyze_audio_with_retry(
+                blob,
+                q["question"],
+                api_key,
+                difficulty,
+                mime_guess=mime_for_gemini,
+                on_status=_on_status,
+                diag={
+                    "submission_id": submission_id,
+                    "question_index": q_index,
+                    "question_id": q_id,
+                    "mock_mode": _mock_mode(mx),
+                    "attempt_id": mx.get("attempt_no"),
+                    "mock_page": mx.get("mock_page"),
+                    "caller": "mock_exam._run_analysis",
+                },
+            )
         except Exception as exc:
             logger.exception("Gemini analysis unexpected failure q_id=%s", q_id)
             last_error = f"{type(exc).__name__}: {exc}"
             result = None
             attempts = max(attempts, 1)
+        finally:
+            finish_analysis_waiting_ui(wait_slot, submission_id)
 
         if _is_analysis_failed(result, last_error):
             err_kind = classify_analysis_error(last_error)
@@ -2200,32 +2576,93 @@ def _run_analysis(
             st.rerun()
             return
 
-        _pipeline_no_speech = bool(result.get("no_speech_detected")) or (
-            result.get("diagnosis_status") == "no_speech"
+        speech_issue = classify_post_analysis_issue(blob, result)
+        audio_pipeline_diag.log_no_speech_gate(
+            q_index=q_index,
+            audio_bytes=blob,
+            transcript=(result or {}).get("transcript") or "",
+            trust_result=audio_pipeline_diag.trust_result_label(result),
+            status=speech_issue,
         )
-        _transcript_raw = (result.get("transcript") or "").strip()
-        _transcript_is_real = bool(_transcript_raw) and is_real_speech_transcript(
-            _transcript_raw
-        )
-        if _pipeline_no_speech or not _transcript_is_real:
-            apply_no_speech_result(
-                mx,
-                q,
-                q_id=int(q_id),
-                question_index=q_index,
-                audio_key=audio_key,
+        if speech_issue != "ok":
+            mime_guess = resolve_mime_for_debug(
+                blob, mx=mx, audio_key=audio_key, result=result
             )
-            mark_pending_recovery(
-                mx,
-                q_id=int(q_id),
-                audio_key=audio_key,
-                error_message=NO_SPEECH_ERROR_SENTINEL,
-                attempts=attempts,
-                transcript_preview=None,
-            )
+            if speech_issue == "no_audio":
+                apply_no_audio_result(
+                    mx,
+                    q,
+                    q_id=int(q_id),
+                    question_index=q_index,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=nbytes,
+                )
+                mark_pending_recovery(
+                    mx,
+                    q_id=int(q_id),
+                    audio_key=audio_key,
+                    error_message=NO_AUDIO_ERROR_SENTINEL,
+                    attempts=attempts,
+                )
+            elif speech_issue == "non_english":
+                preview = (result or {}).get("non_english_preview") or ""
+                kind = (result or {}).get("language_mismatch_kind") or "korean"
+                apply_non_english_result(
+                    mx,
+                    q,
+                    q_id=int(q_id),
+                    question_index=q_index,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=nbytes,
+                    audio_mime_guess=mime_guess,
+                    non_english_preview=preview,
+                    language_mismatch_kind=kind,
+                )
+                mark_pending_recovery(
+                    mx,
+                    q_id=int(q_id),
+                    audio_key=audio_key,
+                    error_message=NON_ENGLISH_ERROR_SENTINEL,
+                    attempts=attempts,
+                )
+            elif speech_issue == "needs_review":
+                apply_needs_review_result(
+                    mx,
+                    q,
+                    q_id=int(q_id),
+                    question_index=q_index,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=nbytes,
+                    audio_mime_guess=mime_guess,
+                )
+                mark_pending_recovery(
+                    mx,
+                    q_id=int(q_id),
+                    audio_key=audio_key,
+                    error_message=NEEDS_REVIEW_ERROR_SENTINEL,
+                    attempts=attempts,
+                )
+            else:
+                apply_unclear_speech_result(
+                    mx,
+                    q,
+                    q_id=int(q_id),
+                    question_index=q_index,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=nbytes,
+                    audio_mime_guess=mime_guess,
+                )
+                mark_pending_recovery(
+                    mx,
+                    q_id=int(q_id),
+                    audio_key=audio_key,
+                    error_message=UNCLEAR_SPEECH_ERROR_SENTINEL,
+                    attempts=attempts,
+                )
             st.rerun()
             return
 
+        _transcript_raw = (result.get("transcript") or "").strip()
         result_to_store = cache_analysis_payload(result)
         result_to_store = apply_completed_analysis_result(
             mx,
@@ -2256,6 +2693,26 @@ def _run_analysis(
 # ---------------------------------------------------------------------------
 
 _RECOVERY_COPY: dict[str, tuple[str, str]] = {
+    "no_audio": (
+        "녹음이 제대로 저장되지 않았어요",
+        "마이크 권한을 확인하고, 조용한 환경에서 3초 이상 다시 녹음해 주세요. "
+        "진행 상황과 다른 문항의 답변은 그대로 안전하게 보관됩니다.",
+    ),
+    "unclear_speech": (
+        "말소리가 정확히 인식되지 않았어요",
+        "녹음은 저장되었지만, AI가 답변을 충분히 읽지 못했어요. "
+        "조금 더 또렷하게 다시 말하거나, 저장하고 다음 문항으로 넘어갈 수 있어요.",
+    ),
+    "needs_review": (
+        "답변 일부가 불명확하게 인식되었어요",
+        "녹음은 저장되었지만, AI가 답변 전체를 확신 있게 읽지 못했어요. "
+        "조금 더 또렷하게 다시 말하거나, 같은 녹음으로 다시 분석할 수 있어요.",
+    ),
+    "non_english": (
+        "영어로 답변해 주세요",
+        "녹음은 정상적으로 저장되었지만, 답변이 영어가 아닌 언어로 인식되었어요. "
+        "오픽 연습에서는 영어로 답변해야 AI 코칭을 받을 수 있어요.",
+    ),
     "no_speech": (
         "음성이 감지되지 않았어요 🙏",
         "이번 답변에서 인식된 발화가 없어요. 마이크가 켜져 있는지 확인하고 "
@@ -2346,17 +2803,42 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
     title, body = _RECOVERY_COPY.get(err_kind, _RECOVERY_COPY["unknown"])
     attempts = int(pr.get("attempts") or 0)
     saved_audio = mx.get("audio_bytes") or mx.get("recordings", {}).get(audio_key)
-    audio_size = len(saved_audio) if saved_audio else 0
-    is_no_speech = err_kind == "no_speech"
-
-    # Different eyebrow / meta for the no-speech case — this isn't an AI
-    # failure, it's an empty-state, so we don't show "AI 분석 일시 지연".
-    eyebrow_text = "음성 미감지" if is_no_speech else "AI 분석 일시 지연"
-    audio_meta = (
-        "녹음 음성 미감지"
-        if is_no_speech
-        else f"녹음 {audio_size:,} bytes 보존됨"
+    audio_size = recording_byte_length(saved_audio)
+    is_no_audio = err_kind == "no_audio"
+    is_unclear = err_kind == "unclear_speech"
+    is_needs_review = err_kind == "needs_review"
+    is_non_english = err_kind == "non_english"
+    is_legacy_no_speech = err_kind == "no_speech"
+    if is_legacy_no_speech and audio_size >= MIN_RECORDED_AUDIO_BYTES:
+        is_unclear = True
+        is_legacy_no_speech = False
+    is_speech_issue = (
+        is_no_audio or is_unclear or is_needs_review or is_non_english or is_legacy_no_speech
     )
+
+    if is_no_audio:
+        eyebrow_text = "녹음 저장 실패"
+    elif is_non_english:
+        eyebrow_text = "언어 안내"
+    elif is_unclear:
+        eyebrow_text = "말소리 인식 어려움"
+    elif is_needs_review:
+        eyebrow_text = "인식 검토 필요"
+    elif is_legacy_no_speech:
+        eyebrow_text = "음성 미감지"
+    else:
+        eyebrow_text = "AI 분석 일시 지연"
+
+    if (is_unclear or is_needs_review or is_non_english) and audio_size > 0:
+        audio_meta = f"녹음 저장됨 · {audio_size:,} bytes"
+    elif is_no_audio:
+        audio_meta = (
+            f"녹음 {audio_size:,} bytes" if audio_size else "녹음 데이터 없음"
+        )
+    elif is_legacy_no_speech:
+        audio_meta = "녹음 음성 미감지"
+    else:
+        audio_meta = f"녹음 {audio_size:,} bytes 보존됨"
 
     st.markdown(
         f"""
@@ -2376,21 +2858,33 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
         unsafe_allow_html=True,
     )
 
+    if is_speech_issue:
+        row = find_result_row(mx, int(q_id))
+        lr = (row or {}).get("result", {}) if isinstance(row, dict) else {}
+        render_recording_debug_block(
+            mx,
+            audio_key,
+            lr if isinstance(lr, dict) else {},
+            q_index=int(mx.get("current_idx") or 0),
+            blob=saved_audio,
+        )
+
     in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
     c1, c2, c3 = st.columns(3)
 
-    if is_no_speech:
-        # No-speech branch: re-analysing the same silent audio would just
-        # produce no_speech again, so the primary action is "re-record".
-        # We deliberately drop the saved audio for this question so the
-        # mic recorder comes back fresh — no stale or "leaked" audio.
+    if is_unclear or is_needs_review or is_non_english:
+        if is_non_english:
+            row = find_result_row(mx, int(q_id))
+            lr = (row or {}).get("result", {}) if isinstance(row, dict) else {}
+            render_language_mismatch_preview(lr if isinstance(lr, dict) else {})
         with c1:
             if st.button(
-                "🎤 다시 녹음하기",
+                "같은 질문 다시 말하기",
                 key=f"recover_rerecord_{q_id}",
                 type="primary",
                 use_container_width=True,
             ):
+                reset_recording_timer()
                 mx["audio_bytes"] = None
                 mx["recordings"].pop(audio_key, None)
                 mx["preview_transcript"] = None
@@ -2398,12 +2892,49 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
                 st.rerun()
         with c2:
             if st.button(
-                "⏸️ 잠시 후 시도",
-                key=f"recover_pause_{q_id}",
+                "다시 분석하기",
+                key=f"recover_reanalyze_{q_id}",
+                use_container_width=True,
+                disabled=(audio_size == 0) or in_flight,
+            ):
+                api_key = get_gemini_api_key()
+                if not api_key:
+                    st.error("Gemini API Key가 없어 다시 시도할 수 없습니다.")
+                else:
+                    clear_pending_recovery(mx)
+                    if saved_audio:
+                        mx["audio_bytes"] = saved_audio
+                    _run_analysis(mx, q, q_id, audio_key, api_key, from_retry=True)
+        with c3:
+            if st.button(
+                "다음 문제로 넘어가기",
+                key=f"recover_next_{q_id}",
                 use_container_width=True,
             ):
+                _go_to_next_question(mx, q_id)
+        return
+
+    if is_no_audio or is_legacy_no_speech:
+        with c1:
+            if st.button(
+                "같은 질문 다시 말하기",
+                key=f"recover_rerecord_na_{q_id}",
+                type="primary",
+                use_container_width=True,
+            ):
+                reset_recording_timer()
+                mx["audio_bytes"] = None
+                mx["recordings"].pop(audio_key, None)
+                mx["preview_transcript"] = None
                 clear_pending_recovery(mx)
                 st.rerun()
+        with c2:
+            if st.button(
+                "다음 문제로 넘어가기",
+                key=f"recover_speech_next_{q_id}",
+                use_container_width=True,
+            ):
+                _go_to_next_question(mx, q_id)
         with c3:
             if st.button(
                 "🏠 홈으로",
@@ -2459,15 +2990,31 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
 
     preview = (pr.get("transcript_preview") or "").strip()
     if preview:
-        with st.expander("복원된 발화 미리보기", expanded=False):
+
+        def _preview_body() -> None:
             st.write(preview)
+
+        render_collapsible_section(
+            "복원된 발화 미리보기",
+            f"mx_pr_preview_q{q_id}",
+            _preview_body,
+            css_scope="mx-col",
+        )
 
     # Last-resort technical detail, collapsed by default so it doesn't
     # crowd the friendly copy.
     err_msg = (pr.get("error_message") or "").strip()
     if err_msg:
-        with st.expander("기술 상세", expanded=False):
+
+        def _tech_detail_body() -> None:
             st.code(err_msg, language="text")
+
+        render_collapsible_section(
+            "기술 상세",
+            f"mx_pr_tech_q{q_id}",
+            _tech_detail_body,
+            css_scope="mx-col",
+        )
 
 
 def _render_precision_section(mx: dict) -> None:
@@ -2476,33 +3023,32 @@ def _render_precision_section(mx: dict) -> None:
     if not results:
         return
 
-    with st.expander("정밀 분석", expanded=False):
-        st.caption("문항별 세부 분석을 확인할 수 있어요.")
-        for idx, item in enumerate(results, start=1):
-            if not isinstance(item, dict):
-                continue
-            res = item.get("result") if isinstance(item.get("result"), dict) else {}
-            src = res if res else item
-            status = (
-                str(src.get("analysis_status") or src.get("diagnosis_status") or item.get("analysis_status") or "")
-            )
-            level = (
-                src.get("estimated_level_display")
-                or src.get("estimated_level")
-                or item.get("estimated_level_display")
-                or item.get("estimated_level")
-                or "분석 대기"
-            )
-            transcript = str(src.get("transcript") or item.get("transcript") or "")
+    st.caption("문항별 세부 분석을 확인할 수 있어요.")
+    for idx, item in enumerate(results, start=1):
+        if not isinstance(item, dict):
+            continue
+        res = item.get("result") if isinstance(item.get("result"), dict) else {}
+        src = res if res else item
+        status = (
+            str(src.get("analysis_status") or src.get("diagnosis_status") or item.get("analysis_status") or "")
+        )
+        level = (
+            src.get("estimated_level_display")
+            or src.get("estimated_level")
+            or item.get("estimated_level_display")
+            or item.get("estimated_level")
+            or "분석 대기"
+        )
+        transcript = str(src.get("transcript") or item.get("transcript") or "")
 
-            qnum = item.get("q_id", idx)
-            st.markdown(f"**Q{qnum}. {level}**")
-            if status in ["pending", "analysis_pending", "api_error", "failed"]:
-                st.info("AI 분석 대기 중입니다. 나중에 다시 시도할 수 있어요.")
-            elif transcript:
-                st.caption(transcript[:300])
-            else:
-                st.caption("표시할 답변 내용이 없습니다.")
+        qnum = item.get("q_id", idx)
+        st.markdown(f"**Q{qnum}. {level}**")
+        if status in ["pending", "analysis_pending", "api_error", "failed"]:
+            st.info("AI 분석 대기 중입니다. 나중에 다시 시도할 수 있어요.")
+        elif transcript:
+            st.caption(transcript[:300])
+        else:
+            st.caption("표시할 답변 내용이 없습니다.")
 
 
 def _render_report(mx: dict) -> None:
@@ -2534,14 +3080,7 @@ def _render_report(mx: dict) -> None:
         # Trust gate: AI-emitted no_speech OR sanitizer rejection both lead
         # to the friendly empty-state hero. We never render unknown text
         # as if it were the user's recorded speech.
-        _no_speech = bool(_lr.get("no_speech_detected")) or (
-            _lr.get("diagnosis_status") == "no_speech"
-        )
-        _has_real_speech = (
-            bool(_heard_raw)
-            and not _no_speech
-            and is_real_speech_transcript(_heard_raw)
-        )
+        _has_real_speech = bool(_heard_raw) and is_real_speech_transcript(_heard_raw)
         _latest_ok_coaching = (
             _has_real_speech
             and _lr.get("diagnosis_status") == "ok"
@@ -2575,10 +3114,6 @@ def _render_report(mx: dict) -> None:
                 unsafe_allow_html=True,
             )
 
-        if _latest_ok_coaching and not _is_real_mock(mx):
-            render_overall_coaching_hero(_lr, int(_lq))
-            render_strong_points_cards(_lr)
-
         if _has_real_speech and not _is_real_mock(mx):
             _wpm = _lr.get("wpm")
             _sent = _lr.get("sentence_count", 0)
@@ -2610,41 +3145,28 @@ def _render_report(mx: dict) -> None:
             )
         elif _is_pending:
             pass
-        else:
-            st.markdown(
-                f"""
-                <section class="mx-report-hero">
-                  <p class="mx-rh-eyebrow">Q{_lq} · 음성 미감지</p>
-                  <div class="mx-rh-title">음성이 감지되지 않았어요 🙏</div>
-                  <div class="mx-rh-transcript">
-                    이번 답변에서는 인식된 발화가 없습니다. 마이크가 켜져 있는지 확인하고
-                    다시 한 번 또렷한 목소리로 답변해 보세요.
-                  </div>
-                </section>
-                """,
-                unsafe_allow_html=True,
+        elif not _has_real_speech:
+            _render_speech_issue_hero(
+                mx, _audio_key, _lr, q_label=int(_lq), q_index=int(mx.get("current_idx") or 0)
             )
 
-        if _latest_ok_coaching and not _is_real_mock(mx):
-            render_grammar_and_expression_coaching(_heard_raw)
-            render_native_upgrade_section(_lr)
-            render_flow_coaching_section(_lr)
-            render_pronunciation_section(_lr)
-            _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
-            if _sum_rehab and len(_sum_rehab) > 160:
-                with st.expander("AI 총평 전문", expanded=False):
-                    st.write(_sum_rehab)
-        elif _has_real_speech and not _is_real_mock(mx):
-            render_grammar_and_expression_coaching(_heard_raw)
-            _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
-            if _sum_rehab:
-                st.caption(_sum_rehab[:280] + ("…" if len(_sum_rehab) > 280 else ""))
+        if (_latest_ok_coaching or _has_real_speech) and not _is_real_mock(mx):
+            render_structured_coaching_report(_lr, _heard_raw, _lq, show_hero=True)
         elif _lr.get("diagnosis_status") == "analysis_pending":
             pass
         else:
             _sum_rehab = (_lr.get("summary_speech_rehab") or "").strip()
             if _sum_rehab:
-                st.caption(_sum_rehab[:280] + ("…" if len(_sum_rehab) > 280 else ""))
+
+                def _ai_summary_body() -> None:
+                    st.write(_sum_rehab)
+
+                render_collapsible_section(
+                    "AI 총평 보기",
+                    f"mx_report_ai_sum_q{_lq}",
+                    _ai_summary_body,
+                    css_scope="mx-col",
+                )
 
         _raw_parse_failed = (_lr.get("raw_text_parse_failed") or "").strip()
         if _raw_parse_failed:
@@ -2675,29 +3197,41 @@ def _render_report(mx: dict) -> None:
                 continue
             result = item.get("result", {})
             qid = item.get("q_id")
-            label = f"Q{qid} | {item.get('type', '')} {item.get('topic', '')}".strip()
-            with st.expander(label, expanded=False):
-                if result.get("diagnosis_status") == "no_audio":
-                    st.error(result.get("error", "녹음 데이터 없음"))
-                    continue
-                if result.get("diagnosis_status") == "api_error":
-                    st.error(result.get("error", "API 오류"))
-                    continue
-                if result.get("diagnosis_status") == "analysis_pending":
-                    st.info(
-                        (result.get("summary_speech_rehab") or "").strip()
-                        + " "
-                        + (result.get("prescription") or "").strip()
-                    )
-                    continue
-                if "error" in result:
-                    st.error(result["error"])
-                    continue
+            label = clean_visible_label(
+                f"Q{qid} | {item.get('type', '')} {item.get('topic', '')}".strip(),
+                f"Q{qid}",
+            )
 
-                st.caption(item.get("question", "") or "")
-                if qid == 1:
+            def _history_body(it=item) -> None:
+                res = it.get("result") or {}
+                q = it.get("q_id")
+                if res.get("diagnosis_status") == "no_audio":
+                    st.error(res.get("error", "녹음 데이터 없음"))
+                    return
+                if res.get("diagnosis_status") == "api_error":
+                    st.error(res.get("error", "API 오류"))
+                    return
+                if res.get("diagnosis_status") == "analysis_pending":
+                    st.info(
+                        (res.get("summary_speech_rehab") or "").strip()
+                        + " "
+                        + (res.get("prescription") or "").strip()
+                    )
+                    return
+                if "error" in res:
+                    st.error(res["error"])
+                    return
+                st.caption(it.get("question", "") or "")
+                if q == 1:
                     st.info("몸 풀기 단계입니다. 본인의 바이브를 잘 점검해 보세요.")
-                render_history_expander_coaching(item)
+                render_history_expander_coaching(it)
+
+            render_collapsible_section(
+                label or f"Q{qid}",
+                f"mx_hist_q{qid}",
+                _history_body,
+                css_scope="mx-col",
+            )
 
     _answered_report = count_completed_exam_prefix(mx)
     has_next = (_answered_report < len(_exam_run)) and not mx.get("exam_finished")
@@ -2719,6 +3253,7 @@ def _render_report(mx: dict) -> None:
                 if _is_pending and _lq is not None:
                     _go_to_next_question(mx, int(_lq))
                     return
+                reset_recording_timer()
                 reconcile_mock_exam_pointer(mx)
                 mx["audio_bytes"] = None
                 mx["preview_transcript"] = None
@@ -2750,8 +3285,12 @@ def _render_report(mx: dict) -> None:
             st.rerun()
 
     if not _is_real_mock(mx):
-        with st.expander("더 깊은 분석 (선택)", expanded=False):
-            _render_precision_section(mx)
+        render_collapsible_section(
+            "더 깊은 분석 (선택)",
+            "mx_deep_precision",
+            lambda: _render_precision_section(mx),
+            css_scope="mx-col",
+        )
         st.subheader("🧪 에릭의 발화 정밀 처방전")
         st.caption("FACT 기반 냉철 분석 모드: 어휘 · 논리 · 내용 중복 · 문법")
     for idx, item in enumerate(mx["results"]):
@@ -2766,7 +3305,12 @@ def _render_report(mx: dict) -> None:
         if not transcript:
             continue
 
-        with st.expander(f"Q{qid} 정밀 처방", expanded=False):
+        def _precision_q_body(
+            result=result,
+            transcript=transcript,
+            item=item,
+            qid=qid,
+        ) -> None:
             lines = []
             lower = transcript.lower()
 
@@ -2844,9 +3388,16 @@ def _render_report(mx: dict) -> None:
             # boilerplate that fired on every clean answer.
             if not lines:
                 st.caption("이 답변에서는 별도의 정밀 처방 항목이 감지되지 않았습니다.")
-                continue
+                return
 
             for row in lines:
                 st.markdown(
                     f"- **{row['axis']}** | 현재 발화: {row['current']} | 에릭의 추천: {row['recommend']}"
                 )
+
+        render_collapsible_section(
+            f"Q{qid} 정밀 처방",
+            f"mx_precision_q{qid}",
+            _precision_q_body,
+            css_scope="mx-col",
+        )

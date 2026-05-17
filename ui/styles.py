@@ -1326,6 +1326,94 @@ GLOBAL_CSS = """
       color: var(--text-muted);
       line-height: 1.5;
     }
+    .grammar-fix .gf-label,
+    .coach-alt-card .gf-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 8px 0 2px 0;
+    }
+    .grammar-fix .gf-label:first-child,
+    .coach-alt-card .gf-label:first-child {
+      margin-top: 0;
+    }
+    .grammar-fix .gf-val,
+    .coach-alt-card .gf-val {
+      font-size: 0.92rem;
+      line-height: 1.5;
+      margin: 0 0 4px 0;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
+    .grammar-fix .gf-val.gf-bad,
+    .coach-alt-card .gf-val.gf-bad {
+      color: #a16207;
+      text-decoration: line-through;
+      text-decoration-color: rgba(161, 98, 7, 0.35);
+    }
+    .grammar-fix .gf-val.gf-good {
+      color: var(--mint);
+      font-weight: 700;
+    }
+    section.main:has(.mx-marker) .mx-coach-empty-note {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 4px 0 12px 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-struct {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      background: rgba(248, 250, 252, 0.95);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+    }
+    section.main:has(.mx-marker) .mx-coach-struct-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--mint);
+      margin: 10px 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    section.main:has(.mx-marker) .mx-coach-struct-label:first-child {
+      margin-top: 0;
+    }
+    section.main:has(.mx-marker) .mx-coach-struct-list {
+      margin: 0 0 4px 0;
+      padding-left: 1.1rem;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      color: var(--text);
+    }
+    section.main:has(.mx-marker) .mx-coach-struct-miss {
+      color: var(--text-secondary);
+    }
+    section.main:has(.mx-marker) .mx-coach-example-body {
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--text);
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(125deg, rgba(224, 242, 254, 0.55) 0%, rgba(255, 255, 255, 0.95) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      margin: 0 0 8px 0;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
+    section.main:has(.mx-marker) .mx-coach-mission-list {
+      margin: 0 0 12px 0;
+      padding-left: 1.25rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    section.main:has(.mx-marker) .mx-coach-mission-item {
+      margin-bottom: 6px;
+    }
 
     .alt-card,
     .coach-alt-card {
@@ -1671,44 +1759,72 @@ GLOBAL_CSS = """
       margin: 0;
     }
 
-    /* --- Pattern tab pills (session-state buttons, not st.tabs) -------- */
-    .pat-screen .pat-tab-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+    /* --- Pattern category tabs (st.radio horizontal, not st.tabs) ------ */
+    .pat-screen .pat-tab-radio {
       margin: 0 0 14px 0;
-      padding: 4px;
+      padding: 6px;
       background: rgba(255, 255, 255, 0.72);
       border: 1px solid var(--border-subtle);
       border-radius: 999px;
       box-shadow: var(--shadow-card);
     }
-    .pat-screen .pat-tab-row [data-testid="column"] {
-      flex: 0 0 auto;
-      min-width: 0;
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] {
+      margin: 0 !important;
     }
-    .pat-screen .pat-tab-row .stButton > button {
-      border-radius: 999px !important;
-      font-weight: 600 !important;
-      font-size: 0.88rem !important;
-      min-height: 36px !important;
-      padding: 8px 14px !important;
-      white-space: nowrap;
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] > div {
+      flex-direction: row !important;
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
-    .pat-screen .pat-tab-row .stButton > button[kind="secondary"] {
-      color: var(--text-secondary) !important;
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label {
+      margin: 0 !important;
+      padding: 0 !important;
       background: transparent !important;
       border: none !important;
-      box-shadow: none !important;
     }
-    .pat-screen .pat-tab-row .stButton > button[kind="primary"] {
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label > div:first-child {
+      display: none !important;
+    }
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label p,
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label span {
+      font-size: 0.88rem !important;
+      font-weight: 600 !important;
+      color: #4b5563 !important;
+      line-height: 1.2 !important;
+    }
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p,
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) span {
       color: #ffffff !important;
+    }
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label:has(input:checked) {
       background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
-      border: none !important;
+      border-radius: 999px !important;
+      padding: 8px 14px !important;
       box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
     }
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label:not(:has(input:checked)) {
+      padding: 8px 14px !important;
+      border-radius: 999px !important;
+    }
+    .pat-screen .pat-tab-radio [data-testid="stRadio"] label:not(:has(input:checked)):hover {
+      background: rgba(13, 148, 136, 0.06) !important;
+    }
 
-    /* --- Streamlit tab bar (legacy st.tabs fallback) ------------------- */
+    /* Hide legacy st.tabs if any leak into the pattern screen */
+    .pat-screen [data-testid="stTabs"] {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      max-height: 0 !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* --- Streamlit tab bar (legacy — kept hidden above) ---------------- */
     .pat-screen [data-testid="stTabs"] [role="tablist"] {
       gap: 6px;
       padding: 4px;
@@ -1756,42 +1872,111 @@ GLOBAL_CSS = """
       padding-top: 18px;
     }
 
-    /* --- Section accordion (st.expander) ------------------------------ */
-    /* Each category section is rendered with st.expander. We restyle the
-     * details/summary so the section feels like a soft category card
-     * instead of Streamlit's default chevron-with-border. */
-    .pat-screen div[data-testid="stExpander"] {
-      margin: 0 0 10px 0;
-    }
-    .pat-screen div[data-testid="stExpander"] details {
+    /* --- Section groups (custom toggle — not st.expander) --------------- */
+    .pat-screen .pat-sec-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 6px 0;
+      padding: 12px 14px;
       background: rgba(255, 255, 255, 0.92);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md) !important;
+      border-radius: var(--radius-md);
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-      transition: box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
     }
-    .pat-screen div[data-testid="stExpander"] details[open] {
+    .pat-screen .pat-sec-head--open {
       border-color: rgba(13, 148, 136, 0.22);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      margin-bottom: 0;
     }
-    .pat-screen div[data-testid="stExpander"] summary {
-      padding: 12px 14px !important;
-      font-weight: 600 !important;
-      font-size: 0.95rem !important;
-      color: var(--navy) !important;
-      letter-spacing: -0.005em;
-      border-radius: var(--radius-md) !important;
+    .pat-screen .pat-sec-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #111827 !important;
+      letter-spacing: -0.01em;
+      line-height: 1.35;
     }
-    .pat-screen div[data-testid="stExpander"] summary:hover {
-      background: rgba(13, 148, 136, 0.04) !important;
+    .pat-screen .pat-sec-count {
+      flex-shrink: 0;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #0f766e;
+      background: rgba(204, 251, 241, 0.65);
+      border: 1px solid rgba(13, 148, 136, 0.18);
+      padding: 4px 10px;
+      border-radius: 999px;
     }
-    .pat-screen div[data-testid="stExpander"] details[open] summary {
-      border-bottom: 1px solid var(--border-subtle);
-      border-bottom-left-radius: 0 !important;
-      border-bottom-right-radius: 0 !important;
+    .pat-screen .pat-sec-body {
+      margin: 0 0 12px 0;
+      padding: 12px 12px 4px 12px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      border-top: none;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
-    .pat-screen div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
-      padding: 12px 14px 4px 14px !important;
+    .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] {
+      margin: -2px 0 10px 0 !important;
+    }
+    .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] > button {
+      min-height: 2.4rem !important;
+      font-size: 0.82rem !important;
+      border-radius: 12px !important;
+      color: #0f766e !important;
+      background: rgba(240, 253, 250, 0.9) !important;
+      border: 1px solid rgba(13, 148, 136, 0.22) !important;
+    }
+    /* Shared collapsible sections (mock survey / report / patterns) */
+    .mx-survey-head,
+    .mx-col-head,
+    .pat-sec-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 6px 0;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+    .mx-survey-title,
+    .mx-col-title,
+    .pat-sec-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #111827 !important;
+      letter-spacing: -0.01em;
+      line-height: 1.35;
+    }
+    .mx-survey-count,
+    .mx-col-count,
+    .pat-sec-count {
+      flex-shrink: 0;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #0f766e;
+      background: rgba(204, 251, 241, 0.65);
+      border: 1px solid rgba(13, 148, 136, 0.18);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .mx-survey-body,
+    .mx-col-body,
+    .pat-sec-body {
+      margin: 0 0 12px 0;
+      padding: 12px 12px 4px 12px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(13, 148, 136, 0.16);
+      border-radius: var(--radius-md);
+    }
+    section.main:has(.mx-marker) .mx-survey-head--open,
+    section.main:has(.mx-marker) .mx-col-head--open,
+    .pat-screen .pat-sec-head--open {
+      border-color: rgba(13, 148, 136, 0.22);
     }
 
     /* --- Pattern detail stack (UI redesign step 5) -------------------- */
@@ -2033,9 +2218,13 @@ GLOBAL_CSS = """
       border-color: rgba(13, 148, 136, 0.14);
     }
 
-    /* --- "예문 더보기 / 접기" toggle button -------------------------- */
-    .pat-screen .stButton > button {
+    /* --- Pattern card action buttons (열기 / 예문 더보기 / 접기) ------------ */
+    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]),
+    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) {
       margin-top: 8px !important;
+    }
+    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]) > button,
+    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) > button {
       min-height: 1.9rem !important;
       padding: 4px 14px !important;
       border-radius: 999px !important;
@@ -2046,7 +2235,8 @@ GLOBAL_CSS = """
       border: 1px solid rgba(13, 148, 136, 0.25) !important;
       box-shadow: none !important;
     }
-    .pat-screen .stButton > button:hover {
+    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]) > button:hover,
+    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) > button:hover {
       background: rgba(204, 251, 241, 0.9) !important;
       border-color: var(--mint) !important;
     }
@@ -2327,6 +2517,92 @@ GLOBAL_CSS = """
       color: rgba(255, 255, 255, 0.88) !important;
       margin: 0 0 14px 0;
     }
+    .mx-record-stage .mx-rec-timer {
+      margin: 0 0 16px 0;
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.96) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+      color: #0f172a !important;
+      text-align: center;
+    }
+    .mx-record-stage .mx-rec-timer-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0f766e !important;
+      margin: 0 0 6px 0;
+    }
+    .mx-record-stage .mx-rec-timer-value {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #0f766e !important;
+      margin: 0 0 10px 0;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .mx-record-stage .mx-rec-timer-progress {
+      display: block;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(13, 148, 136, 0.12);
+      overflow: hidden;
+      margin: 0 0 10px 0;
+    }
+    .mx-record-stage .mx-rec-timer-progress-fill {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #14b8a6 0%, #0d9488 100%);
+      transition: width 0.35s ease;
+    }
+    .mx-record-stage .mx-rec-timer-helper {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      margin: 0;
+      color: #64748b !important;
+    }
+    .mx-record-stage .mx-rec-timer--idle {
+      background: rgba(255, 255, 255, 0.96);
+    }
+    .mx-record-stage .mx-rec-timer--idle .mx-rec-timer-value {
+      color: #334155 !important;
+    }
+    .mx-record-stage .mx-rec-timer--normal .mx-rec-timer-value {
+      color: #0f766e !important;
+    }
+    .mx-record-stage .mx-rec-timer--warn {
+      border-color: rgba(234, 88, 12, 0.5);
+      background: linear-gradient(165deg, rgba(255, 251, 235, 0.98) 0%, rgba(255, 247, 237, 0.98) 100%);
+    }
+    .mx-record-stage .mx-rec-timer--warn .mx-rec-timer-value {
+      color: #c2410c !important;
+    }
+    .mx-record-stage .mx-rec-timer--warn .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #fb923c 0%, #ea580c 100%);
+    }
+    .mx-record-stage .mx-rec-timer--warn .mx-rec-timer-helper {
+      color: #c2410c !important;
+      font-weight: 600;
+    }
+    .mx-record-stage .mx-rec-timer--up {
+      border-color: rgba(220, 38, 38, 0.45);
+      background: linear-gradient(165deg, rgba(254, 242, 242, 0.98) 0%, rgba(255, 247, 247, 0.98) 100%);
+    }
+    .mx-record-stage .mx-rec-timer--up .mx-rec-timer-value {
+      color: #b91c1c !important;
+    }
+    .mx-record-stage .mx-rec-timer--up .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #f87171 0%, #dc2626 100%);
+    }
+    .mx-record-stage .mx-rec-timer--up .mx-rec-timer-helper {
+      color: #b91c1c !important;
+      font-weight: 600;
+    }
     .mx-record-saved {
       display: inline-flex;
       align-items: center;
@@ -2459,13 +2735,175 @@ GLOBAL_CSS = """
       color: var(--navy) !important;
     }
 
-    /* Status widget (``st.status``) — used during analysis. Soften its
-     * default look so it feels like a calm progress card, not an alert. */
+    /* Status widget (``st.status``) — legacy; analysis uses .mx-ai-wait */
     section.main:has(.mx-marker) [data-testid="stStatus"] {
       border-radius: var(--radius-md) !important;
       border: 1px solid var(--border-subtle) !important;
       background: rgba(255, 255, 255, 0.92) !important;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+    }
+
+    /* --- AI analysis waiting screen -------------------------------- */
+    .mx-ai-wait-marker {
+      display: none !important;
+    }
+    .mx-ai-wait {
+      max-width: 520px;
+      margin: 8px auto 20px auto;
+      padding: 24px 20px 20px 20px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.55) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.16);
+      box-shadow: var(--shadow-card);
+      text-align: center;
+    }
+    .mx-ai-wait-anim {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 14px auto;
+    }
+    .mx-ai-wait-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid rgba(13, 148, 136, 0.15);
+      border-top-color: var(--mint);
+      animation: mxWaitSpin 1.1s linear infinite;
+    }
+    @keyframes mxWaitSpin {
+      to { transform: rotate(360deg); }
+    }
+    .mx-ai-wait-mic {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--mint);
+      animation: mxWaitPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes mxWaitPulse {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
+    .mx-ai-wait-bubble {
+      position: absolute;
+      top: 4px;
+      right: -2px;
+      width: 18px;
+      height: 14px;
+      border-radius: 10px 10px 10px 2px;
+      background: rgba(204, 251, 241, 0.9);
+      border: 1px solid rgba(13, 148, 136, 0.25);
+      animation: mxWaitBubble 1.8s ease-in-out infinite;
+    }
+    @keyframes mxWaitBubble {
+      0%, 100% { transform: scale(0.92); opacity: 0.7; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+    .mx-ai-wait-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin: 0 0 12px 0;
+    }
+    .mx-ai-wait-dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint);
+      animation: mxWaitBounce 1.2s ease-in-out infinite;
+    }
+    .mx-ai-wait-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .mx-ai-wait-dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes mxWaitBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+      40% { transform: translateY(-6px); opacity: 1; }
+    }
+    .mx-ai-wait-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin: 0 0 8px 0;
+      letter-spacing: -0.02em;
+    }
+    .mx-ai-wait-sub {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      margin: 0 0 10px 0;
+    }
+    .mx-ai-wait-stage {
+      font-size: 0.8rem;
+      color: var(--mint);
+      font-weight: 600;
+      margin: 0 0 14px 0;
+    }
+    .mx-ai-wait-tip {
+      margin-top: 6px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--border-subtle);
+      text-align: left;
+    }
+    .mx-ai-wait-tip-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0 0 10px 0;
+    }
+    .mx-ai-wait-tip-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 10px 0 2px 0;
+    }
+    .mx-ai-wait-tip-label:first-of-type {
+      margin-top: 0;
+    }
+    .mx-ai-wait-tip-pattern {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0;
+      line-height: 1.4;
+    }
+    .mx-ai-wait-tip-text,
+    .mx-ai-wait-tip-example {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--text);
+      margin: 0;
+    }
+    .mx-ai-wait-tip-example {
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .mx-speech-debug {
+      margin: 10px 0 14px 0;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.04);
+      border: 1px dashed rgba(13, 148, 136, 0.35);
+      font-size: 0.72rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+    .mx-speech-debug-label {
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      color: var(--text-secondary);
+    }
+    .mx-speech-debug-body {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
     /* --- Report screen --------------------------------------------- */

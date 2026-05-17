@@ -134,6 +134,10 @@ def reset_exam_state(
 # commit an empty transcript silently — the user needs an explicit
 # "음성이 감지되지 않았어요" prompt + a re-record affordance.
 NO_SPEECH_ERROR_SENTINEL = "NO_SPEECH"
+NO_AUDIO_ERROR_SENTINEL = "NO_AUDIO"
+UNCLEAR_SPEECH_ERROR_SENTINEL = "UNCLEAR_SPEECH"
+NEEDS_REVIEW_ERROR_SENTINEL = "NEEDS_REVIEW"
+NON_ENGLISH_ERROR_SENTINEL = "NON_ENGLISH"
 
 
 def build_analysis_pending_result(
@@ -196,6 +200,14 @@ def classify_analysis_error(message: str) -> str:
         return "unknown"
     if message.strip().upper() == NO_SPEECH_ERROR_SENTINEL:
         return "no_speech"
+    if message.strip().upper() == NO_AUDIO_ERROR_SENTINEL:
+        return "no_audio"
+    if message.strip().upper() == UNCLEAR_SPEECH_ERROR_SENTINEL:
+        return "unclear_speech"
+    if message.strip().upper() == NEEDS_REVIEW_ERROR_SENTINEL:
+        return "needs_review"
+    if message.strip().upper() == NON_ENGLISH_ERROR_SENTINEL:
+        return "non_english"
     upper = message.upper()
     if "503" in upper or "OVERLOAD" in upper or "UNAVAILABLE" in upper:
         return "overload"
@@ -280,7 +292,21 @@ def _row_counts_as_answered(row: Dict[str, Any]) -> bool:
         return bool(row)
     ast = str(res.get("analysis_status") or "").lower()
     dst = str(res.get("diagnosis_status") or "").lower()
-    if ast in ("no_speech", "no_audio", "failed") or dst in ("no_speech", "no_audio"):
+    if ast in (
+        "no_speech",
+        "no_audio",
+        "unclear_speech",
+        "needs_review",
+        "non_english",
+        "failed",
+    ) or dst in (
+        "no_speech",
+        "no_audio",
+        "unclear_speech",
+        "needs_review",
+        "non_english",
+        "language_mismatch",
+    ):
         return False
     return True
 
@@ -456,6 +482,180 @@ def apply_completed_analysis_result(
     return stored
 
 
+def _speech_issue_result_base(
+    *,
+    analysis_status: str,
+    diagnosis_status: str,
+    summary: str,
+    prescription: str,
+    source_audio_size_bytes: int = 0,
+    audio_mime_guess: str = "",
+) -> Dict[str, Any]:
+    res: Dict[str, Any] = {
+        "analysis_status": analysis_status,
+        "diagnosis_status": diagnosis_status,
+        "no_speech_detected": diagnosis_status in ("no_speech", "unclear_speech"),
+        "transcript": "",
+        "estimated_level": "측정 불가",
+        "estimated_level_display": "측정 불가",
+        "summary_speech_rehab": summary,
+        "prescription": prescription,
+        "wpm": 0,
+        "sentence_count": 0,
+        "word_count": 0,
+        "fact_scores": {"text_type": 0.0, "accuracy": 0.0},
+        "rubric_scores": {"fluency": 0, "lexical": 0, "logic": 0, "grammar": 0},
+    }
+    if source_audio_size_bytes > 0:
+        res["source_audio_size_bytes"] = int(source_audio_size_bytes)
+    if audio_mime_guess:
+        res["audio_mime_guess"] = audio_mime_guess
+    return res
+
+
+def apply_no_audio_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    source_audio_size_bytes: int = 0,
+) -> Dict[str, Any]:
+    """Recording missing or too small — does not advance exam pointer."""
+    res = _speech_issue_result_base(
+        analysis_status="no_audio",
+        diagnosis_status="no_audio",
+        summary="녹음이 제대로 저장되지 않았어요. 마이크 권한을 확인하고 다시 녹음해 주세요.",
+        prescription="브라우저 마이크 권한 허용 후 3초 이상 다시 녹음해 주세요.",
+        source_audio_size_bytes=source_audio_size_bytes,
+    )
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=res,
+        ),
+    )
+    return res
+
+
+def apply_unclear_speech_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    source_audio_size_bytes: int,
+    audio_mime_guess: str = "",
+) -> Dict[str, Any]:
+    """Audio saved but transcript empty/untrusted — audio preserved for retry."""
+    res = _speech_issue_result_base(
+        analysis_status="unclear_speech",
+        diagnosis_status="unclear_speech",
+        summary=(
+            "녹음은 저장되었지만, AI가 답변을 충분히 읽지 못했어요. "
+            "조금 더 또렷하게 다시 말하거나, 저장하고 다음 문항으로 넘어갈 수 있어요."
+        ),
+        prescription="마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
+        source_audio_size_bytes=source_audio_size_bytes,
+        audio_mime_guess=audio_mime_guess,
+    )
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=res,
+        ),
+    )
+    return res
+
+
+def apply_non_english_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    source_audio_size_bytes: int,
+    audio_mime_guess: str = "",
+    non_english_preview: str = "",
+    language_mismatch_kind: str = "korean",
+) -> Dict[str, Any]:
+    """Non-English transcript — preserve audio; no English coaching/scoring."""
+    from utils.language_detection import language_mismatch_body, language_mismatch_title
+
+    kind = (language_mismatch_kind or "korean").strip()
+    body = language_mismatch_body(kind)
+    res = _speech_issue_result_base(
+        analysis_status="non_english",
+        diagnosis_status="non_english",
+        summary=language_mismatch_title(kind),
+        prescription=body,
+        source_audio_size_bytes=source_audio_size_bytes,
+        audio_mime_guess=audio_mime_guess,
+    )
+    res["no_speech_detected"] = False
+    preview = (non_english_preview or "").strip()
+    if preview:
+        res["non_english_preview"] = preview[:120]
+        res["language_mismatch_kind"] = kind
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=res,
+        ),
+    )
+    return res
+
+
+def apply_needs_review_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    source_audio_size_bytes: int,
+    audio_mime_guess: str = "",
+) -> Dict[str, Any]:
+    """Trust gate rejected Gemini text — audio preserved; user may re-record or re-analyze."""
+    res = _speech_issue_result_base(
+        analysis_status="needs_review",
+        diagnosis_status="needs_review",
+        summary="답변 일부가 불명확하게 인식되었어요.",
+        prescription=(
+            "녹음은 저장되어 있습니다. 조금 더 또렷하게 다시 말하거나, "
+            "같은 녹음으로 다시 분석해 보세요."
+        ),
+        source_audio_size_bytes=source_audio_size_bytes,
+        audio_mime_guess=audio_mime_guess,
+    )
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=res,
+        ),
+    )
+    return res
+
+
 def apply_no_speech_result(
     mx: Dict[str, Any],
     q: Dict[str, Any],
@@ -463,23 +663,16 @@ def apply_no_speech_result(
     q_id: int,
     question_index: int,
     audio_key: str,
+    source_audio_size_bytes: int = 0,
 ) -> Dict[str, Any]:
-    """Mark answer as no-speech — does not advance exam pointer."""
-    res = {
-        "analysis_status": "no_speech",
-        "diagnosis_status": "no_speech",
-        "no_speech_detected": True,
-        "transcript": "",
-        "estimated_level": "측정 불가",
-        "estimated_level_display": "측정 불가",
-        "summary_speech_rehab": "음성이 감지되지 않았어요. 다시 녹음해 주세요.",
-        "prescription": "마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
-        "wpm": 0,
-        "sentence_count": 0,
-        "word_count": 0,
-        "fact_scores": {"text_type": 0.0, "accuracy": 0.0},
-        "rubric_scores": {"fluency": 0, "lexical": 0, "logic": 0, "grammar": 0},
-    }
+    """Legacy no-speech row — prefer ``apply_unclear_speech_result`` when audio exists."""
+    res = _speech_issue_result_base(
+        analysis_status="no_speech",
+        diagnosis_status="no_speech",
+        summary="음성이 감지되지 않았어요. 다시 녹음해 주세요.",
+        prescription="마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
+        source_audio_size_bytes=source_audio_size_bytes,
+    )
     upsert_mock_exam_result(
         mx,
         _result_row(

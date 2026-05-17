@@ -21,10 +21,12 @@ from services.evaluation import ai_diag
 from google import genai
 from google.genai import types as genai_types
 
-from .audio_mime import guess_audio_mime
+from .audio_mime import resolve_audio_mime
+from utils import audio_pipeline_diag
 from .eval_audio import build_audio_info
 from .eval_config import MODEL_NAME
 from .eval_grading import evaluate_grading_logic as run_hybrid_grading, strip_json_fence
+from utils.language_detection import detect_language_mismatch, language_mismatch_body
 from utils.text_utils import is_real_speech_transcript
 
 
@@ -168,6 +170,27 @@ def _extract_json_object(text: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _try_extract_transcription_from_broken_json(raw_text: str) -> str:
+    """Best-effort transcription field recovery when JSON parsing fails."""
+    text = raw_text or ""
+    for key in ("transcription", "transcript"):
+        pattern = rf'"{key}"\s*:\s*"((?:\\.|[^"\\])*)"'
+        match = re.search(pattern, text, re.DOTALL)
+        if not match:
+            continue
+        fragment = match.group(1)
+        try:
+            return str(json.loads(f'"{fragment}"')).strip()
+        except Exception:
+            return (
+                fragment.replace("\\n", "\n")
+                .replace('\\"', '"')
+                .replace("\\\\", "\\")
+                .strip()
+            )
+    return ""
+
+
 def _slice_semantic(parsed: Dict[str, Any]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     for k in SEMANTIC_KEYS:
@@ -250,7 +273,14 @@ def evaluate_grading_logic(
     return run_hybrid_grading(audio_info, transcript, question_text, semantic=semantic)
 
 
-def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, difficulty: int = 5):
+def analyze_audio_with_ai(
+    audio_bytes: bytes,
+    question_text: str,
+    api_key: str,
+    difficulty: int = 5,
+    *,
+    mime_guess: Optional[str] = None,
+):
     if not audio_bytes:
         ai_diag.log_pipeline_end(outcome="no_audio_bytes")
         return {"error": "녹음 바이트가 비어 있습니다.", "diagnosis_status": "api_error"}
@@ -262,7 +292,7 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         model_candidates = _build_model_candidates()
         logger.info("Gemini semantic fixed candidate queue: %s", model_candidates)
 
-        mime_type = guess_audio_mime(audio_bytes)
+        mime_type = resolve_audio_mime(audio_bytes, mime_guess)
         audio_info = build_audio_info(audio_bytes, mime_type)
         audio_info["mime_guess"] = mime_type
 
@@ -372,18 +402,13 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
             }
 
         parsed = _extract_json_object(raw_text)
+        parse_fragment = False
         if parsed is None:
-            # CRITICAL: do NOT fall back to raw_text as the transcript.
-            # When Gemini emits commentary or markdown outside the JSON
-            # envelope (typical hallucination path on silent / corrupted
-            # audio), pasting that raw text into ``transcription`` was the
-            # historical source of fake "Hi, I'm Ava…" self-introduction
-            # transcripts. The pipeline now reports the parse failure
-            # explicitly and surfaces an empty transcript so the view
-            # renders the no-speech empty state instead.
+            recovered = _try_extract_transcription_from_broken_json(raw_text)
+            parse_fragment = True
             parsed = {
-                "transcription": "",
-                "no_speech_detected": True,
+                "transcription": recovered,
+                "no_speech_detected": not recovered,
                 "feedback": "",
                 "raw_parse_fragment": True,
             }
@@ -391,16 +416,97 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         # Trust gate (single source of truth lives in utils.text_utils):
         # reject anything that doesn't look like genuine recognized speech
         # — placeholder phrases, question-echo, JSON fragments, etc.
-        raw_transcription = (
-            (parsed.get("transcription") or parsed.get("transcript") or "")
-        )
+        raw_transcription = str(
+            parsed.get("transcription") or parsed.get("transcript") or ""
+        ).strip()
+        lang_from_model = str(
+            parsed.get("detected_language")
+            or parsed.get("response_language")
+            or parsed.get("language")
+            or ""
+        ).strip().lower()
+        lang_kind = detect_language_mismatch(raw_transcription)
+        if not lang_kind and lang_from_model:
+            if any(tok in lang_from_model for tok in ("ko", "korean", "hangul", "한국")):
+                lang_kind = "korean"
+            elif lang_from_model not in ("en", "english", "eng", ""):
+                lang_kind = "possible_non_english"
+
+        if lang_kind:
+            preview = raw_transcription[:120]
+            semantic_slice = _slice_semantic(parsed)
+            grading = run_hybrid_grading(
+                audio_info, "", question_text, semantic=semantic_slice
+            )
+            metrics = grading.get("metrics") or {}
+            ai_diag.log_pipeline_end(outcome="non_english")
+            return {
+                "diagnosis_status": "non_english",
+                "analysis_status": "non_english",
+                "no_speech_detected": False,
+                "trust_gate_passed": False,
+                "trust_gate_rejected": False,
+                "trust_gate_result": f"language_{lang_kind}",
+                "transcript": "",
+                "non_english_preview": preview,
+                "language_mismatch_kind": lang_kind,
+                "estimated_level": "측정 불가",
+                "estimated_level_display": "측정 불가",
+                "estimated_range": "",
+                "summary_speech_rehab": language_mismatch_body(lang_kind),
+                "prescription": language_mismatch_body(lang_kind),
+                "tense_appropriateness_feedback": "",
+                "wpm": metrics.get("wpm", 0),
+                "sentence_count": 0,
+                "word_count": 0,
+                "fact_scores": {"text_type": 0.0, "accuracy": 0.0},
+                "rubric_scores": {"fluency": 0, "lexical": 0, "logic": 0, "grammar": 0},
+                "model_used": model_used or "unknown",
+                "audio_mime_guess": mime_type,
+                "source_audio_size_bytes": len(audio_bytes),
+                "question_type": grading.get("question_type", "A"),
+                "final_grade_score": 0,
+                "semantic_feedback": "",
+                "semantic_dimensions": grading.get("semantic_dimensions") or {},
+                "pronunciation_scores": {},
+                "pronunciation_feedback": "",
+                "grading_rule_flags": {},
+                "raw_text_parse_failed": "",
+            }
+
         ai_no_speech_flag = bool(parsed.get("no_speech_detected"))
-        if ai_no_speech_flag or not is_real_speech_transcript(raw_transcription):
+        trust_passed = is_real_speech_transcript(raw_transcription)
+
+        if trust_passed:
+            transcription = raw_transcription
+            no_speech = False
+            diagnosis_status = "ok"
+            trust_gate_result = "passed"
+            trust_gate_rejected = False
+        elif raw_transcription:
+            transcription = ""
+            no_speech = False
+            diagnosis_status = "needs_review"
+            trust_gate_result = "rejected_nonempty"
+            trust_gate_rejected = True
+        elif ai_no_speech_flag:
             transcription = ""
             no_speech = True
+            diagnosis_status = "no_speech"
+            trust_gate_result = "ai_no_speech_flag"
+            trust_gate_rejected = False
         else:
-            transcription = str(raw_transcription).strip()
-            no_speech = False
+            transcription = ""
+            no_speech = True
+            diagnosis_status = "no_speech"
+            trust_gate_result = "empty_transcript"
+            trust_gate_rejected = False
+
+        audio_pipeline_diag.log_transcript(transcript=transcription or raw_transcription)
+        audio_pipeline_diag.log_after_gemini(
+            response_ok=True,
+            raw_keys=sorted(parsed.keys()) if isinstance(parsed, dict) else [],
+        )
 
         semantic_slice = _slice_semantic(parsed)
         grading = run_hybrid_grading(audio_info, transcription, question_text, semantic=semantic_slice)
@@ -434,19 +540,17 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         }
 
         parse_failed = ""
-        if parsed.get("raw_parse_fragment"):
+        if parse_fragment or parsed.get("raw_parse_fragment"):
             parse_failed = raw_text[:1200]
-
-        # ``no_speech`` is its own diagnosis state — the view renders a
-        # calm empty-state card instead of fabricated content, but the
-        # exam continues normally (the user can re-record and analyze
-        # again from the recovery panel).
-        diagnosis_status = "no_speech" if no_speech else "ok"
 
         ai_diag.log_pipeline_end(outcome=diagnosis_status)
         return {
             "diagnosis_status": diagnosis_status,
             "no_speech_detected": no_speech,
+            "trust_gate_passed": trust_passed,
+            "trust_gate_rejected": trust_gate_rejected,
+            "trust_gate_result": trust_gate_result,
+            "raw_transcript_rejected": raw_transcription if trust_gate_rejected else "",
             "transcript": transcription,
             "estimated_level": final_level,
             "estimated_level_display": grading.get("estimated_level_display") or final_level,
@@ -487,8 +591,16 @@ def analyze_audio_with_ai(audio_bytes: bytes, question_text: str, api_key: str, 
         }
 
 
-def analyze_answer(audio_data: bytes, question_text: str, api_key: str):
-    return analyze_audio_with_ai(audio_data, question_text, api_key)
+def analyze_answer(
+    audio_data: bytes,
+    question_text: str,
+    api_key: str,
+    *,
+    mime_guess: Optional[str] = None,
+):
+    return analyze_audio_with_ai(
+        audio_data, question_text, api_key, mime_guess=mime_guess
+    )
 
 
 def list_available_gemini_models(api_key: str) -> List[str]:

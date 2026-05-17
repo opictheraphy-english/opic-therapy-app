@@ -28,6 +28,19 @@ from typing import Any, Dict, List, Tuple
 
 # (rule_id, regex, canonical_fix, korean_note)
 _GRAMMAR_RULES: Tuple[Tuple[str, str, str, str], ...] = (
+    (
+        "two_bedroom",
+        r"\btwo\s+bedroom\b",
+        "two bedrooms / a two-bedroom house",
+        "bedroom이 셀 수 있는 명사라서 숫자 two 뒤에는 복수형 bedrooms를 씁니다. "
+        "형용사처럼 쓸 때는 a two-bedroom house처럼 단수형으로 연결합니다.",
+    ),
+    (
+        "a_quite_good_house",
+        r"\ba\s+quite\s+good\s+house\b",
+        "quite a good house / a pretty nice place",
+        "형용사 순서상 quite는 a 바로 뒤에 오는 quite a … 패턴이 자연스럽습니다.",
+    ),
     ("very_like", r"\bvery\s+like\b", "really like / really enjoy",
      "‘very’는 동사 ‘like’를 직접 수식하지 못합니다."),
     ("very_much_like", r"\bvery\s+much\s+like\b", "really enjoy",
@@ -76,6 +89,31 @@ _GRAMMAR_RULES: Tuple[Tuple[str, str, str, str], ...] = (
 
 # (rule_id, phrase_regex, upgrades, korean_note)
 _ALT_RULES: Tuple[Tuple[str, str, Tuple[str, ...], str], ...] = (
+    (
+        "really_great",
+        r"\breally\s+great\b",
+        ("comfortable and practical", "cozy and convenient"),
+        '"great"은 너무 넓은 표현이라 집 묘사에서는 comfortable, cozy, convenient처럼 '
+        "구체적인 형용사가 더 좋아요.",
+    ),
+    (
+        "crazy_neighbor",
+        r"\bcrazy\s+neighbor\b",
+        ("a noisy neighbor", "a neighbor who can be a bit loud"),
+        "crazy는 강하고 비격식적이라 시험 답변에서는 noisy, loud처럼 중립적인 표현이 안전해요.",
+    ),
+    (
+        "just_wanna_say",
+        r"\bi\s+just\s+wanna\s+say\b",
+        ("overall, I'd say", "to be honest, I'd say"),
+        "구어체 wanna 대신 overall I'd say처럼 마무리 표현을 쓰면 자연스럽게 들려요.",
+    ),
+    (
+        "quite_good",
+        r"\bquite\s+good\b",
+        ("quite nice", "a pretty comfortable place"),
+        "good만 쓰기보다 nice place처럼 구체적으로 묘사하면 점수에 유리해요.",
+    ),
     ("a_lot_of", r"\ba\s+lot\s+of\b",
      ("plenty of", "a wide range of", "numerous"),
      "수량 강조 표현을 다양화하세요."),
