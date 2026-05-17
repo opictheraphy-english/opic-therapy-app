@@ -1,9 +1,10 @@
 """Global Streamlit CSS — premium medical AI design system."""
 
 GLOBAL_CSS = """
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css");
 
     :root {
+      --font-sans: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color-scheme: light only;
       --mint: #0d9488;
       --mint-soft: #ccfbf1;
@@ -32,7 +33,32 @@ GLOBAL_CSS = """
       --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    html, body, [class*="css"], .stMarkdown { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
+    html, body,
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    .block-container,
+    .stMarkdown,
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, input, textarea, select, label {
+      font-family: var(--font-sans) !important;
+    }
+
+    html, body, .stMarkdown {
+      color: var(--text);
+    }
+
+    html, body, .stMarkdown, .block-container {
+      line-height: 1.55;
+    }
+
+    small, .ds-muted, .tp-topic-sub, .cc-meta, .mx-record-hint {
+      line-height: 1.45;
+    }
+
+    h1, h2, h3, h4, h5, h6,
+    .mx-mode-title, .tp-topic-title, .cc-title, .tb-title {
+      line-height: 1.25;
+    }
 
     /* Lock html/body background to the page gradient so anchor navigations
      * (?nav=...) don't flash white between the old page unload and the new
@@ -247,32 +273,60 @@ GLOBAL_CSS = """
       margin-bottom: var(--space-2);
     }
 
-    /* --- Onboarding (first entry, scoped) — premium coach intro ---------- */
+    /* --- Onboarding (first entry, scoped) — premium mobile coach intro ----- */
     section.main:has(.onb-marker) {
+      color-scheme: light only;
       background:
-        radial-gradient(ellipse 90% 55% at 50% -10%, rgba(13, 148, 136, 0.11) 0%, transparent 55%),
-        linear-gradient(180deg, #fafaf9 0%, #f4f4f5 45%, #f1f5f9 100%) !important;
+        radial-gradient(ellipse 95% 60% at 50% -8%, rgba(20, 184, 166, 0.14) 0%, transparent 58%),
+        radial-gradient(ellipse 70% 45% at 100% 20%, rgba(204, 251, 241, 0.35) 0%, transparent 50%),
+        linear-gradient(180deg, #f8faf9 0%, #f6fbfa 42%, #f1f5f9 100%) !important;
+      color: #111827 !important;
     }
     section.main:has(.onb-marker) div.block-container {
-      max-width: 480px !important;
+      max-width: 520px !important;
       margin: 0 auto !important;
-      padding-top: 1.25rem !important;
-      padding-bottom: 5.5rem !important;
-      padding-left: 1.1rem !important;
-      padding-right: 1.1rem !important;
+      padding-top: 1rem !important;
+      padding-bottom: 5rem !important;
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
+    section.main:has(.onb-marker) .onb-shell {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
     }
     section.main:has(.onb-marker) .onb-progress {
       text-align: center;
-      margin: 0 0 1.1rem 0;
+      margin: 0 0 1rem 0;
+      padding: 0 0.15rem;
     }
     section.main:has(.onb-marker) .onb-progress-label {
       display: block;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      color: #6b7280 !important;
+      margin-bottom: 10px;
+    }
+    section.main:has(.onb-marker) .onb-progress-track {
+      display: block;
+      width: 100%;
+      max-width: 220px;
+      height: 6px;
+      margin: 0 auto 12px auto;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      border: 1px solid rgba(13, 148, 136, 0.08);
+    }
+    section.main:has(.onb-marker) .onb-progress-fill {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0f9f8f 0%, #14b8a6 55%, #2dd4bf 100%);
+      box-shadow: 0 0 12px rgba(20, 184, 166, 0.35);
+      transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     }
     section.main:has(.onb-marker) .onb-progress-dots {
       display: flex;
@@ -281,16 +335,16 @@ GLOBAL_CSS = """
       align-items: center;
     }
     section.main:has(.onb-marker) .onb-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 999px;
-      background: rgba(15, 23, 42, 0.12);
-      transition: transform 0.2s ease, background 0.2s ease;
+      background: rgba(15, 23, 42, 0.14);
+      transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
     }
     section.main:has(.onb-marker) .onb-dot--on {
-      background: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
-      transform: scale(1.15);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+      background: linear-gradient(135deg, #0f9f8f 0%, #14b8a6 100%);
+      transform: scale(1.2);
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
     }
     section.main:has(.onb-marker) .onb-hero-premium {
       border-radius: 24px;
@@ -317,18 +371,18 @@ GLOBAL_CSS = """
       margin-bottom: 14px;
     }
     section.main:has(.onb-marker) .onb-title-xl {
-      font-size: clamp(1.55rem, 5.2vw, 2rem);
+      font-size: clamp(1.5rem, 5vw, 1.95rem);
       font-weight: 800;
       letter-spacing: -0.035em;
-      color: var(--navy);
-      line-height: 1.22;
-      margin: 0 0 14px 0;
+      color: #111827 !important;
+      line-height: 1.2;
+      margin: 0 0 12px 0;
     }
     section.main:has(.onb-marker) .onb-sub-hero {
-      font-size: 1.02rem;
-      line-height: 1.62;
-      color: var(--text-secondary);
-      margin: 0 0 1.25rem 0;
+      font-size: 0.98rem;
+      line-height: 1.55;
+      color: #4b5563 !important;
+      margin: 0 0 1rem 0;
       font-weight: 500;
     }
     section.main:has(.onb-marker) .onb-mini-mock {
@@ -408,18 +462,16 @@ GLOBAL_CSS = """
       gap: 4px;
     }
     section.main:has(.onb-marker) .onb-mini-dot { opacity: 0.5; }
-    section.main:has(.onb-marker) .onb-block,
-    section.main:has(.onb-marker) .onb-block--tight,
-    section.main:has(.onb-marker) .onb-plan-block {
+    section.main:has(.onb-marker) .onb-head-card {
       border-radius: 24px;
-      padding: 1.35rem 1.2rem;
-      margin-bottom: 1rem;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-      border: 1px solid rgba(13, 148, 136, 0.1);
-      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.05);
+      padding: 1.25rem 1.15rem 1rem 1.15rem;
+      margin-bottom: 0.85rem;
+      background: #ffffff;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.06);
     }
-    section.main:has(.onb-marker) .onb-block--tight {
-      padding: 1.1rem 1.1rem 0.85rem 1.1rem;
+    section.main:has(.onb-marker) .onb-head-card--plan {
+      margin-bottom: 0.75rem;
     }
     section.main:has(.onb-marker) .onb-eyebrow {
       font-size: 0.7rem;
@@ -430,28 +482,106 @@ GLOBAL_CSS = """
       margin: 0 0 10px 0;
     }
     section.main:has(.onb-marker) .onb-h2 {
-      font-size: 1.22rem;
-      font-weight: 700;
-      color: var(--navy);
-      letter-spacing: -0.02em;
+      font-size: clamp(1.15rem, 4.5vw, 1.35rem);
+      font-weight: 800;
+      color: #111827 !important;
+      letter-spacing: -0.025em;
       margin: 0 0 8px 0;
-      line-height: 1.35;
+      line-height: 1.28;
     }
     section.main:has(.onb-marker) .onb-muted {
       font-size: 0.92rem;
       line-height: 1.55;
-      color: var(--text-muted);
-      margin: 0 0 4px 0;
+      color: #6b7280 !important;
+      margin: 0;
+      font-weight: 500;
     }
-    section.main:has(.onb-marker) .onb-plan-title {
-      margin-bottom: 12px;
+    section.main:has(.onb-marker) .onb-choice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 0.65rem;
+    }
+    section.main:has(.onb-marker) .onb-pick-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto auto;
+      gap: 2px 10px;
+      padding: 14px 14px 12px 14px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1.5px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    section.main:has(.onb-marker) .onb-pick-card--selected {
+      background: linear-gradient(165deg, #e6fffa 0%, #ffffff 48%);
+      border-color: rgba(20, 184, 166, 0.55);
+      box-shadow: 0 8px 24px rgba(20, 184, 166, 0.14);
+    }
+    section.main:has(.onb-marker) .onb-pick-check {
+      grid-row: 1 / span 2;
+      align-self: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #ffffff;
+      background: linear-gradient(135deg, #0f9f8f 0%, #14b8a6 100%);
+      box-shadow: 0 2px 8px rgba(20, 184, 166, 0.35);
+    }
+    section.main:has(.onb-marker) .onb-pick-check--empty {
+      background: #f3f4f6;
+      color: transparent;
+      box-shadow: none;
+      border: 1.5px solid rgba(15, 23, 42, 0.1);
+    }
+    section.main:has(.onb-marker) .onb-pick-badge {
+      grid-column: 2;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #0f766e;
+      margin-bottom: 0;
+    }
+    section.main:has(.onb-marker) .onb-pick-title {
+      grid-column: 2;
+      margin: 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #111827 !important;
+      line-height: 1.35;
+    }
+    section.main:has(.onb-marker) .onb-pick-body {
+      grid-column: 2;
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      color: #6b7280 !important;
+      font-weight: 500;
+    }
+    section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] {
+      margin: -4px 0 8px 0 !important;
+    }
+    section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button {
+      min-height: 2.35rem !important;
+      border-radius: 12px !important;
+      font-size: 0.82rem !important;
+      padding: 0.4rem 0.75rem !important;
+      white-space: nowrap !important;
     }
     section.main:has(.onb-marker) .onb-plan-card {
-      margin-top: 4px;
-      padding: 16px 14px;
-      border-radius: 18px;
-      background: rgba(204, 251, 241, 0.38);
-      border: 1px solid rgba(13, 148, 136, 0.16);
+      margin: 0 0 0.85rem 0;
+      padding: 18px 16px;
+      border-radius: 20px;
+      background: linear-gradient(165deg, #e6fffa 0%, #f0fdfa 40%, #ffffff 100%);
+      border: 1px solid rgba(20, 184, 166, 0.22);
+      box-shadow: 0 8px 28px rgba(20, 184, 166, 0.1);
     }
     section.main:has(.onb-marker) .onb-plan-eyebrow {
       font-size: 0.78rem;
@@ -470,35 +600,60 @@ GLOBAL_CSS = """
       list-style-type: decimal;
     }
     section.main:has(.onb-marker) .onb-plan-list li { margin-bottom: 8px; }
-    section.main:has(.onb-marker) .onb-plan-warm {
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-      margin: 1rem 0 0 0;
-      text-align: center;
-      font-weight: 500;
+    section.main:has(.onb-marker) .onb-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 0.35rem;
     }
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button {
-      border-radius: 18px !important;
-      min-height: 2.85rem !important;
-      font-weight: 600 !important;
-      white-space: pre-line !important;
-      line-height: 1.45 !important;
-      text-align: center !important;
-      padding-top: 0.85rem !important;
-      padding-bottom: 0.85rem !important;
+    section.main:has(.onb-marker) .onb-actions--hero {
+      margin-top: 0.15rem;
     }
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="primary"],
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%) !important;
+    section.main:has(.onb-marker) .onb-actions--stack {
+      gap: 10px;
+    }
+    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button {
+      border-radius: 15px !important;
+      min-height: 3rem !important;
+      font-weight: 700 !important;
+      font-size: 0.95rem !important;
+      letter-spacing: -0.01em;
+    }
+    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[kind="primary"],
+    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(135deg, #0f9f8f 0%, #14b8a6 100%) !important;
+      color: #ffffff !important;
       border: none !important;
-      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.28) !important;
+      box-shadow: 0 6px 20px rgba(20, 184, 166, 0.32) !important;
     }
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="secondary"],
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
-      border: 1.5px solid rgba(13, 148, 136, 0.28) !important;
-      background: rgba(255, 255, 255, 0.85) !important;
-      color: var(--navy) !important;
+    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[kind="secondary"],
+    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
+      background: #ffffff !important;
+      color: #111827 !important;
+      border: 1.5px solid rgba(15, 23, 42, 0.1) !important;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    }
+    section.main:has(.onb-marker) .onb-actions--split div[data-testid="column"] {
+      padding: 0 4px !important;
+    }
+    section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button[kind="primary"],
+    section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: rgba(20, 184, 166, 0.12) !important;
+      color: #0f766e !important;
+      border: 1.5px solid rgba(20, 184, 166, 0.45) !important;
+      box-shadow: none !important;
+    }
+    section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button[kind="secondary"],
+    section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
+      background: #f9fafb !important;
+      color: #6b7280 !important;
+      border: 1px solid rgba(15, 23, 42, 0.08) !important;
+    }
+    section.main:has(.onb-marker) [data-testid="stCaptionContainer"],
+    section.main:has(.onb-marker) [data-testid="stCaptionContainer"] p {
+      color: #9ca3af !important;
+      text-align: center;
+      font-size: 0.78rem !important;
     }
 
     /* --- Session splash (before Home, scoped) ----------------------------- */
@@ -1350,10 +1505,8 @@ GLOBAL_CSS = """
       background: rgba(15, 23, 42, 0.035);
     }
     .opic-bottom-nav__item--active {
-      color: var(--mint);
-      background: linear-gradient(180deg,
-        rgba(13, 148, 136, 0.14) 0%,
-        rgba(13, 148, 136, 0.09) 100%);
+      color: #0f766e;
+      background: #e6fffa;
       box-shadow: 0 1px 0 rgba(13, 148, 136, 0.10) inset;
     }
     .opic-bottom-nav__ico {
@@ -1518,10 +1671,44 @@ GLOBAL_CSS = """
       margin: 0;
     }
 
-    /* --- Streamlit tab bar (묘사 · 루틴 · 경험 · …) --------------------- */
-    /* Scoped pill bar — clean, no underline, mint highlight on the active
-     * tab. Default Streamlit tabs look like an admin tool; this is the
-     * single biggest visual win on the pattern screen. */
+    /* --- Pattern tab pills (session-state buttons, not st.tabs) -------- */
+    .pat-screen .pat-tab-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 14px 0;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      box-shadow: var(--shadow-card);
+    }
+    .pat-screen .pat-tab-row [data-testid="column"] {
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+    .pat-screen .pat-tab-row .stButton > button {
+      border-radius: 999px !important;
+      font-weight: 600 !important;
+      font-size: 0.88rem !important;
+      min-height: 36px !important;
+      padding: 8px 14px !important;
+      white-space: nowrap;
+    }
+    .pat-screen .pat-tab-row .stButton > button[kind="secondary"] {
+      color: var(--text-secondary) !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    .pat-screen .pat-tab-row .stButton > button[kind="primary"] {
+      color: #ffffff !important;
+      background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
+      border: none !important;
+      box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+    }
+
+    /* --- Streamlit tab bar (legacy st.tabs fallback) ------------------- */
     .pat-screen [data-testid="stTabs"] [role="tablist"] {
       gap: 6px;
       padding: 4px;
@@ -1878,6 +2065,74 @@ GLOBAL_CSS = """
       }
     }
 
+    /* --- Topic practice: selection screen (filters + compact cards) ----- */
+    .tp-select-intro {
+      margin-bottom: 4px;
+    }
+    .tp-select-summary {
+      margin: 10px 0 0 0;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: -0.01em;
+    }
+    .tp-select-visible {
+      margin: 0 0 10px 0;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .tp-select-visible b {
+      color: var(--mint);
+      font-weight: 700;
+    }
+    .tp-filter-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 12px 0 6px 0;
+    }
+    .tp-topic-card {
+      background: #ffffff;
+      border: 1px solid rgba(17, 24, 39, 0.08);
+      border-radius: var(--radius-md);
+      padding: 12px 14px 10px 14px;
+      margin: 0 0 6px 0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+    .tp-topic-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      margin: 0 0 4px 0;
+      line-height: 1.3;
+    }
+    .tp-topic-sub {
+      margin: 0 0 6px 0;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+    .tp-topic-meta {
+      margin: 0;
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--mint);
+      letter-spacing: -0.01em;
+    }
+    section.main:has(.mx-landing-marker) div[data-testid="column"] {
+      min-width: 0;
+    }
+    @media (max-width: 640px) {
+      section.main:has(.mx-landing-marker) div[data-testid="column"] {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 100% !important;
+      }
+    }
+
     /* ==================================================================
      * Mock exam screen (UI redesign step 4) — premium speaking studio.
      *
@@ -2007,6 +2262,18 @@ GLOBAL_CSS = """
       display: block;
     }
     .mx-listen-stage .mx-stage-eyebrow { color: var(--mint); }
+    .mx-listen-prep {
+      font-size: 0.84rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      margin: 0 0 10px 0;
+    }
+    .mx-listen-ready-label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #0f766e;
+      margin: 0 0 8px 0;
+    }
 
     /* --- Record stage (the screen's emotional center) ---------------- */
     .mx-record-stage {
@@ -2015,9 +2282,18 @@ GLOBAL_CSS = """
       border-radius: var(--radius-lg);
       padding: 24px 22px 18px 22px;
       margin: 0 0 18px 0;
-      color: #ecfdf5;
+      color: #ffffff !important;
       box-shadow: 0 14px 36px rgba(13, 148, 136, 0.18), 0 2px 8px rgba(15, 23, 42, 0.18);
       overflow: hidden;
+    }
+    /* Dark studio panel: always light text (never inherit page dark text). */
+    .mx-record-stage,
+    .mx-record-stage p,
+    .mx-record-stage div,
+    .mx-record-stage span,
+    .mx-record-stage strong,
+    .mx-record-stage b {
+      color: #ffffff !important;
     }
     .mx-record-stage::before {
       /* Soft glowing orb behind the recorder to give the dark panel a
@@ -2035,20 +2311,20 @@ GLOBAL_CSS = """
       font-weight: 700;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: rgba(204, 251, 241, 0.85);
+      color: rgba(204, 251, 241, 0.9) !important;
       margin: 0;
     }
     .mx-record-title {
       font-size: 1.15rem;
       font-weight: 700;
       margin: 6px 0 6px 0;
-      color: #ffffff;
+      color: #ffffff !important;
       letter-spacing: -0.015em;
     }
     .mx-record-hint {
       font-size: 0.84rem;
       line-height: 1.55;
-      color: rgba(236, 253, 245, 0.78);
+      color: rgba(255, 255, 255, 0.88) !important;
       margin: 0 0 14px 0;
     }
     .mx-record-saved {
@@ -2060,7 +2336,7 @@ GLOBAL_CSS = """
       border-radius: 999px;
       background: rgba(204, 251, 241, 0.18);
       border: 1px solid rgba(204, 251, 241, 0.25);
-      color: #d1fae5;
+      color: #d1fae5 !important;
       font-size: 0.78rem;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2080,7 +2356,7 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.07);
       border: 1px dashed rgba(204, 251, 241, 0.28);
       font-size: 0.82rem;
-      color: rgba(236, 253, 245, 0.78);
+      color: rgba(255, 255, 255, 0.88) !important;
       line-height: 1.5;
     }
 
@@ -2464,6 +2740,15 @@ GLOBAL_CSS = """
         color: #111827 !important;
         color-scheme: light only !important;
       }
+      .mx-record-stage,
+      .mx-record-stage * {
+        color: #ffffff !important;
+      }
+      .mx-record-stage .mx-record-hint,
+      .mx-record-stage .mx-record-empty,
+      .mx-record-stage p {
+        color: rgba(255, 255, 255, 0.88) !important;
+      }
     }
 
     [data-testid="stAppViewContainer"],
@@ -2562,8 +2847,8 @@ GLOBAL_CSS = """
 
     .opic-bottom-nav__item--active,
     a.opic-bottom-nav__item.opic-bottom-nav__item--active {
-      color: #14b8a6 !important;
-      background: rgba(20, 184, 166, 0.12) !important;
+      color: #0f766e !important;
+      background: #e6fffa !important;
     }
 
     .opic-bottom-nav__ico,
@@ -2605,14 +2890,54 @@ GLOBAL_CSS = """
       color: inherit;
     }
 
-    /* Recording panel keeps intentional dark studio styling */
+    /* Light cards — explicit dark text on white surfaces */
+    .tp-topic-card,
+    .tp-topic-card .tp-topic-title,
+    .tp-topic-card .tp-topic-sub {
+      color: #111827 !important;
+    }
+    .tp-topic-card .tp-topic-meta {
+      color: #0f766e !important;
+    }
+    .mx-question-card,
+    .mx-question-card .mx-question-topic,
+    .mx-question-card .mx-question-hint,
+    .mx-question-card .mx-question-type {
+      color: #111827 !important;
+    }
+    .mx-question-card .mx-question-hint {
+      color: #4b5563 !important;
+    }
+    .mx-rh-chip,
+    .mx-coach-chip,
+    .mx-status:not(.mx-status--error):not(.mx-status--warn) {
+      background: #f3f4f6 !important;
+      color: #111827 !important;
+    }
+
+    /* Dark gradient surfaces — white text (must override main { color: #111827 }) */
     .mx-record-stage,
-    .mx-record-stage .mx-record-title,
+    .mx-record-stage * {
+      color: #ffffff !important;
+    }
     .mx-record-stage .mx-record-hint,
-    .mx-record-stage .mx-record-eyebrow,
-    .mx-record-stage .mx-record-saved,
-    .mx-record-stage .mx-record-empty {
-      color: inherit;
+    .mx-record-stage .mx-record-empty,
+    .mx-record-stage p {
+      color: rgba(255, 255, 255, 0.88) !important;
+    }
+    .mx-record-stage .mx-record-eyebrow {
+      color: rgba(204, 251, 241, 0.9) !important;
+    }
+    .mx-record-stage .mx-record-title {
+      color: #ffffff !important;
+    }
+    .mx-record-stage .mx-record-saved {
+      color: #d1fae5 !important;
+    }
+    /* Mic recorder sits below the card; keep Streamlit buttons outside the panel readable */
+    section.main:has(.mx-record-stage) div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
+      background: rgba(255, 255, 255, 0.95) !important;
+      color: #111827 !important;
     }
 """
 

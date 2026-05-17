@@ -37,15 +37,53 @@ _CURRENT_COPY: dict[str, tuple[str, str]] = {
 
 
 def _progress_html(step: int) -> str:
+    pct = int((step / 4) * 100)
     dots = []
     for i in range(1, 5):
         cls = "onb-dot onb-dot--on" if i <= step else "onb-dot"
         dots.append(f'<span class="{cls}" aria-hidden="true"></span>')
     return (
-        '<nav class="onb-progress" aria-label="온보딩 진행">'
+        '<header class="onb-progress" aria-label="온보딩 진행">'
         f'<span class="onb-progress-label">Step {step} / 4</span>'
+        f'<div class="onb-progress-track" role="progressbar" aria-valuenow="{pct}" '
+        f'aria-valuemin="0" aria-valuemax="100">'
+        f'<span class="onb-progress-fill" style="width:{pct}%;"></span></div>'
         f'<div class="onb-progress-dots">{"".join(dots)}</div>'
-        "</nav>"
+        "</header>"
+    )
+
+
+def _shell_open(step: int) -> None:
+    st.markdown('<div class="onb-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="onb-shell" data-onb-step="{step}">', unsafe_allow_html=True)
+    st.markdown(_progress_html(step), unsafe_allow_html=True)
+
+
+def _shell_close() -> None:
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _head_block(title: str, subtitle: str) -> str:
+    return (
+        '<section class="onb-head-card">'
+        f'<h2 class="onb-h2">{html.escape(title)}</h2>'
+        f'<p class="onb-muted">{html.escape(subtitle)}</p>'
+        "</section>"
+    )
+
+
+def _choice_card_html(title: str, body: str, *, selected: bool, badge: str | None = None) -> str:
+    state = " onb-pick-card--selected" if selected else ""
+    mark = '<span class="onb-pick-check" aria-hidden="true">✓</span>' if selected else '<span class="onb-pick-check onb-pick-check--empty" aria-hidden="true"></span>'
+    badge_html = (
+        f'<span class="onb-pick-badge">{html.escape(badge)}</span>' if badge else ""
+    )
+    return (
+        f'<article class="onb-pick-card{state}" aria-pressed="{"true" if selected else "false"}">'
+        f"{mark}{badge_html}"
+        f'<p class="onb-pick-title">{html.escape(title)}</p>'
+        f'<p class="onb-pick-body">{html.escape(body)}</p>'
+        "</article>"
     )
 
 
@@ -144,8 +182,7 @@ def render_onboarding() -> None:
     step = int(ss.get("onboarding_step") or 1)
     step = max(1, min(4, step))
 
-    st.markdown('<div class="onb-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-    st.markdown(_progress_html(step), unsafe_allow_html=True)
+    _shell_open(step)
 
     if step == 1:
         st.markdown(
@@ -158,57 +195,60 @@ def render_onboarding() -> None:
     AI 피드백으로 문법·표현·흐름을<br/>
     한 번에 점검할 수 있어요.
   </p>
-  <div class="onb-mini-mock" aria-hidden="true">
+  <div class="onb-mini-mock" aria-label="연습 미리보기">
     <div class="onb-mini-head">
-      <span class="onb-mini-tag">오늘의 연습</span>
-      <span class="onb-mini-pill">1분 답변 연습</span>
+      <span class="onb-mini-tag">오늘의 연습 예시</span>
     </div>
     <p class="onb-mini-q">Tell me about your home.</p>
     <div class="onb-mini-flow">
       <span class="onb-mini-chip onb-mini-chip--rec">녹음하기</span>
-      <span class="onb-mini-arrow">→</span>
+      <span class="onb-mini-arrow" aria-hidden="true">→</span>
       <span class="onb-mini-chip onb-mini-chip--ai">AI 분석</span>
-      <span class="onb-mini-arrow">→</span>
+      <span class="onb-mini-arrow" aria-hidden="true">→</span>
       <span class="onb-mini-chip">다시 말하기</span>
-    </div>
-    <div class="onb-mini-foot">
-      <span>실전 질문</span><span class="onb-mini-dot">·</span><span>AI 피드백 준비됨</span>
     </div>
   </div>
 </section>
             """,
             unsafe_allow_html=True,
         )
+        st.markdown('<div class="onb-actions onb-actions--hero">', unsafe_allow_html=True)
         if st.button("시작하기", type="primary", use_container_width=True, key="onb_start"):
             ss["onboarding_step"] = 2
             st.rerun()
         if st.button("건너뛰기", use_container_width=True, key="onb_skip_bottom"):
             _skip_to_home(ss)
+        st.markdown("</div>", unsafe_allow_html=True)
+        _shell_close()
         return
 
     if step == 2:
         ss.setdefault("_onb_target", "IH")
         st.markdown(
-            """
-            <section class="onb-block onb-block--tight">
-              <h2 class="onb-h2">목표 등급을 골라 주세요</h2>
-              <p class="onb-muted">코칭 톤에만 반영돼요. 로그인은 필요 없습니다.</p>
-            </section>
-            """,
+            _head_block(
+                "목표 등급을 골라 주세요",
+                "코칭 톤에만 반영돼요. 로그인은 필요 없습니다.",
+            ),
             unsafe_allow_html=True,
         )
+        st.markdown('<div class="onb-choice-list">', unsafe_allow_html=True)
         for code, _short in _TARGET_OPTIONS:
             title, body = _TARGET_COPY[code]
             sel = ss.get("_onb_target") == code
-            prefix = "✓ " if sel else ""
+            st.markdown(
+                _choice_card_html(title, body, selected=sel, badge=title),
+                unsafe_allow_html=True,
+            )
             if st.button(
-                f"{prefix}{title}\n{body}",
+                "선택" if not sel else "선택됨",
                 type="primary" if sel else "secondary",
                 use_container_width=True,
                 key=f"onb_tgt_{code}",
             ):
                 ss["_onb_target"] = code
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="onb-actions onb-actions--split">', unsafe_allow_html=True)
         bc1, bc2 = st.columns(2)
         with bc1:
             if st.button("이전", key="onb_back_2", use_container_width=True):
@@ -218,31 +258,37 @@ def render_onboarding() -> None:
             if st.button("다음", type="primary", use_container_width=True, key="onb_next_2"):
                 ss["onboarding_step"] = 3
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        _shell_close()
         return
 
     if step == 3:
         ss.setdefault("_onb_current", "short")
         st.markdown(
-            """
-            <section class="onb-block onb-block--tight">
-              <h2 class="onb-h2">지금 말하기는 어느 쪽에 가깝나요?</h2>
-              <p class="onb-muted">가장 가까운 한 가지만 선택해 주세요.</p>
-            </section>
-            """,
+            _head_block(
+                "지금 말하기는 어느 쪽에 가깝나요?",
+                "가장 가까운 한 가지만 선택해 주세요.",
+            ),
             unsafe_allow_html=True,
         )
+        st.markdown('<div class="onb-choice-list">', unsafe_allow_html=True)
         for code, _label in _CURRENT_OPTIONS:
             title, sub = _CURRENT_COPY[code]
             sel = ss.get("_onb_current") == code
-            prefix = "✓ " if sel else ""
+            st.markdown(
+                _choice_card_html(title, sub, selected=sel),
+                unsafe_allow_html=True,
+            )
             if st.button(
-                f"{prefix}{title}\n{sub}",
+                "선택" if not sel else "선택됨",
                 type="primary" if sel else "secondary",
                 use_container_width=True,
                 key=f"onb_cur_{code}",
             ):
                 ss["_onb_current"] = code
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="onb-actions onb-actions--split">', unsafe_allow_html=True)
         bc1, bc2 = st.columns(2)
         with bc1:
             if st.button("이전", key="onb_back_3", use_container_width=True):
@@ -252,6 +298,8 @@ def render_onboarding() -> None:
             if st.button("다음", type="primary", use_container_width=True, key="onb_next_3"):
                 ss["onboarding_step"] = 4
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        _shell_close()
         return
 
     target = str(ss.get("_onb_target") or "IH")
@@ -260,21 +308,20 @@ def render_onboarding() -> None:
     blist = "".join(f"<li>{html.escape(b)}</li>" for b in bullets)
     st.markdown(
         f"""
-        <section class="onb-block onb-plan-block">
-          <h2 class="onb-h2 onb-plan-title">오늘은 이렇게 시작해볼까요?</h2>
-          <div class="onb-plan-card">
-            <p class="onb-plan-eyebrow">당신에게 추천하는 첫 연습 루트</p>
-            <ol class="onb-plan-list">{blist}</ol>
-          </div>
-          <p class="onb-plan-warm">
-            처음부터 완벽하게 말할 필요는 없어요.<br/>
-            녹음하고, 확인하고, 다시 말하는 과정이 실력입니다.
-          </p>
+        <section class="onb-head-card onb-head-card--plan">
+          <h2 class="onb-h2">오늘은 이렇게 시작해볼까요?</h2>
+          <p class="onb-muted">처음부터 완벽하게 말할 필요는 없어요.<br/>
+            짧게 말하고, 피드백 받고, 다시 말하는 과정이 실력입니다.</p>
+        </section>
+        <section class="onb-plan-card" aria-label="추천 루트">
+          <p class="onb-plan-eyebrow">추천 루트</p>
+          <ol class="onb-plan-list">{blist}</ol>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
+    st.markdown('<div class="onb-actions onb-actions--stack">', unsafe_allow_html=True)
     if st.button("이전", key="onb_back_4", use_container_width=True):
         ss["onboarding_step"] = 3
         st.rerun()
@@ -287,8 +334,10 @@ def render_onboarding() -> None:
 
     if st.button("홈에서 둘러보기", type="secondary", use_container_width=True, key="onb_home"):
         _finish_to_home(ss, target, current_key)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.caption("설정에서 「온보딩 다시 보기」를 켜면 이 안내를 다시 볼 수 있어요.")
+    _shell_close()
 
 
 __all__ = ["render_onboarding"]

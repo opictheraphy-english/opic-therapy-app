@@ -101,12 +101,11 @@ def _router_debug(tag: str, ss: Any, nav_p: str | None, mock_p: str | None) -> N
 
 
 _ALLOWED_PAGES = {"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS"}
-_ALLOWED_MOCK_SUBPAGES = {"PICK", "SURVEY", "TEST", "REPORT", "FINAL"}
+_ALLOWED_MOCK_SUBPAGES = {"PICK", "TOPIC", "SURVEY", "TEST", "REPORT", "FINAL"}
 
 nav_param = _q_one("nav")
 mock_param = _q_one("mock")
 reset_param = _q_one("reset")
-
 # 1. Explicit exam reset (home "처음부터 다시")
 if reset_param == "1" and (nav_param == "MOCK" or st.session_state.page == "MOCK"):
     from utils.exam_state import reset_exam_state
@@ -123,13 +122,22 @@ if nav_param in _ALLOWED_PAGES:
     st.session_state.page = nav_param
     if nav_param != "MOCK":
         st.session_state.mock_data["recording_active"] = False
+    # Do not reset practice routing on every ?nav=MOCK load — that wiped portal
+    # button state. Use ?nav=MOCK&reset_practice=1 or bottom-nav reset instead.
 
-# 3. Mock sub-screen from URL
+# 3. Mock sub-screen from URL (never force PICK over an active practice mode)
 if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
     mx = ensure_mock(st.session_state)
-    if mx.get("mock_page") != mock_param:
+    if mock_param == "PICK":
+        if not st.session_state.get("practice_portal_selected"):
+            mx["mock_page"] = "PICK"
+            st.session_state["mock_page"] = "PICK"
+    elif mx.get("mock_page") != mock_param:
         prev_m = mx.get("mock_page")
         mx["mock_page"] = mock_param
+        st.session_state["mock_page"] = mock_param
+        if mock_param in {"SURVEY", "TEST", "REPORT", "FINAL", "TOPIC"}:
+            st.session_state["practice_portal_selected"] = True
         if mock_param == "FINAL":
             mx["exam_finished"] = True
         elif mock_param in {"SURVEY", "TEST"}:

@@ -153,8 +153,7 @@ def _clear_topic_practice_state() -> None:
 
 def _exit_topic_practice_to_mode_picker(mx: dict) -> None:
     _clear_topic_practice_state()
-    _clear_mock_mode(mx)
-    mx["mock_page"] = "PICK"
+    reset_to_learning_portal()
 
 
 def _has_mock_mode(mx: dict) -> bool:
@@ -174,6 +173,215 @@ def _clear_mock_mode(mx: dict) -> None:
     st.session_state.pop("mock_mode", None)
     mx.pop("mock_mode", None)
     mx.pop("mock_mode_label", None)
+
+
+def _practice_portal_selected() -> bool:
+    return bool(st.session_state.get("practice_portal_selected"))
+
+
+def _sync_mock_routing_state(mx: dict) -> None:
+    """Align top-level routing keys with the mock namespace (portal buttons write both)."""
+    page = st.session_state.get("mock_page")
+    if page:
+        mx["mock_page"] = page
+    elif mx.get("mock_page"):
+        st.session_state["mock_page"] = mx["mock_page"]
+    else:
+        st.session_state["mock_page"] = "PICK"
+        mx["mock_page"] = "PICK"
+
+    if "mock_mode" in st.session_state:
+        mode_raw = st.session_state.get("mock_mode")
+        if mode_raw:
+            mx["mock_mode"] = str(mode_raw).strip().lower()
+            mx["mock_mode_label"] = _mock_mode_label(_mock_mode(mx))
+        else:
+            mx.pop("mock_mode", None)
+            mx.pop("mock_mode_label", None)
+    elif mx.get("mock_mode"):
+        st.session_state["mock_mode"] = mx["mock_mode"]
+
+
+def _set_mock_page(mx: dict, page: str) -> None:
+    st.session_state["mock_page"] = page
+    mx["mock_page"] = page
+
+
+def _get_mock_page(mx: dict) -> str:
+    return str(st.session_state.get("mock_page") or mx.get("mock_page") or "PICK")
+
+
+def reset_to_learning_portal() -> None:
+    """Return to the learning portal without deleting saved results."""
+    mx = mock_session()
+    st.session_state["practice_portal_selected"] = False
+    st.session_state["mock_mode"] = None
+    st.session_state["mock_page"] = "PICK"
+    st.session_state["topic_practice_step"] = None
+    st.session_state["selected_topic_id"] = None
+    mx["mock_page"] = "PICK"
+    mx.pop("mock_mode", None)
+    mx.pop("mock_mode_label", None)
+    mx.pop("_resume_confirmed", None)
+    st.session_state.pop("mock_mode", None)
+
+
+def _render_learning_portal_back_button(mx: dict) -> None:
+    if st.button(
+        "학습 방식 다시 선택",
+        key="mx_back_to_portal",
+        use_container_width=True,
+    ):
+        reset_to_learning_portal()
+        try:
+            st.query_params.clear()
+            st.query_params["nav"] = "MOCK"
+        except Exception:
+            pass
+        st.rerun()
+
+
+def _default_coaching_survey_results() -> dict:
+    from utils.session_state import settings_session
+
+    return {
+        "work": "사업·회사원",
+        "housing": "가족과 함께 거주",
+        "leisure": ["영화 보기", "공원 가기"],
+        "interests": ["음악 감상하기", "요리하기"],
+        "sports": ["조깅", "걷기"],
+        "travel": ["국내 여행"],
+        "difficulty": int(settings_session()["difficulty"]),
+    }
+
+
+def _ensure_coaching_exam(mx: dict) -> None:
+    from utils.session_state import settings_session
+
+    if not mx.get("survey_results"):
+        mx["survey_results"] = _default_coaching_survey_results()
+    mx["survey_completed"] = True
+    mx.setdefault("attempt_no", 1)
+    _exam = generate_test_set(
+        mx["survey_results"],
+        difficulty=int(settings_session()["difficulty"]),
+    )
+    mx["current_exam"] = _exam
+    mx["exam"] = _exam
+    mx["current_idx"] = 0
+    mx["results"] = []
+    mx["last_result"] = None
+    mx["question_play_counts"] = {}
+    mx["exam_listen_nonce"] = secrets.token_hex(8)
+    _now = iso_now()
+    mx["exam_started_at"] = _now
+    mx["exam_last_seen_at"] = _now
+    clear_mock_question_tts_keys()
+
+
+def _clear_reset_practice_query_param() -> None:
+    try:
+        if "reset_practice" in st.query_params:
+            del st.query_params["reset_practice"]
+        st.query_params["nav"] = "MOCK"
+    except Exception:
+        pass
+
+
+def _maybe_reset_practice_from_url() -> None:
+    """Handle ?nav=MOCK&reset_practice=1 only while the portal is visible (not before button handlers)."""
+    raw = st.query_params.get("reset_practice")
+    if isinstance(raw, list):
+        raw = raw[0] if raw else None
+    if raw != "1":
+        return
+    reset_to_learning_portal()
+    _clear_reset_practice_query_param()
+
+
+def _session_mock_mode() -> str | None:
+    raw = st.session_state.get("mock_mode")
+    if raw is None:
+        return None
+    mode = str(raw).strip().lower()
+    if mode in ("real_mock", "real", "exam"):
+        return "real_mock"
+    if mode == "coaching":
+        return "coaching"
+    if mode in ("topic_practice", "topic"):
+        return "topic_practice"
+    return None
+
+
+def _sync_portal_mode_to_mx(mx: dict, mode: str) -> None:
+    st.session_state["mock_mode"] = mode
+    mx["mock_mode"] = mode
+    mx["mock_mode_label"] = _mock_mode_label(mode)
+
+
+def _render_dev_portal_debug(mx: dict) -> None:
+    if not st.session_state.get("show_dev_debug"):
+        return
+    with st.expander("개발용 상태 확인", expanded=False):
+        st.json(
+            {
+                "page": st.session_state.get("page"),
+                "mock_page": _get_mock_page(mx),
+                "mock_mode": st.session_state.get("mock_mode"),
+                "practice_portal_selected": st.session_state.get("practice_portal_selected"),
+                "topic_practice_step": st.session_state.get("topic_practice_step"),
+                "selected_topic_id": st.session_state.get("selected_topic_id"),
+                "current_question_index": mx.get("current_idx"),
+            }
+        )
+
+
+def _render_coaching_flow(mx: dict) -> None:
+    if (
+        has_resumable_exam(mx)
+        and not mx.get("_resume_confirmed")
+        and _mock_mode(mx) == "coaching"
+    ):
+        render_resumable_landing(mx)
+        return
+    mock_page = _get_mock_page(mx)
+    if mock_page == "REPORT":
+        _render_report(mx)
+    else:
+        if mock_page != "TEST":
+            _ensure_coaching_exam(mx)
+            _set_mock_page(mx, "TEST")
+        _render_test(mx)
+
+
+def _render_real_mock_flow(mx: dict) -> None:
+    if (
+        has_resumable_exam(mx)
+        and not mx.get("_resume_confirmed")
+        and _mock_mode(mx) == "real_mock"
+    ):
+        render_resumable_landing(mx)
+        return
+    if is_completed_mock(mx) and _should_show_completed_final_report(mx):
+        render_top_bar(
+            "종합 리포트",
+            back_href="?nav=MOCK",
+            eyebrow=format_mock_attempt_label(mx),
+        )
+        from views.final_report import render_final_report
+
+        render_final_report(mx)
+        return
+    mock_page = _get_mock_page(mx)
+    if mock_page == "SURVEY":
+        _render_survey(mx)
+    elif mock_page == "TEST":
+        _render_test(mx)
+    elif mock_page == "REPORT":
+        _render_report(mx)
+    else:
+        _set_mock_page(mx, "SURVEY")
+        _render_survey(mx)
 
 
 def _is_real_mock(mx: dict) -> bool:
@@ -206,7 +414,7 @@ def _clear_in_progress_for_mode_pick(mx: dict) -> None:
     mx["analysis_result"] = None
     mx.pop("_show_exam_celebration", None)
     mx.pop("_view_completed_report", None)
-    mx["mock_page"] = "PICK"
+    reset_to_learning_portal()
 
 
 def _begin_new_practice_from_completed(mx: dict) -> bool:
@@ -217,20 +425,23 @@ def _begin_new_practice_from_completed(mx: dict) -> bool:
     mx["exam"] = []
     mx["results"] = []
     mx["current_idx"] = 0
-    mx["mock_page"] = "PICK"
-    _clear_mock_mode(mx)
+    reset_to_learning_portal()
     _clear_topic_practice_state()
     return True
 
 
-def render_mode_selector(mx: dict) -> None:
-    render_top_bar("모의고사", back_href="?nav=HOME", eyebrow="연습 방식")
+def render_learning_portal(mx: dict) -> None:
+    """Learning portal — three Streamlit mode buttons (no HTML/JS navigation)."""
+    _maybe_reset_practice_from_url()
+    mx = mock_session()
+
+    render_top_bar("학습하기", back_href="?nav=HOME", eyebrow="학습하기")
     st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
 
     st.markdown(
         """
-        <section class="mx-mode-intro" role="region" aria-label="연습 방식 선택">
-          <h2 class="mx-mode-title">오늘은 어떻게 연습할까요?</h2>
+        <section class="mx-mode-intro" role="region" aria-label="학습하기">
+          <h2 class="mx-mode-title">학습하기</h2>
           <p class="mx-mode-subtitle">실전처럼 풀 수도 있고, 원하는 주제만 골라 집중 연습할 수도 있어요.</p>
         </section>
         """,
@@ -253,10 +464,14 @@ def render_mode_selector(mx: dict) -> None:
             "실전 모의고사 시작",
             type="primary",
             use_container_width=True,
-            key="mx_pick_real_mock",
+            key="portal_start_real_mock",
         ):
-            _set_mock_mode(mx, "real_mock")
-            mx["mock_page"] = "SURVEY"
+            st.session_state["mock_mode"] = "real_mock"
+            st.session_state["practice_portal_selected"] = True
+            st.session_state["mock_page"] = "SURVEY"
+            _sync_portal_mode_to_mx(mx, "real_mock")
+            _set_mock_page(mx, "SURVEY")
+            _clear_reset_practice_query_param()
             st.rerun()
     with c2:
         st.markdown(
@@ -270,13 +485,18 @@ def render_mode_selector(mx: dict) -> None:
             unsafe_allow_html=True,
         )
         if st.button(
-            "AI 코칭 시작",
+            "AI 코칭 연습 시작",
             type="primary",
             use_container_width=True,
-            key="mx_pick_coaching",
+            key="portal_start_coaching",
         ):
-            _set_mock_mode(mx, "coaching")
-            mx["mock_page"] = "SURVEY"
+            st.session_state["mock_mode"] = "coaching"
+            st.session_state["practice_portal_selected"] = True
+            st.session_state["mock_page"] = "TEST"
+            _sync_portal_mode_to_mx(mx, "coaching")
+            _ensure_coaching_exam(mx)
+            _set_mock_page(mx, "TEST")
+            _clear_reset_practice_query_param()
             st.rerun()
 
     st.markdown(
@@ -293,62 +513,186 @@ def render_mode_selector(mx: dict) -> None:
         "주제별 연습 시작",
         type="primary",
         use_container_width=True,
-        key="mx_pick_topic_practice",
+        key="portal_start_topic_practice",
     ):
-        _set_mock_mode(mx, "topic_practice")
+        st.session_state["mock_mode"] = "topic_practice"
+        st.session_state["practice_portal_selected"] = True
         st.session_state["topic_practice_step"] = "select_topic"
-        mx["mock_page"] = "TOPIC"
+        st.session_state["selected_topic_id"] = None
+        st.session_state["topic_practice_question_index"] = 0
+        st.session_state["mock_page"] = "TOPIC"
+        _sync_portal_mode_to_mx(mx, "topic_practice")
+        _set_mock_page(mx, "TOPIC")
+        _clear_reset_practice_query_param()
+        st.rerun()
+
+    _render_dev_portal_debug(mx)
+
+
+def render_mode_selector(mx: dict) -> None:
+    """Backward-compatible alias for the learning portal."""
+    render_learning_portal(mx)
+
+
+_TOPIC_PRACTICE_CATEGORY_ORDER = (
+    "place",
+    "hobby",
+    "daily",
+    "experience",
+    "unexpected",
+    "roleplay",
+)
+
+_TOPIC_CATEGORY_FILTER_CHIPS: tuple[tuple[str, str], ...] = (
+    ("all", "전체"),
+    ("place", "장소"),
+    ("hobby", "취미"),
+    ("daily", "일상"),
+    ("experience", "경험·비교"),
+    ("unexpected", "돌발"),
+    ("roleplay", "롤플레이"),
+)
+
+
+def _sort_topics_by_category(topics: list) -> list:
+    order = {cat: idx for idx, cat in enumerate(_TOPIC_PRACTICE_CATEGORY_ORDER)}
+    return sorted(topics, key=lambda t: order.get(str(t.get("category") or ""), 99))
+
+
+def _filter_topic_sets(topics: list, *, category_filter: str, search_query: str) -> list:
+    cat = str(category_filter or "all").strip()
+    filtered = topics
+    if cat and cat != "all":
+        filtered = [t for t in filtered if str(t.get("category") or "") == cat]
+    q = str(search_query or "").strip().lower()
+    if q:
+        filtered = [
+            t
+            for t in filtered
+            if q in str(t.get("topic_title") or "").lower()
+            or q in str(t.get("topic_subtitle") or "").lower()
+        ]
+    return filtered
+
+
+def _render_topic_category_filter_chips() -> None:
+    if "topic_category_filter" not in st.session_state:
+        st.session_state["topic_category_filter"] = "all"
+    active = str(st.session_state.get("topic_category_filter") or "all")
+
+    st.markdown('<div class="tp-filter-label">카테고리</div>', unsafe_allow_html=True)
+    for chip_row in (_TOPIC_CATEGORY_FILTER_CHIPS[:4], _TOPIC_CATEGORY_FILTER_CHIPS[4:]):
+        cols = st.columns(len(chip_row), gap="small")
+        for col, (key, label) in zip(cols, chip_row):
+            with col:
+                if st.button(
+                    label,
+                    key=f"tp_cat_{key}",
+                    type="primary" if active == key else "secondary",
+                    use_container_width=True,
+                ):
+                    st.session_state["topic_category_filter"] = key
+                    st.rerun()
+
+
+def _render_topic_practice_card(topic: dict) -> None:
+    from data.topic_practice_questions import get_category_label
+
+    topic_id = str(topic.get("topic_id") or "")
+    title = html.escape(str(topic.get("topic_title") or ""))
+    subtitle = html.escape(str(topic.get("topic_subtitle") or ""))
+    level = html.escape(str(topic.get("level") or ""))
+    cat_label = html.escape(get_category_label(str(topic.get("category") or "")))
+    meta = f"{cat_label} · {level} · 3문항"
+
+    st.markdown(
+        f"""
+        <section class="tp-topic-card" role="region" aria-label="{title}">
+          <div class="tp-topic-title">{title}</div>
+          <p class="tp-topic-sub">{subtitle}</p>
+          <p class="tp-topic-meta">{meta}</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        "연습하기",
+        type="primary",
+        use_container_width=True,
+        key=f"mx_topic_pick_{topic_id}",
+    ):
+        st.session_state["selected_topic_id"] = topic_id
+        st.session_state["topic_practice_question_index"] = 0
+        st.session_state["topic_practice_results"] = []
+        st.session_state["topic_practice_step"] = "practice"
         st.rerun()
 
 
 def render_topic_selection(mx: dict) -> None:
-    from data.topic_practice_questions import get_topic_sets
+    from data.topic_practice_questions import get_category_label, get_topic_sets
 
     render_top_bar("주제별 연습", back_href="?nav=HOME", eyebrow="주제 선택")
     st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_learning_portal_back_button(mx)
+
+    all_topics = _sort_topics_by_category(get_topic_sets())
+    topic_count = len(all_topics)
+    total_question_count = topic_count * 3
 
     st.markdown(
-        """
-        <section class="mx-mode-intro" role="region" aria-label="주제별 연습 주제 선택">
+        f"""
+        <section class="mx-mode-intro tp-select-intro" role="region" aria-label="주제별 연습 주제 선택">
           <h2 class="mx-mode-title">주제별 연습</h2>
-          <p class="mx-mode-subtitle">오늘 집중해서 연습할 주제를 골라 주세요.</p>
+          <p class="mx-mode-subtitle">원하는 오픽 주제를 골라 3문항 콤보로 집중 연습해요.</p>
+          <p class="tp-select-summary">총 {topic_count}개 주제 · {total_question_count}개 질문</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    topics = get_topic_sets()
-    for row_start in range(0, len(topics), 2):
-        row_topics = topics[row_start : row_start + 2]
-        cols = st.columns(len(row_topics))
-        for col, topic in zip(cols, row_topics):
-            topic_id = str(topic.get("topic_id") or "")
-            title = html.escape(str(topic.get("topic_title") or ""))
-            subtitle = html.escape(str(topic.get("topic_subtitle") or ""))
-            level = html.escape(str(topic.get("level") or ""))
-            with col:
-                st.markdown(
-                    f"""
-                    <section class="continue-card continue-card--resume mx-mode-card" role="region"
-                             aria-label="{title}">
-                      <div class="cc-eyebrow">{level}</div>
-                      <div class="cc-title">{title}</div>
-                      <div class="cc-meta">{subtitle}<br/><b>3문항 콤보</b></div>
-                    </section>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                if st.button(
-                    "이 주제로 연습하기",
-                    type="primary",
-                    use_container_width=True,
-                    key=f"mx_topic_pick_{topic_id}",
-                ):
-                    st.session_state["selected_topic_id"] = topic_id
-                    st.session_state["topic_practice_question_index"] = 0
-                    st.session_state["topic_practice_results"] = []
-                    st.session_state["topic_practice_step"] = "practice"
-                    st.rerun()
+    _render_topic_category_filter_chips()
+
+    search_query = st.text_input(
+        "주제 검색",
+        placeholder="주제 검색하기",
+        key="topic_search_input",
+        label_visibility="collapsed",
+    )
+
+    category_filter = str(st.session_state.get("topic_category_filter") or "all")
+    topics = _filter_topic_sets(
+        all_topics,
+        category_filter=category_filter,
+        search_query=search_query,
+    )
+
+    if category_filter != "all" or str(search_query or "").strip():
+        cat_note = (
+            get_category_label(category_filter)
+            if category_filter != "all"
+            else "전체"
+        )
+        st.markdown(
+            f'<p class="tp-select-visible">표시 중 <b>{len(topics)}</b>개'
+            f'{" · " + html.escape(cat_note) if category_filter != "all" else ""}'
+            f'{" · 검색" if str(search_query or "").strip() else ""}</p>',
+            unsafe_allow_html=True,
+        )
+
+    if not topics:
+        st.info("조건에 맞는 주제가 없습니다. 다른 카테고리나 검색어를 시도해 보세요.")
+    else:
+        for row_start in range(0, len(topics), 2):
+            row_topics = topics[row_start : row_start + 2]
+            if len(row_topics) == 1:
+                _render_topic_practice_card(row_topics[0])
+            else:
+                col_l, col_r = st.columns(2, gap="medium")
+                with col_l:
+                    _render_topic_practice_card(row_topics[0])
+                with col_r:
+                    _render_topic_practice_card(row_topics[1])
+
 
     if st.button("다른 연습 방식 선택", use_container_width=True, key="mx_topic_back_to_modes"):
         _exit_topic_practice_to_mode_picker(mx)
@@ -924,14 +1268,20 @@ def render_topic_practice_complete(mx: dict) -> None:
     with c1:
         if st.button("실전 모의고사로 이동", use_container_width=True, key="mx_tp_goto_real_mock"):
             _clear_topic_practice_state()
+            st.session_state["practice_portal_selected"] = True
             _set_mock_mode(mx, "real_mock")
             mx["mock_page"] = "SURVEY"
             st.rerun()
     with c2:
         if st.button("AI 코칭 연습으로 이동", use_container_width=True, key="mx_tp_goto_coaching"):
             _clear_topic_practice_state()
-            _set_mock_mode(mx, "coaching")
-            mx["mock_page"] = "SURVEY"
+            st.session_state["mock_mode"] = "coaching"
+            st.session_state["practice_portal_selected"] = True
+            st.session_state["mock_page"] = "TEST"
+            _sync_portal_mode_to_mx(mx, "coaching")
+            _ensure_coaching_exam(mx)
+            _set_mock_page(mx, "TEST")
+            _clear_reset_practice_query_param()
             st.rerun()
 
     if st.button("모의고사 화면으로 돌아가기", use_container_width=True, key="mx_tp_back_modes"):
@@ -956,6 +1306,7 @@ def render_resumable_landing(mx: dict) -> None:
     mode_label = _mock_mode_label(mode)
     render_top_bar("모의고사", back_href="?nav=HOME", eyebrow=format_mock_attempt_label(mx))
     st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_learning_portal_back_button(mx)
 
     st.markdown(
         f"""
@@ -1129,8 +1480,20 @@ def render_completed_exam_landing(mx: dict) -> None:
 
 def render_mock_exam_shell() -> None:
     mx = mock_session()
-    if mx["mock_page"] not in {"PICK", "TOPIC", "SURVEY", "TEST", "REPORT", "FINAL"}:
-        mx["mock_page"] = "PICK" if _needs_mode_selection(mx) else "SURVEY"
+    _sync_mock_routing_state(mx)
+
+    page = _get_mock_page(mx)
+    if page not in {"PICK", "TOPIC", "SURVEY", "TEST", "REPORT", "FINAL"}:
+        _set_mock_page(mx, "PICK")
+        page = "PICK"
+
+    if page == "SURVEY" and not _practice_portal_selected():
+        _set_mock_page(mx, "PICK")
+        page = "PICK"
+
+    if page == "TOPIC" and not _practice_portal_selected():
+        _set_mock_page(mx, "PICK")
+        page = "PICK"
 
     mock_q = _mock_query_param()
     if is_completed_mock(mx):
@@ -1139,11 +1502,16 @@ def render_mock_exam_shell() -> None:
         elif mock_q is None:
             mx.pop("_view_completed_report", None)
 
-    if mock_q == "PICK":
-        mx["mock_page"] = "PICK"
+    if mock_q == "PICK" and not _practice_portal_selected():
+        _set_mock_page(mx, "PICK")
 
-    if mx["mock_page"] == "SURVEY" and has_resumable_exam(mx) and _has_mock_mode(mx):
-        mx["mock_page"] = "TEST"
+    if (
+        _get_mock_page(mx) == "SURVEY"
+        and has_resumable_exam(mx)
+        and _mock_mode(mx) == "real_mock"
+        and _practice_portal_selected()
+    ):
+        _set_mock_page(mx, "TEST")
 
     if mx.get("current_exam") and not is_completed_mock(mx):
         reconcile_mock_exam_pointer(mx)
@@ -1155,6 +1523,7 @@ def render_mock_exam_shell() -> None:
 
 def render_mock_flow() -> None:
     mx = mock_session()
+    _sync_mock_routing_state(mx)
     sync_settings_to_legacy(st.session_state)
 
     _pv = st.query_params.get("preview_final")
@@ -1171,42 +1540,34 @@ def render_mock_flow() -> None:
             pass
         st.rerun()
 
-    if is_completed_mock(mx) and not _should_show_completed_final_report(mx):
-        render_completed_exam_landing(mx)
+    if not _practice_portal_selected():
+        render_learning_portal(mx)
         return
 
-    if has_resumable_exam(mx) and not mx.get("_resume_confirmed"):
-        render_resumable_landing(mx)
-        return
+    mode = _session_mock_mode() or _mock_mode(mx)
 
-    if _is_topic_practice(mx):
+    if mode == "topic_practice":
         render_topic_practice_flow(mx)
         return
 
-    if _needs_mode_selection(mx) or mx.get("mock_page") == "PICK":
-        render_mode_selector(mx)
+    if mode == "coaching":
+        _render_coaching_flow(mx)
         return
 
-    if is_completed_mock(mx) and _should_show_completed_final_report(mx):
-        render_top_bar(
-            "종합 리포트",
-            back_href="?nav=MOCK",
-            eyebrow=format_mock_attempt_label(mx),
-        )
-        from views.final_report import render_final_report
-
-        render_final_report(mx)
+    if mode == "real_mock":
+        if is_completed_mock(mx) and not _should_show_completed_final_report(mx):
+            render_completed_exam_landing(mx)
+            return
+        _render_real_mock_flow(mx)
         return
 
-    if mx["mock_page"] == "SURVEY":
-        _render_survey(mx)
-    elif mx["mock_page"] == "TEST":
-        _render_test(mx)
-    elif mx["mock_page"] == "REPORT":
-        _render_report(mx)
+    # Legacy / unknown mode — show portal again.
+    st.session_state["practice_portal_selected"] = False
+    render_learning_portal(mx)
 
 
 def _render_survey(mx: dict) -> None:
+    _render_learning_portal_back_button(mx)
     st.title("📋 Background Survey")
     st.write("당신의 상황에 맞는 답변을 선택해주세요. 이 선택에 따라 문제가 출제됩니다.")
     # The "final report preview" button seeds synthetic demo transcripts
@@ -1368,6 +1729,150 @@ def _render_survey(mx: dict) -> None:
         st.rerun()
 
 
+def _mock_tts_session_keys(q_id: int, voice_id: str) -> tuple[str, str, str]:
+    mock_err_key = f"_mock_q_tts_err_{q_id}"
+    pref_key = f"_mock_tts_pref_{q_id}_{voice_id}"
+    fail_key = f"_mock_pref_fail_{q_id}"
+    return mock_err_key, pref_key, fail_key
+
+
+def _load_mock_question_tts(q_text: str, voice_id: str, q_id: int) -> dict | None:
+    """Fetch question TTS into session state. Call only from button/fragment — never block first paint."""
+    mock_err_key, pref_key, fail_key = _mock_tts_session_keys(q_id, voice_id)
+    cached = st.session_state.get(pref_key)
+    if isinstance(cached, dict) and cached.get("audio_bytes"):
+        return cached
+    if st.session_state.get(fail_key):
+        return None
+    try:
+        payload = tts_audio_cached(
+            q_text,
+            voice_id,
+            DEFAULT_TTS_SPEAKING_RATE,
+            DEFAULT_TTS_PITCH,
+        )
+        st.session_state[pref_key] = payload
+        st.session_state.pop(mock_err_key, None)
+        return payload if isinstance(payload, dict) else None
+    except Exception as e:
+        st.session_state[fail_key] = True
+        st.session_state[mock_err_key] = str(e)
+        logger.warning("Mock exam TTS load failed: %s: %s", type(e).__name__, e)
+        return None
+
+
+def _render_mock_question_audio_when_ready(
+    mx: dict,
+    q_id: int,
+    payload: dict,
+) -> None:
+    st.markdown(
+        '<p class="mx-listen-ready-label">질문 듣기</p>',
+        unsafe_allow_html=True,
+    )
+    render_exam_question_audio_player(
+        payload["audio_bytes"],
+        payload.get("audio_format", "audio/mp3"),
+        str(mx["exam_listen_nonce"]),
+        int(q_id),
+        max_plays=2,
+    )
+
+
+def _render_mock_question_listen_stage(mx: dict, q: dict, q_id: int) -> None:
+    """Listen UI — never blocks the record stage; TTS loads lazily."""
+    q_text = q["question"]
+    voice_id = neural2_voice_for_session()
+    mock_err_key, pref_key, fail_key = _mock_tts_session_keys(q_id, voice_id)
+
+    st.markdown(
+        '<div class="mx-listen-stage">'
+        '<span class="mx-stage-eyebrow">음성 듣기 · 최대 2회</span>',
+        unsafe_allow_html=True,
+    )
+
+    err_msg = st.session_state.get(mock_err_key)
+    if err_msg:
+        st.markdown(
+            f'<div class="mx-status mx-status--error">'
+            f'<span class="mx-status-icon">⚠️</span>'
+            f'<span>질문 음성을 만들 수 없습니다.<br>{html.escape(err_msg)}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("다시 시도", key=f"mock_tts_retry_{q_id}"):
+            st.session_state.pop(fail_key, None)
+            st.session_state.pop(pref_key, None)
+            st.session_state.pop(mock_err_key, None)
+            st.session_state.pop(f"_mock_tts_frag_pass_{q_id}_{voice_id}", None)
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    payload = st.session_state.get(pref_key)
+    if isinstance(payload, dict) and payload.get("audio_bytes"):
+        _render_mock_question_audio_when_ready(mx, q_id, payload)
+    else:
+        st.markdown(
+            '<div class="mx-listen-prep">'
+            "질문 음성을 준비 중이에요. 잠시 후 다시 눌러 주세요."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        if st.button("질문 듣기", key=f"mock_listen_load_{q_id}"):
+            with st.spinner("질문 음성을 준비하는 중…"):
+                _load_mock_question_tts(q_text, voice_id, q_id)
+            st.rerun()
+        _maybe_auto_prefetch_mock_question_tts(mx, q_id, q_text, voice_id)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _maybe_auto_prefetch_mock_question_tts(
+    mx: dict,
+    q_id: int,
+    q_text: str,
+    voice_id: str,
+) -> None:
+    """Background TTS in a fragment so the main page (recorder) paints first."""
+    if not hasattr(st, "fragment"):
+        return
+    _, pref_key, fail_key = _mock_tts_session_keys(q_id, voice_id)
+    if pref_key in st.session_state or st.session_state.get(fail_key):
+        return
+    try:
+        from datetime import timedelta
+
+        run_every = timedelta(milliseconds=800)
+    except Exception:
+        return
+
+    pass_key = f"_mock_tts_frag_pass_{q_id}_{voice_id}"
+
+    def _auto_prefetch_listen_audio() -> None:
+        _, pref_key, fail_key = _mock_tts_session_keys(q_id, voice_id)
+        payload = st.session_state.get(pref_key)
+        if isinstance(payload, dict) and payload.get("audio_bytes"):
+            _render_mock_question_audio_when_ready(mx, q_id, payload)
+            return
+        if st.session_state.get(fail_key):
+            return
+        passes = int(st.session_state.get(pass_key) or 0)
+        st.session_state[pass_key] = passes + 1
+        if passes < 1:
+            return
+        with st.spinner("질문 음성을 준비하는 중…"):
+            loaded = _load_mock_question_tts(q_text, voice_id, q_id)
+        if isinstance(loaded, dict) and loaded.get("audio_bytes"):
+            _render_mock_question_audio_when_ready(mx, q_id, loaded)
+
+    try:
+        frag = st.fragment(run_every=run_every)(_auto_prefetch_listen_audio)
+    except TypeError:
+        return
+    frag()
+
+
 def _render_test(mx: dict) -> None:
     api_key = get_gemini_api_key()
     if not api_key:
@@ -1400,10 +1905,12 @@ def _render_test(mx: dict) -> None:
     q_id = q["id"]
     audio_key = f"q_{q_id}"
     total = len(_exam_run)
+    _mode_lbl = _mock_mode_label(_mock_mode(mx))
+    _progress_lbl = format_mock_attempt_label(mx, q_id=int(q_id), total=int(total))
     render_top_bar(
         f"Q{q_id} · {q.get('topic', '')}".strip(" ·"),
         back_href="?nav=MOCK&mock=SURVEY",
-        eyebrow=format_mock_attempt_label(mx, q_id=int(q_id), total=int(total)),
+        eyebrow=f"{_mode_lbl} · {_progress_lbl}",
     )
 
     # Marker — activates the ``section.main:has(.mx-marker)`` Streamlit-widget
@@ -1411,6 +1918,7 @@ def _render_test(mx: dict) -> None:
     # styled, expander cards). Stays invisible (``display:none`` via empty
     # element) so it only acts as a CSS sentinel.
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_learning_portal_back_button(mx)
 
     # --- Pending recovery branch -----------------------------------------
     # When a previous analysis attempt failed for THIS question, we never
@@ -1460,60 +1968,8 @@ def _render_test(mx: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    q_text = q["question"]
-    voice_id = neural2_voice_for_session()
-
-    mock_err_key = f"_mock_q_tts_err_{q_id}"
-    pref_key = f"_mock_tts_pref_{q_id}_{voice_id}"
-    fail_key = f"_mock_pref_fail_{q_id}"
-
-    if pref_key not in st.session_state and not st.session_state.get(fail_key):
-        try:
-            st.session_state[pref_key] = tts_audio_cached(
-                q_text,
-                voice_id,
-                DEFAULT_TTS_SPEAKING_RATE,
-                DEFAULT_TTS_PITCH,
-            )
-            st.session_state.pop(mock_err_key, None)
-        except Exception as e:
-            st.session_state[fail_key] = True
-            st.session_state[mock_err_key] = str(e)
-            logger.warning("Mock exam TTS prefetch failed: %s: %s", type(e).__name__, e)
-
-    # 3) Listen stage — branded label above the audio player.
-    st.markdown(
-        '<div class="mx-listen-stage">'
-        '<span class="mx-stage-eyebrow">음성 듣기 · 최대 2회</span>',
-        unsafe_allow_html=True,
-    )
-
-    err_msg = st.session_state.get(mock_err_key)
-    if err_msg:
-        st.markdown(
-            f'<div class="mx-status mx-status--error">'
-            f'<span class="mx-status-icon">⚠️</span>'
-            f'<span>질문 음성을 만들 수 없습니다.<br>{html.escape(err_msg)}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-        if st.button("다시 시도", key=f"mock_tts_retry_{q_id}"):
-            st.session_state.pop(fail_key, None)
-            st.session_state.pop(pref_key, None)
-            st.session_state.pop(mock_err_key, None)
-            st.rerun()
-
-    payload = st.session_state.get(pref_key)
-    if isinstance(payload, dict) and payload.get("audio_bytes"):
-        render_exam_question_audio_player(
-            payload["audio_bytes"],
-            payload.get("audio_format", "audio/mp3"),
-            str(mx["exam_listen_nonce"]),
-            int(q_id),
-            max_plays=2,
-        )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    # 3) Listen stage — TTS loads lazily (never blocks recorder below).
+    _render_mock_question_listen_stage(mx, q, q_id)
 
     # 4) Record stage — the dark-teal "studio" panel. The mic_recorder
     # component renders an iframe so we can only style the wrapper, but
@@ -2061,6 +2517,7 @@ def _render_report(mx: dict) -> None:
 
     # Marker for the scoped Streamlit-widget overrides (button + expander).
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_learning_portal_back_button(mx)
 
     _exam_run = mx.get("current_exam") or mx["exam"]
     if _exam_run:

@@ -58,11 +58,20 @@ _SVG = {
         '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>'
         '<circle cx="12" cy="12" r="3"/></svg>'
     ),
+    "study": (
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" '
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        'stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>'
+        '<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'
+        '<line x1="8" y1="6" x2="16" y2="6"/>'
+        '<line x1="8" y1="10" x2="14" y2="10"/></svg>'
+    ),
 }
 
 NAV_ITEMS = (
     ("HOME", "홈", "home"),
-    ("MOCK", "모의고사", "mic"),
+    ("MOCK", "학습하기", "study"),
     ("PATTERN", "패턴", "wave"),
     ("SCRIPTS", "스크립트", "file"),
     ("LECTURES", "강의", "play"),
@@ -93,12 +102,18 @@ def navigate_to(
         if isinstance(md, dict):
             md["recording_active"] = False
 
-    if page == "MOCK" and mock:
+    if page == "MOCK":
         from utils.session_state import ensure_mock
+        from views.mock_exam import reset_to_learning_portal
 
         mx = ensure_mock(st.session_state)
         prev_m = mx.get("mock_page")
-        mx["mock_page"] = mock
+        if mock:
+            mx["mock_page"] = mock
+            st.session_state["mock_page"] = mock
+            st.session_state["practice_portal_selected"] = True
+        else:
+            reset_to_learning_portal()
         if mock == "FINAL":
             mx["exam_finished"] = True
         elif mock in {"SURVEY", "TEST"}:
@@ -116,6 +131,8 @@ def navigate_to(
         st.query_params["nav"] = page
         if mock:
             st.query_params["mock"] = mock
+        elif page == "MOCK":
+            st.query_params["reset_practice"] = "1"
         if reset:
             st.query_params["reset"] = "1"
     except Exception:
@@ -152,7 +169,13 @@ _NAV_SAME_TAB_SCRIPT = """
     var params = new URLSearchParams(window.location.search);
     params.set("nav", page);
     params.delete("reset");
-    if (page !== "MOCK") params.delete("mock");
+    if (page === "MOCK") {
+      params.set("reset_practice", "1");
+      params.delete("mock");
+    } else {
+      params.delete("mock");
+      params.delete("reset_practice");
+    }
     var qs = params.toString();
     var url = window.location.pathname + (qs ? "?" + qs : "");
     window.location.assign(url);
@@ -170,9 +193,10 @@ def _build_opic_bottom_nav_html(page: str) -> str:
         aria = ' aria-current="page"' if page == key else ""
         svg = _SVG.get(ico, _SVG["home"])
         safe_key = html.escape(key)
+        href = f"?nav={safe_key}&reset_practice=1" if key == "MOCK" else f"?nav={safe_key}"
         tabs.append(
             f'<a class="opic-bottom-nav__item{active}"'
-            f' href="?nav={safe_key}"'
+            f' href="{href}"'
             f' target="_self"'
             f' data-nav="{safe_key}"'
             f' role="tab"'

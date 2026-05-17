@@ -35,6 +35,37 @@ def _render_hero() -> None:
     )
 
 
+def _render_pattern_tab_bar(tabs_model: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Session-state tab pills — avoids Streamlit 1.50 st.tabs leaking internal key text."""
+    tab_ids = [t["tab_id"] for t in tabs_model]
+    if "pattern_active_tab" not in st.session_state:
+        st.session_state.pattern_active_tab = tab_ids[0]
+    if st.session_state.pattern_active_tab not in tab_ids:
+        st.session_state.pattern_active_tab = tab_ids[0]
+
+    st.markdown('<div class="pat-tab-row" role="tablist" aria-label="패턴 유형">', unsafe_allow_html=True)
+    cols = st.columns(len(tabs_model))
+    for col, tab in zip(cols, tabs_model):
+        tid = tab["tab_id"]
+        label = tab["label"]
+        is_active = st.session_state.pattern_active_tab == tid
+        with col:
+            if st.button(
+                label,
+                key=f"pat_tab_{tid}",
+                type="primary" if is_active else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state.pattern_active_tab = tid
+                st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    return next(
+        (t for t in tabs_model if t["tab_id"] == st.session_state.pattern_active_tab),
+        tabs_model[0],
+    )
+
+
 def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[str, Any]]) -> None:
     cnt = len(patterns)
     if not patterns:
@@ -62,26 +93,20 @@ def render_patterns() -> None:
     _render_hero()
 
     tabs_model = build_pattern_tabs_model()
-    tabs = st.tabs([t["label"] for t in tabs_model])
+    active = _render_pattern_tab_bar(tabs_model)
+    tid = active["tab_id"]
+    sections = active.get("sections") or []
+    empty_msg = active.get("empty_message")
 
-    for panel, tab in zip(tabs, tabs_model):
-        with panel:
-            tid = tab["tab_id"]
-            sections = tab.get("sections") or []
-            empty_msg = tab.get("empty_message")
-
-            if empty_msg and not sections:
-                st.info(empty_msg)
-                continue
-
-            if not sections:
-                st.caption("내용 없음")
-                continue
-
-            for si, sec in enumerate(sections):
-                title = sec.get("title") or ""
-                patterns: List[Dict[str, Any]] = sec.get("patterns") or []
-                sec_uid = _safe_key(f"{tid}_{sec.get('section_id') or si}")
-                _render_section(tid, sec_uid, title, patterns)
+    if empty_msg and not sections:
+        st.info(empty_msg)
+    elif not sections:
+        st.caption("내용 없음")
+    else:
+        for si, sec in enumerate(sections):
+            title = sec.get("title") or ""
+            patterns: List[Dict[str, Any]] = sec.get("patterns") or []
+            sec_uid = _safe_key(f"{tid}_{sec.get('section_id') or si}")
+            _render_section(tid, sec_uid, title, patterns)
 
     st.markdown("</div>", unsafe_allow_html=True)

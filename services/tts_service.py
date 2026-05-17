@@ -232,6 +232,7 @@ def clear_mock_question_tts_keys() -> None:
         "_mock_tts_pref_",
         "_mock_q_display_",
         "_mock_pref_fail_",
+        "_mock_tts_frag_pass_",
     )
     for k in list(st.session_state.keys()):
         if k.startswith(prefixes):
