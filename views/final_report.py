@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from components.collapsible_section import render_collapsible_section
-from components.smart_feedback import render_smart_feedback_block
+from components.coaching_experience import render_structured_coaching_report
 from services.exam_analytics import compute_exam_aggregates, detect_risk_flags, summary_rows_for_table
 from utils.exam_state import reset_exam_state, start_new_mock_attempt
 from utils.local_profile import sync_user_progress
@@ -87,9 +87,9 @@ _REPORT_CSS = """
   background: #0f172a08;
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  max-height: 220px;
-  overflow-y: auto;
   white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 </style>
 """
@@ -360,7 +360,14 @@ def render_final_report(mx: Dict[str, Any]) -> None:
             # Only run when the trust gate has accepted the transcript so we
             # never "fix grammar" on hallucinated text.
             if tx_is_real:
-                render_smart_feedback_block(tx_raw)
+                st.markdown("##### [D-ii] 코칭 피드백 (문법 · 표현 · 구조)")
+                render_structured_coaching_report(
+                    res,
+                    tx_raw,
+                    int(q or 0),
+                    show_hero=True,
+                    question_text=str(r.get("question") or ""),
+                )
 
             st.markdown("##### [E] 세부 점수")
             rs = res.get("rubric_scores") or {}

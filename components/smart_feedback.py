@@ -37,9 +37,9 @@ def render_grammar_corrections(
         return 0
     cards: List[str] = []
     for row in rows:
-        wrong = html.escape(row.get("wrong", ""))
-        right = html.escape(row.get("right", ""))
-        note = html.escape(row.get("note", ""))
+        wrong = html.escape(row.get("wrong") or row.get("before") or "")
+        right = html.escape(row.get("right") or row.get("after") or "")
+        note = html.escape(row.get("note") or row.get("reason") or "")
         cards.append(
             f'<div class="grammar-fix coach-gf-card">'
             f'<p class="gf-label">문장</p>'
@@ -77,9 +77,9 @@ def render_alternative_expressions(
         return 0
     cards: List[str] = []
     for row in rows:
-        phrase = html.escape(str(row.get("phrase", "")))
-        note = html.escape(str(row.get("note", "")))
-        alts = row.get("alternatives") or []
+        phrase = html.escape(str(row.get("phrase") or row.get("before") or ""))
+        note = html.escape(str(row.get("note") or row.get("reason") or ""))
+        alts = row.get("alternatives") or row.get("better") or []
         if not isinstance(alts, list):
             continue
         alt_html = " · ".join(

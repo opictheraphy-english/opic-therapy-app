@@ -844,7 +844,13 @@ def _render_detailed_coaching_for_result(lr: dict, q_label: int, heard_raw: str)
         height=140,
         key=f"tp_restored_transcript_q_{q_label}",
     )
-    render_structured_coaching_report(lr, heard_raw, int(q_label), show_hero=True)
+    render_structured_coaching_report(
+        lr,
+        heard_raw,
+        int(q_label),
+        show_hero=True,
+        question_text=str(lr.get("question") or ""),
+    )
 
 
 def _topic_back_to_select_topic() -> None:
@@ -3151,7 +3157,13 @@ def _render_report(mx: dict) -> None:
             )
 
         if (_latest_ok_coaching or _has_real_speech) and not _is_real_mock(mx):
-            render_structured_coaching_report(_lr, _heard_raw, _lq, show_hero=True)
+            render_structured_coaching_report(
+                _lr,
+                _heard_raw,
+                _lq,
+                show_hero=True,
+                question_text=str(q.get("question") or ""),
+            )
         elif _lr.get("diagnosis_status") == "analysis_pending":
             pass
         else:

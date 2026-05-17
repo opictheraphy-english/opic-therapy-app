@@ -334,6 +334,12 @@ def pronunciation_comment(result: Dict[str, Any]) -> str:
     except (TypeError, ValueError):
         w = 0.0
 
+    if w >= 260:
+        return (
+            "속도가 빠르게 측정됐어요. 실제 말하기 속도뿐 아니라 "
+            "녹음 길이 계산이나 문장 인식 방식의 영향도 있을 수 있어요. "
+            "다음 답변에서는 문장 끝마다 0.5초 정도 쉬어 주세요."
+        )
     if w >= 220:
         return (
             "속도가 상당히 빠르게 측정됐어요. 실제 말하기 속도라기보다 "
