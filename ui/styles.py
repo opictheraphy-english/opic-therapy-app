@@ -2266,6 +2266,96 @@ GLOBAL_CSS = """
       color: var(--text-muted);
       letter-spacing: -0.01em;
     }
+    /* --- Final report preview (real mock completion) ------------------- */
+    .mx-fr-preview {
+      margin: 16px 0 18px 0;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(165deg, rgba(204, 251, 241, 0.55) 0%, #ffffff 72%);
+      border: 1px solid rgba(13, 148, 136, 0.18);
+      box-shadow: 0 10px 28px rgba(13, 148, 136, 0.08);
+    }
+    .mx-frp-eyebrow {
+      margin: 0 0 12px 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f766e;
+      letter-spacing: -0.02em;
+    }
+    .mx-frp-stats {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .mx-frp-stats li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .mx-frp-label {
+      font-weight: 600;
+    }
+    .mx-frp-val {
+      font-weight: 800;
+      color: var(--mint);
+    }
+    .mx-frp-pending {
+      margin: 12px 0 0 0;
+      font-size: 0.84rem;
+      color: #0f766e;
+      line-height: 1.45;
+    }
+    .mx-frp-insights-title {
+      margin: 14px 0 8px 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .mx-frp-insights {
+      margin: 0;
+      padding-left: 1.15rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .mx-frp-insights-note {
+      margin: 12px 0 0 0;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .mx-fr-progress {
+      margin: 0 0 14px 0;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: var(--mint-muted);
+      border: 1px solid rgba(13, 148, 136, 0.12);
+    }
+    .mx-fr-progress-title {
+      margin: 0;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .mx-fr-progress-line {
+      margin: 4px 0 0 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--mint);
+    }
+    .mx-fr-progress-meta {
+      margin: 4px 0 0 0;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
     .tp-select-visible {
       margin: 0 0 10px 0;
       font-size: 0.8rem;
@@ -2602,6 +2692,31 @@ GLOBAL_CSS = """
     .mx-record-stage .mx-rec-timer--up .mx-rec-timer-helper {
       color: #b91c1c !important;
       font-weight: 600;
+    }
+    .mx-daily-usage {
+      margin: 8px 0 12px 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .mx-ai-wait-footnote {
+      margin: 0 0 8px 0;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+    .tp-mini-topic {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .mx-record-status {
+      margin: 8px 0 4px 0;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    section.main:has(.mx-record-stage) .mx-record-status {
+      color: rgba(255, 255, 255, 0.88) !important;
     }
     .mx-record-saved {
       display: inline-flex;
@@ -3263,6 +3378,14 @@ GLOBAL_CSS = """
     .mx-landing-card {
       background: #ffffff !important;
       border: 1px solid rgba(17, 24, 39, 0.08) !important;
+    }
+
+    .mx-mode-badge {
+      margin: 10px 0 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #2563eb !important;
+      letter-spacing: -0.01em;
     }
 
     /* Bottom nav — stay light with readable inactive labels */

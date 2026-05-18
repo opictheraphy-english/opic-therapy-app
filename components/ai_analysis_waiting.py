@@ -57,6 +57,9 @@ def render_ai_analysis_waiting(
     session_id: str,
     *,
     stage_label: Optional[str] = None,
+    title: Optional[str] = None,
+    subtitle: Optional[str] = None,
+    footnote: Optional[str] = None,
 ) -> None:
     """Waiting card with CSS animation + one OPIc tip (no external assets)."""
     tip = ensure_waiting_tip(session_id)
@@ -64,6 +67,16 @@ def render_ai_analysis_waiting(
     stage_html = (
         f'<p class="mx-ai-wait-stage">{html.escape(stage)}</p>' if stage else ""
     )
+    wait_title = (title or "AI가 답변을 듣고 있어요").strip()
+    wait_sub = (
+        subtitle
+        or "문법, 표현, 흐름을 차근차근 확인하는 중입니다.<br/>잠시만 기다려 주세요."
+    ).strip()
+    footnote_html = ""
+    if footnote and footnote.strip():
+        footnote_html = (
+            f'<p class="mx-ai-wait-footnote">{html.escape(footnote.strip())}</p>'
+        )
     pat = html.escape(str(tip.get("pattern") or ""))
     meaning = html.escape(str(tip.get("meaning") or ""))
     example = html.escape(str(tip.get("example") or ""))
@@ -88,11 +101,9 @@ def render_ai_analysis_waiting(
           <div class="mx-ai-wait-dots" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
-          <h2 class="mx-ai-wait-title">AI가 답변을 듣고 있어요</h2>
-          <p class="mx-ai-wait-sub">
-            문법, 표현, 흐름을 차근차근 확인하는 중입니다.<br/>
-            잠시만 기다려 주세요.
-          </p>
+          <h2 class="mx-ai-wait-title">{html.escape(wait_title)}</h2>
+          <p class="mx-ai-wait-sub">{wait_sub}</p>
+          {footnote_html}
           {stage_html}
           <div class="mx-ai-wait-tip">
             <p class="mx-ai-wait-tip-eyebrow">기다리는 동안 보는 오픽 꿀패턴</p>
@@ -106,4 +117,21 @@ def render_ai_analysis_waiting(
         </section>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def render_topic_mini_report_waiting(
+    session_id: str,
+    *,
+    stage_label: Optional[str] = None,
+) -> None:
+    render_ai_analysis_waiting(
+        session_id,
+        stage_label=stage_label,
+        title="AI가 3개 답변을 분석하고 있어요",
+        subtitle=(
+            "복원 발화, 문법, 표현, 답변 흐름을 한 번에 정리하는 중입니다.<br/>"
+            "조금 시간이 걸릴 수 있어요."
+        ),
+        footnote="분석이 완료되면 주제별 풀 리포트가 표시됩니다.",
     )

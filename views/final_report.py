@@ -13,7 +13,13 @@ import streamlit as st
 
 from components.collapsible_section import render_collapsible_section
 from components.coaching_experience import render_structured_coaching_report
-from services.exam_analytics import compute_exam_aggregates, detect_risk_flags, summary_rows_for_table
+from services.exam_analytics import (
+    compute_exam_aggregates,
+    detect_risk_flags,
+    exam_results_summary_stats,
+    result_display_status,
+    summary_rows_for_table,
+)
 from utils.exam_state import reset_exam_state, start_new_mock_attempt
 from utils.local_profile import sync_user_progress
 from utils.streamlit_ui import clean_visible_label
@@ -135,6 +141,13 @@ def render_final_report(mx: Dict[str, Any]) -> None:
 
     agg = _ensure_analytics(mx)
     results: List[Dict[str, Any]] = mx.get("results") or []
+    stats = exam_results_summary_stats(results)
+
+    if stats["pending"] > 0:
+        st.info(
+            "일부 문항은 AI 분석 대기 중입니다. "
+            "분석이 완료된 문항 기준으로 리포트를 먼저 보여드릴게요."
+        )
 
     # --- Hero ---
     st.markdown(
@@ -166,6 +179,58 @@ def render_final_report(mx: Dict[str, Any]) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown(
+        f"""
+<div class="section-card">
+  <div style="font-size:0.85rem;color:#64748b;font-weight:700;letter-spacing:0.08em;">전체 요약</div>
+  <p style="margin:0.5rem 0 0;line-height:1.55;color:#334155;">
+    답변 저장 <b>{stats["answered"]}</b>문항 · 분석 완료 <b>{stats["completed"]}</b> · 분석 대기 <b>{stats["pending"]}</b>
+  </p>
+  <p style="margin:0.35rem 0 0;color:#64748b;font-size:0.92rem;">
+    예상 레벨 <b>{html.escape(str(ov))}</b> · 신뢰도 {conf}%
+  </p>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    combined_tx = " ".join(
+        (str((r.get("result") or {}).get("transcript") or "")).strip()
+        for r in results
+        if isinstance(r, dict)
+        and result_display_status(r.get("result") or {}) == "분석 완료"
+        and is_real_speech_transcript(str((r.get("result") or {}).get("transcript") or ""))
+    ).strip()
+    if combined_tx:
+        from services.feedback.coach_copy import collect_transcript_strengths
+        from services.feedback.missions import build_next_missions
+        from services.feedback.structure_feedback import build_structure_feedback
+
+        strengths = collect_transcript_strengths(combined_tx)[:3]
+        structure = build_structure_feedback(combined_tx, "")
+        missions = build_next_missions(combined_tx, structure)[:3]
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.subheader("강점")
+        for s in strengths or ["질문 주제에 맞게 답을 이어갔어요."]:
+            st.markdown(f"- {html.escape(s)}")
+        st.subheader("주요 개선 포인트")
+        rb = agg.get("rubric_averages") or {}
+        st.markdown(
+            f"- 문법 · 평균 {rb.get('grammar', '—')} · 표현·어휘 {rb.get('lexical', '—')}"
+        )
+        st.markdown(
+            f"- 구조 · 논리 {rb.get('logic', '—')} · 유창성 {rb.get('fluency', '—')}"
+        )
+        st.markdown(f"- 전달 · {html.escape(str(agg.get('filler_trend') or '리듬과 쉼을 점검해 보세요.'))}")
+        st.subheader("추천 미션")
+        for m in missions or [
+            "각 답변 마지막에 Overall, I'd say... 로 마무리해 보세요.",
+            "이유를 말한 뒤 To be more specific,... 으로 예시를 하나 붙여 보세요.",
+            "문장 사이에 짧은 쉼을 넣어 또렷하게 말해 보세요.",
+        ]:
+            st.markdown(f"- {html.escape(str(m))}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
     att = int(mx.get("attempt_no") or 1)
@@ -216,7 +281,14 @@ def render_final_report(mx: Dict[str, Any]) -> None:
             return ""
 
         try:
-            styler = df.style.map(_heat, subset=[c for c in df.columns if c not in ("Q", "Topic", "Type", "Est. Level")])
+            styler = df.style.map(
+                _heat,
+                subset=[
+                    c
+                    for c in df.columns
+                    if c not in ("Q", "Topic", "Type", "Status", "Feedback", "Est. Level")
+                ],
+            )
             st.dataframe(styler, use_container_width=True, hide_index=True)
         except Exception:
             st.dataframe(df, use_container_width=True, hide_index=True)

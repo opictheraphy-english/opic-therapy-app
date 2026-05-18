@@ -36,11 +36,55 @@ These four states are mutually exclusive in practice:
 
 from __future__ import annotations
 
+import os
 import secrets
 from copy import deepcopy
 from typing import Any, Dict, List, MutableMapping, Optional
 
 from utils.local_profile import iso_now
+
+# Production default; override locally with env MOCK_TOTAL_QUESTIONS_FOR_TEST=2|3
+_MOCK_TOTAL_QUESTIONS_DEFAULT = 15
+
+
+def get_mock_total_questions(mx: Optional[Dict[str, Any]] = None) -> int:
+    """Question count for this attempt (env override or live exam length)."""
+    env = os.getenv("MOCK_TOTAL_QUESTIONS_FOR_TEST", "").strip()
+    if env.isdigit():
+        return max(1, int(env))
+    if isinstance(mx, dict):
+        exam = mx.get("current_exam") or mx.get("exam") or []
+        if isinstance(exam, list) and exam:
+            return len(exam)
+    return _MOCK_TOTAL_QUESTIONS_DEFAULT
+
+
+def is_last_mock_question(mx: Dict[str, Any], q_id: int) -> bool:
+    """True when ``q_id`` is the last question in the current exam set."""
+    exam = mx.get("current_exam") or mx.get("exam") or []
+    if isinstance(exam, list) and exam:
+        ids: List[int] = []
+        for q in exam:
+            if not isinstance(q, dict):
+                continue
+            try:
+                ids.append(int(q.get("id", 0)))
+            except (TypeError, ValueError):
+                continue
+        if ids:
+            return int(q_id) >= max(ids)
+    return int(q_id) >= get_mock_total_questions(mx)
+
+
+def mark_mock_exam_completed(mx: Dict[str, Any], ss: MutableMapping[str, Any]) -> None:
+    """After the final question — completion screen first, report on demand."""
+    mx["exam_finished"] = True
+    mx["exam_completed"] = True
+    mx["mock_page"] = "FINAL"
+    mx.pop("_view_completed_report", None)
+    mx.pop("_show_exam_celebration", None)
+    ss["mock_exam_completed"] = True
+    ss["mock_page"] = "FINAL"
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +116,7 @@ _RESET_DEFAULTS: Dict[str, Any] = {
     "audio_bytes": None,
     "preview_transcript": None,
     "exam_finished": False,
+    "exam_completed": False,
     "final_report_generated": False,
     "overall_estimated_level": None,
     "analytics_cache": None,
@@ -86,6 +131,7 @@ _RESET_DEFAULTS: Dict[str, Any] = {
 _POP_KEYS = (
     "_analytics_sig",
     "_show_exam_celebration",
+    "_view_completed_report",
     "_final_report_demo",
     "_demo_preview_loaded",
 )
@@ -122,6 +168,7 @@ def reset_exam_state(
     ss["_mock_restored_from_disk"] = True
     # Force the progress signature to refresh so the very next sync writes.
     ss.pop("_progress_sig", None)
+    ss.pop("mock_exam_completed", None)
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +275,7 @@ def mark_pending_recovery(
     error_message: str,
     attempts: int,
     transcript_preview: Optional[str] = None,
+    pending_meta: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Record that the current question's analysis failed but audio + any
     in-flight transcript are still preserved, so the user can safely retry
@@ -236,15 +284,29 @@ def mark_pending_recovery(
     Critical: this function NEVER appends to ``mx["results"]`` and NEVER
     advances ``current_idx``. Failure is transient state, not exam progress.
     """
-    mx["pending_recovery"] = {
+    err_kind = classify_analysis_error(error_message or "")
+    pr: Dict[str, Any] = {
         "q_id": int(q_id),
         "audio_key": audio_key,
         "error_message": (error_message or "").strip(),
-        "error_kind": classify_analysis_error(error_message or ""),
+        "error_kind": err_kind,
         "attempts": int(attempts),
         "last_attempted_at": iso_now(),
         "transcript_preview": (transcript_preview or "").strip() or None,
     }
+    if isinstance(pending_meta, dict):
+        for key in (
+            "analysis_error_category",
+            "analysis_error_short",
+            "analysis_error_type",
+            "mime_type",
+            "model",
+            "pending_audio_bytes",
+            "retry_count",
+        ):
+            if pending_meta.get(key) is not None:
+                pr[key] = pending_meta[key]
+    mx["pending_recovery"] = pr
     # Reset the analysis status flags — recovery is user-driven now.
     mx["analysis_status"] = ""
     mx["analysis_done"] = False
@@ -696,11 +758,48 @@ def apply_pending_analysis_result(
     error_message: str,
     attempts: int,
     transcript: str = "",
+    mode: str = "",
+    mime_type: str = "",
+    model: str = "",
+    audio_bytes_len: int = 0,
+    elapsed_ms: Optional[float] = None,
+    empty_response: bool = False,
 ) -> Dict[str, Any]:
     """Keep saved answer; mark analysis as pending (API/parse/exception path)."""
+    from utils.ai_pending_diag import (
+        build_pending_error_metadata,
+        category_to_legacy_error_kind,
+    )
+
+    meta = build_pending_error_metadata(
+        error_message or "",
+        empty_response=empty_response,
+        question_index=question_index,
+        mode=mode,
+        audio_bytes_len=audio_bytes_len,
+        mime_type=mime_type,
+        model=model,
+        retry_count=attempts,
+        elapsed_ms=elapsed_ms,
+    )
     err_kind = classify_analysis_error(error_message)
+    if err_kind in (
+        "no_speech",
+        "no_audio",
+        "unclear_speech",
+        "needs_review",
+        "non_english",
+    ):
+        pass
+    else:
+        err_kind = category_to_legacy_error_kind(meta.get("analysis_error_category", ""))
     pending = build_analysis_pending_result(q, err_kind, attempts)
+    pending.update(meta)
     pending["analysis_status"] = "pending"
+    if mime_type:
+        pending["audio_mime_guess"] = mime_type
+    if model:
+        pending["model_used"] = model
     if transcript:
         pending["transcript"] = transcript.strip()
     upsert_mock_exam_result(

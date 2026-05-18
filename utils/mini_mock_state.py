@@ -1,4 +1,4 @@
-"""Session state for Topic Practice — separate from full mock exam ``mx[\"results\"]``."""
+"""Session state for 5-minute mini mock — separate from full mock ``mx[\"results\"]``."""
 
 from __future__ import annotations
 
@@ -8,8 +8,9 @@ from utils.exam_state import build_analysis_pending_result, classify_analysis_er
 from utils.local_profile import iso_now
 from utils.speech_recording import recording_byte_length
 
-_RESULTS_KEY = "topic_practice_results"
-_RECORDINGS_KEY = "topic_practice_recordings"
+_MODE = "mini_mock"
+_RESULTS_KEY = "mini_mock_results"
+_RECORDINGS_KEY = "mini_mock_recordings"
 
 
 def _ss():
@@ -18,11 +19,11 @@ def _ss():
     return st.session_state
 
 
-def topic_audio_key(topic_id: str, question_id: str) -> str:
-    return f"tp_{topic_id}_{question_id}"
+def mini_mock_audio_key(question_id: str) -> str:
+    return f"mm_{question_id}"
 
 
-def get_topic_results() -> List[Dict[str, Any]]:
+def get_mini_mock_results() -> List[Dict[str, Any]]:
     ss = _ss()
     rows = ss.get(_RESULTS_KEY)
     if not isinstance(rows, list):
@@ -31,7 +32,7 @@ def get_topic_results() -> List[Dict[str, Any]]:
     return rows
 
 
-def get_topic_recordings() -> Dict[str, bytes]:
+def get_mini_mock_recordings() -> Dict[str, bytes]:
     ss = _ss()
     rec = ss.get(_RECORDINGS_KEY)
     if not isinstance(rec, dict):
@@ -40,130 +41,74 @@ def get_topic_recordings() -> Dict[str, bytes]:
     return rec
 
 
-def clear_topic_recordings() -> None:
+def clear_mini_mock_recordings() -> None:
     _ss().pop(_RECORDINGS_KEY, None)
 
 
-def find_topic_result(topic_id: str, question_id: str) -> Optional[Dict[str, Any]]:
-    tid = str(topic_id or "").strip()
-    qid = str(question_id or "").strip()
-    if not tid or not qid:
+def clear_mini_mock_session() -> None:
+    ss = _ss()
+    for key in (
+        "mini_mock_question_index",
+        "mini_mock_results",
+        "mini_mock_completed",
+        "mini_mock_page",
+    ):
+        ss.pop(key, None)
+    clear_mini_mock_recordings()
+    for k in list(ss.keys()):
+        if isinstance(k, str) and k.startswith("mm_saved_confirm_"):
+            ss.pop(k, None)
+
+
+def mini_mock_rows_sorted() -> List[Dict[str, Any]]:
+    rows = [r for r in get_mini_mock_results() if isinstance(r, dict)]
+    return sorted(rows, key=lambda x: int(x.get("question_index") or 0))
+
+
+def count_mini_mock_saved_answers(*, expected: int = 3) -> int:
+    return sum(1 for r in mini_mock_rows_sorted() if get_mini_mock_answer_blob(r))
+
+
+def row_result(row: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(row, dict):
+        return {}
+    res = row.get("analysis_result")
+    if isinstance(res, dict):
+        return res
+    res = row.get("result")
+    return res if isinstance(res, dict) else {}
+
+
+def get_mini_mock_answer_blob(row: Dict[str, Any]) -> bytes | None:
+    if not isinstance(row, dict):
         return None
-    for row in get_topic_results():
+    audio_key = str(row.get("audio_key") or "").strip()
+    if audio_key:
+        blob = get_mini_mock_recordings().get(audio_key)
+        if blob:
+            return blob
+    return None
+
+
+def find_mini_mock_result(question_id: str) -> Optional[Dict[str, Any]]:
+    qid = str(question_id or "").strip()
+    if not qid:
+        return None
+    for row in get_mini_mock_results():
         if not isinstance(row, dict):
             continue
-        if str(row.get("topic_id") or "") == tid and str(row.get("question_id") or "") == qid:
+        if str(row.get("question_id") or "") == qid:
             return row
     return None
 
 
-def topic_rows_for_session(topic_id: str) -> List[Dict[str, Any]]:
-    tid = str(topic_id or "").strip()
-    rows = [
-        r
-        for r in get_topic_results()
-        if isinstance(r, dict) and str(r.get("topic_id") or "") == tid
-    ]
-    return sorted(rows, key=lambda x: int(x.get("question_index") or 0))
-
-
-def get_topic_answer_blob(row: Dict[str, Any]) -> bytes | None:
-    if not isinstance(row, dict):
-        return None
-    audio_key = str(row.get("audio_key") or "").strip()
-    if audio_key:
-        blob = get_topic_recordings().get(audio_key)
-        if blob:
-            return blob
-    res = row.get("analysis_result")
-    if isinstance(res, dict):
-        nbytes = int(res.get("source_audio_size_bytes") or 0)
-        if nbytes > 0 and audio_key:
-            return get_topic_recordings().get(audio_key)
-    return None
-
-
-def count_topic_saved_answers(topic_id: str) -> int:
-    return sum(1 for r in topic_rows_for_session(topic_id) if get_topic_answer_blob(r))
-
-
-def all_topic_answers_saved(topic_id: str, *, expected: int = 3) -> bool:
-    return count_topic_saved_answers(topic_id) >= int(expected)
-
-
-def save_topic_unanalyzed_answer(
-    *,
-    topic_id: str,
-    topic_title: str,
-    question_index: int,
-    question: Dict[str, Any],
-    audio_key: str,
-    audio_bytes: bytes,
-    mime_type: str = "",
-) -> Dict[str, Any]:
-    """Persist recording only — no Gemini until mini report."""
-    rec = get_topic_recordings()
-    rec[audio_key] = audio_bytes
-    nbytes = recording_byte_length(audio_bytes)
-    placeholder: Dict[str, Any] = {
-        "analysis_status": "saved_unanalyzed",
-        "diagnosis_status": "saved_unanalyzed",
-        "transcript": "",
-        "saved_before_ai": True,
-        "source_audio_size_bytes": nbytes,
-        "recorded_at": iso_now(),
-    }
-    if mime_type:
-        placeholder["audio_mime_guess"] = mime_type
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
-            question_index=question_index,
-            question=question,
-            audio_key=audio_key,
-            result=placeholder,
-        )
-    )
-    row = find_topic_result(topic_id, str(question.get("question_id") or ""))
-    if isinstance(row, dict):
-        row["mime_type"] = mime_type
-        row["audio_len"] = nbytes
-        row["recorded_at"] = placeholder["recorded_at"]
-    return placeholder
-
-
-def clear_topic_answer_for_question(topic_id: str, question_id: str) -> None:
-    row = find_topic_result(topic_id, question_id)
-    if not isinstance(row, dict):
-        return
-    audio_key = str(row.get("audio_key") or "").strip()
-    if audio_key:
-        get_topic_recordings().pop(audio_key, None)
-    results = get_topic_results()
-    qid = str(question_id or "").strip()
-    tid = str(topic_id or "").strip()
-    keep = [
-        r
-        for r in results
-        if not (
-            isinstance(r, dict)
-            and str(r.get("topic_id") or "") == tid
-            and str(r.get("question_id") or "") == qid
-        )
-    ]
-    _ss()[_RESULTS_KEY] = keep
-
-
-def upsert_topic_result(row: Dict[str, Any]) -> None:
-    """Replace row with same ``topic_id`` + ``question_id``; never duplicate."""
-    tid = str(row.get("topic_id") or "").strip()
+def upsert_mini_mock_result(row: Dict[str, Any]) -> None:
+    results = get_mini_mock_results()
     qid = str(row.get("question_id") or "").strip()
-    results = get_topic_results()
     for i, existing in enumerate(results):
         if not isinstance(existing, dict):
             continue
-        if str(existing.get("topic_id") or "") == tid and str(existing.get("question_id") or "") == qid:
+        if str(existing.get("question_id") or "") == qid:
             results[i] = row
             return
     results.append(row)
@@ -190,59 +135,107 @@ def _analysis_status_from_result(result: Dict[str, Any]) -> str:
     return "failed"
 
 
-def build_topic_row(
+def build_mini_mock_row(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     result: Dict[str, Any],
+    mime_type: str = "",
 ) -> Dict[str, Any]:
+    nbytes = int(result.get("source_audio_size_bytes") or 0)
+    recorded_at = str(result.get("recorded_at") or iso_now())
     return {
-        "mode": "topic_practice",
-        "topic_id": topic_id,
-        "topic_title": topic_title,
-        "question_index": int(question_index),
+        "mode": _MODE,
         "question_id": str(question.get("question_id") or ""),
+        "question_index": int(question_index),
+        "question_type": str(question.get("type") or ""),
+        "question_label": str(question.get("type_label") or ""),
         "question_text": str(question.get("question_en") or ""),
         "question_ko": str(question.get("question_ko") or ""),
         "audio_key": audio_key,
+        "mime_type": mime_type,
+        "audio_len": nbytes,
+        "recorded_at": recorded_at,
         "transcript": (result.get("transcript") or "").strip(),
         "analysis_status": _analysis_status_from_result(result),
+        "result": result,
         "analysis_result": result,
     }
 
 
-def question_as_mock_q(question: Dict[str, Any], topic_title: str) -> Dict[str, Any]:
+def question_as_mock_q(question: Dict[str, Any]) -> Dict[str, Any]:
     """Shape compatible with ``build_analysis_pending_result`` / exam helpers."""
+    label = str(question.get("type_label") or question.get("type") or "")
     return {
         "id": question.get("question_id"),
         "question": question.get("question_en") or "",
-        "type": question.get("type_label") or question.get("type") or "",
-        "topic": topic_title,
+        "type": label,
+        "topic": label,
     }
 
 
-def save_topic_placeholder_before_ai(
+def mini_mock_needs_analysis(row: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(row, dict):
+        return False
+    res = row_result(row)
+    ast = str(row.get("analysis_status") or res.get("analysis_status") or "").lower()
+    if ast in ("saved_unanalyzed", "unknown"):
+        return True
+    from services.exam_analytics import result_display_status
+
+    return result_display_status(res) == "AI 분석 대기 중"
+
+
+def save_mini_mock_unanalyzed_answer(
     *,
-    topic_id: str,
-    topic_title: str,
+    question_index: int,
+    question: Dict[str, Any],
+    audio_key: str,
+    audio_bytes: bytes,
+    mime_type: str = "",
+) -> Dict[str, Any]:
+    rec = get_mini_mock_recordings()
+    rec[audio_key] = audio_bytes
+    nbytes = recording_byte_length(audio_bytes)
+    placeholder: Dict[str, Any] = {
+        "analysis_status": "saved_unanalyzed",
+        "diagnosis_status": "saved_unanalyzed",
+        "transcript": "",
+        "saved_before_ai": True,
+        "source_audio_size_bytes": nbytes,
+        "recorded_at": iso_now(),
+    }
+    if mime_type:
+        placeholder["audio_mime_guess"] = mime_type
+    row = build_mini_mock_row(
+        question_index=question_index,
+        question=question,
+        audio_key=audio_key,
+        result=placeholder,
+        mime_type=mime_type,
+    )
+    row["audio_len"] = nbytes
+    row["recorded_at"] = placeholder["recorded_at"]
+    upsert_mini_mock_result(row)
+    return row
+
+
+def save_mini_mock_placeholder_before_ai(
+    *,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     audio_bytes: bytes,
 ) -> None:
-    rec = get_topic_recordings()
+    rec = get_mini_mock_recordings()
     rec[audio_key] = audio_bytes
-    q_mock = question_as_mock_q(question, topic_title)
+    q_mock = question_as_mock_q(question)
     pending = build_analysis_pending_result(q_mock, "unknown", 0)
     pending["analysis_status"] = "pending"
     pending["saved_before_ai"] = True
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -251,10 +244,8 @@ def save_topic_placeholder_before_ai(
     )
 
 
-def apply_topic_completed_result(
+def apply_mini_mock_completed_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
@@ -265,10 +256,8 @@ def apply_topic_completed_result(
     if stored.get("diagnosis_status") not in ("no_speech", "no_audio", "unclear_speech"):
         stored["diagnosis_status"] = stored.get("diagnosis_status") or "ok"
     stored.pop("analysis_pending", None)
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -278,17 +267,14 @@ def apply_topic_completed_result(
     return stored
 
 
-def apply_topic_pending_result(
+def apply_mini_mock_pending_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     error_message: str,
     attempts: int,
     transcript: str = "",
-    mode: str = "topic_practice",
     mime_type: str = "",
     model: str = "",
     audio_bytes_len: int = 0,
@@ -304,14 +290,14 @@ def apply_topic_pending_result(
         error_message or "",
         empty_response=empty_response,
         question_index=question_index,
-        mode=mode,
+        mode=_MODE,
         audio_bytes_len=audio_bytes_len,
         mime_type=mime_type,
         model=model,
         retry_count=attempts,
         elapsed_ms=elapsed_ms,
     )
-    q_mock = question_as_mock_q(question, topic_title)
+    q_mock = question_as_mock_q(question)
     err_kind = classify_analysis_error(error_message)
     if err_kind not in (
         "no_speech",
@@ -330,10 +316,8 @@ def apply_topic_pending_result(
         pending["model_used"] = model
     if transcript:
         pending["transcript"] = transcript.strip()
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -343,7 +327,7 @@ def apply_topic_pending_result(
     return pending
 
 
-def _topic_speech_issue_result(
+def _speech_issue_result(
     *,
     analysis_status: str,
     diagnosis_status: str,
@@ -374,26 +358,22 @@ def _topic_speech_issue_result(
     return res
 
 
-def apply_topic_no_audio_result(
+def apply_mini_mock_no_audio_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     source_audio_size_bytes: int = 0,
 ) -> Dict[str, Any]:
-    res = _topic_speech_issue_result(
+    res = _speech_issue_result(
         analysis_status="no_audio",
         diagnosis_status="no_audio",
         summary="녹음이 제대로 저장되지 않았어요. 마이크 권한을 확인하고 다시 녹음해 주세요.",
         prescription="브라우저 마이크 권한 허용 후 3초 이상 다시 녹음해 주세요.",
         source_audio_size_bytes=source_audio_size_bytes,
     )
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -403,31 +383,27 @@ def apply_topic_no_audio_result(
     return res
 
 
-def apply_topic_unclear_speech_result(
+def apply_mini_mock_unclear_speech_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     source_audio_size_bytes: int,
     audio_mime_guess: str = "",
 ) -> Dict[str, Any]:
-    res = _topic_speech_issue_result(
+    res = _speech_issue_result(
         analysis_status="unclear_speech",
         diagnosis_status="unclear_speech",
         summary=(
             "녹음은 저장되었지만, AI가 답변을 충분히 읽지 못했어요. "
-            "조금 더 또렷하게 다시 말하거나, 저장하고 다음 문항으로 넘어갈 수 있어요."
+            "조금 더 또렷하게 다시 말해 주세요."
         ),
         prescription="마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
         source_audio_size_bytes=source_audio_size_bytes,
         audio_mime_guess=audio_mime_guess,
     )
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -437,10 +413,8 @@ def apply_topic_unclear_speech_result(
     return res
 
 
-def apply_topic_non_english_result(
+def apply_mini_mock_non_english_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
@@ -452,7 +426,7 @@ def apply_topic_non_english_result(
     from utils.language_detection import language_mismatch_body, language_mismatch_title
 
     kind = (language_mismatch_kind or "korean").strip()
-    res = _topic_speech_issue_result(
+    res = _speech_issue_result(
         analysis_status="non_english",
         diagnosis_status="non_english",
         summary=language_mismatch_title(kind),
@@ -465,10 +439,8 @@ def apply_topic_non_english_result(
     if preview:
         res["non_english_preview"] = preview[:120]
         res["language_mismatch_kind"] = kind
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -478,31 +450,24 @@ def apply_topic_non_english_result(
     return res
 
 
-def apply_topic_needs_review_result(
+def apply_mini_mock_needs_review_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     source_audio_size_bytes: int,
     audio_mime_guess: str = "",
 ) -> Dict[str, Any]:
-    res = _topic_speech_issue_result(
+    res = _speech_issue_result(
         analysis_status="needs_review",
         diagnosis_status="needs_review",
         summary="답변 일부가 불명확하게 인식되었어요.",
-        prescription=(
-            "녹음은 저장되어 있습니다. 조금 더 또렷하게 다시 말하거나, "
-            "같은 녹음으로 다시 분석해 보세요."
-        ),
+        prescription="조금 더 또렷하게 다시 말해 주세요.",
         source_audio_size_bytes=source_audio_size_bytes,
         audio_mime_guess=audio_mime_guess,
     )
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -512,26 +477,22 @@ def apply_topic_needs_review_result(
     return res
 
 
-def apply_topic_no_speech_result(
+def apply_mini_mock_no_speech_result(
     *,
-    topic_id: str,
-    topic_title: str,
     question_index: int,
     question: Dict[str, Any],
     audio_key: str,
     source_audio_size_bytes: int = 0,
 ) -> Dict[str, Any]:
-    res = _topic_speech_issue_result(
+    res = _speech_issue_result(
         analysis_status="no_speech",
         diagnosis_status="no_speech",
         summary="음성이 감지되지 않았어요. 다시 녹음해 주세요.",
         prescription="마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
         source_audio_size_bytes=source_audio_size_bytes,
     )
-    upsert_topic_result(
-        build_topic_row(
-            topic_id=topic_id,
-            topic_title=topic_title,
+    upsert_mini_mock_result(
+        build_mini_mock_row(
             question_index=question_index,
             question=question,
             audio_key=audio_key,
@@ -541,17 +502,15 @@ def apply_topic_no_speech_result(
     return res
 
 
-def summarize_topic_session(topic_id: str) -> Dict[str, int]:
-    rows = topic_rows_for_session(topic_id)
-    done = len(rows)
-    completed = sum(1 for r in rows if str(r.get("analysis_status") or "") == "completed")
-    pending = sum(1 for r in rows if str(r.get("analysis_status") or "") == "pending")
-    saved = sum(
-        1 for r in rows if str(r.get("analysis_status") or "") == "saved_unanalyzed"
-    )
-    return {
-        "answered": done,
-        "completed": completed,
-        "pending": pending,
-        "saved_unanalyzed": saved,
-    }
+def clear_mini_mock_answer_for_question(question_id: str) -> None:
+    row = find_mini_mock_result(question_id)
+    if not isinstance(row, dict):
+        return
+    audio_key = str(row.get("audio_key") or "").strip()
+    if audio_key:
+        get_mini_mock_recordings().pop(audio_key, None)
+    results = get_mini_mock_results()
+    qid = str(question_id or "").strip()
+    _ss()[_RESULTS_KEY] = [
+        r for r in results if isinstance(r, dict) and str(r.get("question_id") or "") != qid
+    ]

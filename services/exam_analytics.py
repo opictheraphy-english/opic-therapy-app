@@ -240,6 +240,47 @@ def compute_exam_aggregates(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def result_display_status(res: Dict[str, Any]) -> str:
+    """Student-facing row status for final report (display only)."""
+    if not isinstance(res, dict):
+        return "—"
+    ast = str(res.get("analysis_status") or "").lower()
+    diag = str(res.get("diagnosis_status") or "").lower()
+    if diag == "analysis_pending" or ast == "pending":
+        return "AI 분석 대기 중"
+    if ast == "non_english" or diag == "non_english":
+        return "영어 답변 필요"
+    if ast in ("unclear_speech", "needs_review") or diag in (
+        "unclear_speech",
+        "needs_review",
+    ):
+        return "말소리 인식 불명확"
+    if ast in ("no_speech",) or diag in ("no_speech",):
+        return "음성 미감지"
+    if ast in ("no_audio",) or diag in ("no_audio",):
+        return "녹음 없음"
+    if ast == "completed" or diag == "ok":
+        return "분석 완료"
+    return "—"
+
+
+def exam_results_summary_stats(items: List[Dict[str, Any]]) -> Dict[str, int]:
+    """Counts for final report header (includes pending rows)."""
+    answered = len([r for r in items if isinstance(r, dict)])
+    completed = 0
+    pending = 0
+    for row in items:
+        if not isinstance(row, dict):
+            continue
+        res = row.get("result") or {}
+        status = result_display_status(res)
+        if status == "분석 완료":
+            completed += 1
+        elif status == "AI 분석 대기 중":
+            pending += 1
+    return {"answered": answered, "completed": completed, "pending": pending}
+
+
 def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     rows = []
     for row in sorted(items, key=lambda x: int(x.get("q_id") or 0)):
@@ -248,16 +289,22 @@ def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         rs = res.get("rubric_scores") or {}
         lvl = res.get("estimated_level_display") or res.get("estimated_level") or "—"
         fg = res.get("final_grade_score")
+        feedback = (
+            (res.get("summary_speech_rehab") or res.get("semantic_feedback") or "")
+            .strip()
+        )[:80]
         rows.append(
             {
                 "Q": qid,
                 "Topic": row.get("topic") or "—",
                 "Type": row.get("type") or "—",
+                "Status": result_display_status(res),
                 "Est. Level": lvl,
                 "Fluency": rs.get("fluency", "—"),
                 "Logic": rs.get("logic", "—"),
                 "Grammar": rs.get("grammar", "—"),
                 "Overall": fg if fg is not None else "—",
+                "Feedback": feedback or "—",
             }
         )
     return rows

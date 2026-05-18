@@ -18,24 +18,43 @@ import html
 import logging
 import re
 import secrets
+from typing import Any
 
 import streamlit as st
 
 from components.audio_player import render_exam_question_audio_player
 from components.collapsible_section import render_collapsible_section
-from components.ai_analysis_waiting import finish_analysis_waiting_ui, render_ai_analysis_waiting
-from components.recording_timer import (
-    arm_recording_mic,
-    reset_recording_timer,
-    render_recording_timer,
-    start_recording_timer,
-    stop_recording_timer,
+from components.ai_analysis_waiting import (
+    finish_analysis_waiting_ui,
+    render_ai_analysis_waiting,
+    render_topic_mini_report_waiting,
 )
+from components.topic_mini_report_ui import (
+    render_topic_all_saved_card,
+    render_topic_answer_saved_card,
+    render_topic_mini_report,
+    render_topic_report_pending_retry_screen,
+)
+from components.answer_recording import (
+    close_record_stage,
+    open_record_stage,
+    render_answer_recording_stage as _render_answer_recording_stage,
+    render_post_record_actions,
+)
+from components.recording_timer import reset_recording_timer, stop_recording_timer
 from components.coaching_experience import (
     render_coaching_cta_preamble,
     render_coaching_retry_banner,
     render_history_expander_coaching,
     render_structured_coaching_report,
+)
+from components.final_report_preview import (
+    render_final_report_preview_card,
+    render_real_mock_progress_chip,
+)
+from components.final_report_preview import (
+    render_final_report_preview_card,
+    render_real_mock_progress_chip,
 )
 from components.topbar import render_top_bar
 from services.evaluation_service import analyze_audio_with_retry
@@ -66,9 +85,12 @@ from utils.exam_state import (
     count_completed_exam_prefix,
     find_result_row,
     format_mock_attempt_label,
+    get_mock_total_questions,
     has_pending_recovery_for,
     has_resumable_exam,
     is_completed_mock,
+    is_last_mock_question,
+    mark_mock_exam_completed,
     mark_pending_recovery,
     reconcile_mock_exam_pointer,
     reset_exam_state,
@@ -110,12 +132,9 @@ logger = logging.getLogger(__name__)
 
 
 def _nav_after_question_analysis(mx: dict, qid: int) -> None:
-    """Q15 완료 시 종합 리포트로, 그 외에는 문항 리포트."""
-    if int(qid) >= 15:
-        mx["exam_finished"] = True
-        mx["mock_page"] = "FINAL"
-        mx["_show_exam_celebration"] = True
-        mx["_view_completed_report"] = True
+    """Last question → completion screen; otherwise per-question report."""
+    if is_last_mock_question(mx, qid):
+        mark_mock_exam_completed(mx, st.session_state)
     else:
         mx["mock_page"] = "REPORT"
 
@@ -131,6 +150,8 @@ def _mock_mode(mx: dict) -> str | None:
         return "coaching"
     if mode in ("topic_practice", "topic"):
         return "topic_practice"
+    if mode in ("mini_mock", "mini"):
+        return "mini_mock"
     return None
 
 
@@ -140,7 +161,9 @@ def _mock_mode_label(mode: str | None) -> str:
     if mode == "coaching":
         return "AI 코칭 연습"
     if mode == "topic_practice":
-        return "주제별 연습"
+        return "주제별 답변 연습"
+    if mode == "mini_mock":
+        return "5분 진단 미니 모의고사"
     return "모의고사"
 
 
@@ -171,9 +194,58 @@ def _clear_topic_practice_state() -> None:
         "selected_topic_id",
         "topic_practice_question_index",
         "topic_practice_results",
+        "topic_mini_report",
+        "topic_mini_report_pending",
+        "topic_report_status",
+        "topic_report_last_error",
     ):
         st.session_state.pop(key, None)
     clear_topic_recordings()
+
+
+_MINI_MOCK_QUESTION_COUNT = 3
+
+
+def _mini_mock_question_index() -> int:
+    try:
+        idx = int(st.session_state.get("mini_mock_question_index") or 0)
+    except (TypeError, ValueError):
+        idx = 0
+    return max(0, min(_MINI_MOCK_QUESTION_COUNT - 1, idx))
+
+
+def _mini_mock_page() -> str:
+    return str(st.session_state.get("mini_mock_page") or "QUESTION").strip()
+
+
+def _clear_mini_mock_state() -> None:
+    from utils.mini_mock_state import clear_mini_mock_session
+
+    for key in (
+        "mini_mock_question_index",
+        "mini_mock_results",
+        "mini_mock_completed",
+        "mini_mock_page",
+    ):
+        st.session_state.pop(key, None)
+    clear_mini_mock_session()
+
+
+def _mini_mock_saved_confirm_key(question_id: str) -> str:
+    return f"mm_saved_confirm_{question_id}"
+
+
+def _normalize_topic_practice_step(step: str) -> str:
+    s = (step or "").strip()
+    if s in ("practice",):
+        return "question"
+    if s in ("complete", "feedback"):
+        return s
+    return s or "select_topic"
+
+
+def _topic_saved_confirm_key(topic_id: str, question_id: str) -> str:
+    return f"tp_saved_confirm_{topic_id}_{question_id}"
 
 
 def _exit_topic_practice_to_mode_picker(mx: dict) -> None:
@@ -186,11 +258,20 @@ def _has_mock_mode(mx: dict) -> bool:
 
 
 def _set_mock_mode(mx: dict, mode: str) -> None:
-    if mode not in ("real_mock", "coaching", "topic_practice"):
-        mode = "coaching"
+    if mode not in ("real_mock", "coaching", "topic_practice", "mini_mock"):
+        mode = "real_mock"
     st.session_state["mock_mode"] = mode
     mx["mock_mode"] = mode
     mx["mock_mode_label"] = _mock_mode_label(mode)
+
+
+def _redirect_hidden_coaching_mode() -> bool:
+    """Launch: coaching mode is hidden — send stale sessions back to the portal."""
+    if _session_mock_mode() != "coaching" and _mock_mode(mock_session()) != "coaching":
+        return False
+    reset_to_learning_portal()
+    st.rerun()
+    return True
 
 
 def _clear_mock_mode(mx: dict) -> None:
@@ -245,6 +326,7 @@ def reset_to_learning_portal() -> None:
     st.session_state["mock_page"] = "PICK"
     st.session_state["topic_practice_step"] = None
     st.session_state["selected_topic_id"] = None
+    _clear_mini_mock_state()
     mx["mock_page"] = "PICK"
     mx.pop("mock_mode", None)
     mx.pop("mock_mode_label", None)
@@ -336,6 +418,8 @@ def _session_mock_mode() -> str | None:
         return "coaching"
     if mode in ("topic_practice", "topic"):
         return "topic_practice"
+    if mode in ("mini_mock", "mini"):
+        return "mini_mock"
     return None
 
 
@@ -346,6 +430,8 @@ def _sync_portal_mode_to_mx(mx: dict, mode: str) -> None:
 
 
 def _render_dev_portal_debug(mx: dict) -> None:
+    if "show_dev_debug" not in st.session_state:
+        st.session_state["show_dev_debug"] = False
     if not st.session_state.get("show_dev_debug"):
         return
 
@@ -358,6 +444,9 @@ def _render_dev_portal_debug(mx: dict) -> None:
                 "practice_portal_selected": st.session_state.get("practice_portal_selected"),
                 "topic_practice_step": st.session_state.get("topic_practice_step"),
                 "selected_topic_id": st.session_state.get("selected_topic_id"),
+                "mini_mock_question_index": st.session_state.get("mini_mock_question_index"),
+                "mini_mock_page": st.session_state.get("mini_mock_page"),
+                "mini_mock_completed": st.session_state.get("mini_mock_completed"),
                 "current_question_index": mx.get("current_idx"),
             }
         )
@@ -388,6 +477,111 @@ def _render_coaching_flow(mx: dict) -> None:
         _render_test(mx)
 
 
+def _retry_first_pending_analysis(mx: dict) -> bool:
+    """Re-run Gemini for the first pending row (saved audio only)."""
+    from services.exam_analytics import result_display_status
+
+    api_key = get_gemini_api_key()
+    if not api_key:
+        st.error("Gemini API Key가 없어 다시 시도할 수 없습니다.")
+        return False
+    for row in mx.get("results") or []:
+        if not isinstance(row, dict):
+            continue
+        res = row.get("result") if isinstance(row.get("result"), dict) else {}
+        if result_display_status(res) != "AI 분석 대기 중":
+            continue
+        try:
+            q_id = int(row.get("q_id"))
+        except (TypeError, ValueError):
+            continue
+        retry_stored_answer_analysis(mx, q_id)
+        return True
+    st.info("분석 대기 중인 문항이 없습니다.")
+    return False
+
+
+def render_mock_exam_completion_screen(mx: dict) -> None:
+    """Shown right after the last real-mock question — before the full report."""
+    from services.final_report_preview import build_final_report_preview
+
+    total = get_mock_total_questions(mx)
+    preview = build_final_report_preview(mx.get("results") or [], total_count=total)
+    render_top_bar(
+        "실전 모의고사",
+        back_href="?nav=HOME",
+        eyebrow=format_mock_attempt_label(mx),
+    )
+    st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <section class="continue-card continue-card--start mx-landing-card" role="region"
+                 aria-label="실전 모의고사 완료">
+          <div class="cc-eyebrow">완료</div>
+          <div class="cc-title">실전 모의고사가 완료되었어요</div>
+          <div class="cc-meta">{total}개 문항의 답변이 저장되었습니다.<br/>
+            이제 전체 흐름, 문법, 표현, 답변 구조를 바탕으로 최종 리포트를 확인할 수 있어요.</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    render_final_report_preview_card(preview)
+
+    if st.button(
+        "최종 리포트 전체 보기",
+        type="primary",
+        use_container_width=True,
+        key="mx_mock_final_report",
+    ):
+        mx["_view_completed_report"] = True
+        mx["mock_page"] = "FINAL"
+        st.session_state["mock_page"] = "FINAL"
+        try:
+            st.query_params.clear()
+            st.query_params["nav"] = "MOCK"
+            st.query_params["mock"] = "FINAL"
+        except Exception:
+            pass
+        st.rerun()
+
+    pending = int(preview.get("pending_count") or 0)
+    if pending > 0:
+        c_retry, c_back = st.columns(2)
+        with c_retry:
+            if st.button(
+                "분석 대기 문항 다시 시도",
+                use_container_width=True,
+                key="mx_mock_retry_pending",
+            ):
+                _retry_first_pending_analysis(mx)
+        with c_back:
+            if st.button(
+                "학습하기로 돌아가기",
+                use_container_width=True,
+                key="mx_mock_back_portal",
+            ):
+                st.session_state["practice_portal_selected"] = False
+                st.session_state["mock_page"] = "PICK"
+                mx["mock_page"] = "PICK"
+                try:
+                    st.query_params.clear()
+                    st.query_params["nav"] = "MOCK"
+                except Exception:
+                    pass
+                st.rerun()
+    elif st.button("학습하기로 돌아가기", use_container_width=True, key="mx_mock_back_portal"):
+        st.session_state["practice_portal_selected"] = False
+        st.session_state["mock_page"] = "PICK"
+        mx["mock_page"] = "PICK"
+        try:
+            st.query_params.clear()
+            st.query_params["nav"] = "MOCK"
+        except Exception:
+            pass
+        st.rerun()
+
+
 def _render_real_mock_flow(mx: dict) -> None:
     if (
         has_resumable_exam(mx)
@@ -396,15 +590,21 @@ def _render_real_mock_flow(mx: dict) -> None:
     ):
         render_resumable_landing(mx)
         return
-    if is_completed_mock(mx) and _should_show_completed_final_report(mx):
-        render_top_bar(
-            "종합 리포트",
-            back_href="?nav=MOCK",
-            eyebrow=format_mock_attempt_label(mx),
-        )
-        from views.final_report import render_final_report
+    if is_completed_mock(mx):
+        if _should_show_completed_final_report(mx):
+            render_top_bar(
+                "종합 리포트",
+                back_href="?nav=MOCK",
+                eyebrow=format_mock_attempt_label(mx),
+            )
+            from views.final_report import render_final_report
 
-        render_final_report(mx)
+            render_final_report(mx)
+            return
+        if _get_mock_page(mx) == "FINAL" or mx.get("exam_completed"):
+            render_mock_exam_completion_screen(mx)
+            return
+        render_completed_exam_landing(mx)
         return
     mock_page = _get_mock_page(mx)
     if mock_page == "SURVEY":
@@ -413,6 +613,8 @@ def _render_real_mock_flow(mx: dict) -> None:
         _render_test(mx)
     elif mock_page == "REPORT":
         _render_report(mx)
+    elif mock_page == "FINAL":
+        render_mock_exam_completion_screen(mx)
     else:
         _set_mock_page(mx, "SURVEY")
         _render_survey(mx)
@@ -465,7 +667,7 @@ def _begin_new_practice_from_completed(mx: dict) -> bool:
 
 
 def render_learning_portal(mx: dict) -> None:
-    """Learning portal — three Streamlit mode buttons (no HTML/JS navigation)."""
+    """Learning portal — real mock, mini mock, topic practice (coaching hidden for launch)."""
     _maybe_reset_practice_from_url()
     mx = mock_session()
 
@@ -475,8 +677,8 @@ def render_learning_portal(mx: dict) -> None:
     st.markdown(
         """
         <section class="mx-mode-intro" role="region" aria-label="학습하기">
-          <h2 class="mx-mode-title">학습하기</h2>
-          <p class="mx-mode-subtitle">실전처럼 풀 수도 있고, 원하는 주제만 골라 집중 연습할 수도 있어요.</p>
+          <h2 class="mx-mode-title">오늘은 어떤 방식으로 연습할까요?</h2>
+          <p class="mx-mode-subtitle">실전처럼 풀어보거나, 빠른 진단·주제 연습으로 답변 습관을 다듬을 수 있어요.</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -489,7 +691,7 @@ def render_learning_portal(mx: dict) -> None:
             <section class="continue-card continue-card--start mx-mode-card" role="region"
                      aria-label="실전 모의고사">
               <div class="cc-title">실전 모의고사</div>
-              <div class="cc-meta">15문항을 실제 시험처럼 끝까지 풀고, 마지막에 전체 리포트를 확인해요.</div>
+              <div class="cc-meta">실제 오픽처럼 연속으로 답변하고 마지막에 전체 리포트를 확인해요.</div>
             </section>
             """,
             unsafe_allow_html=True,
@@ -510,55 +712,61 @@ def render_learning_portal(mx: dict) -> None:
     with c2:
         st.markdown(
             """
-            <section class="continue-card continue-card--resume mx-mode-card" role="region"
-                     aria-label="AI 코칭 연습">
-              <div class="cc-title">AI 코칭 연습</div>
-              <div class="cc-meta">랜덤 문제를 풀고 문제마다 바로 문법·표현·흐름 피드백을 받아요.</div>
+            <section class="continue-card continue-card--start mx-mode-card" role="region"
+                     aria-label="5분 진단 미니 모의고사">
+              <div class="cc-title">5분 진단 미니 모의고사</div>
+              <div class="cc-meta">묘사, 경험, 롤플레이 3문항으로 빠르게 현재 답변 습관을 진단해요.</div>
+              <p class="mx-mode-badge">추천 · 약 5분</p>
             </section>
             """,
             unsafe_allow_html=True,
         )
         if st.button(
-            "AI 코칭 연습 시작",
+            "5분 진단 시작",
             type="primary",
             use_container_width=True,
-            key="portal_start_coaching",
+            key="portal_start_mini_mock",
         ):
-            st.session_state["mock_mode"] = "coaching"
+            _clear_mini_mock_state()
+            st.session_state["mock_mode"] = "mini_mock"
             st.session_state["practice_portal_selected"] = True
-            st.session_state["mock_page"] = "TEST"
-            _sync_portal_mode_to_mx(mx, "coaching")
-            _ensure_coaching_exam(mx)
-            _set_mock_page(mx, "TEST")
+            st.session_state["mini_mock_question_index"] = 0
+            st.session_state["mini_mock_results"] = []
+            st.session_state["mini_mock_completed"] = False
+            st.session_state["mini_mock_page"] = "QUESTION"
+            _sync_portal_mode_to_mx(mx, "mini_mock")
+            _set_mock_page(mx, "MINI_MOCK")
             _clear_reset_practice_query_param()
             st.rerun()
 
-    st.markdown(
-        """
-        <section class="continue-card continue-card--start mx-mode-card" role="region"
-                 aria-label="주제별 연습">
-          <div class="cc-title">주제별 연습</div>
-          <div class="cc-meta">공원, 카페, 집, 운동처럼 원하는 주제를 골라 3문항 콤보로 연습해요.</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    if st.button(
-        "주제별 연습 시작",
-        type="primary",
-        use_container_width=True,
-        key="portal_start_topic_practice",
-    ):
-        st.session_state["mock_mode"] = "topic_practice"
-        st.session_state["practice_portal_selected"] = True
-        st.session_state["topic_practice_step"] = "select_topic"
-        st.session_state["selected_topic_id"] = None
-        st.session_state["topic_practice_question_index"] = 0
-        st.session_state["mock_page"] = "TOPIC"
-        _sync_portal_mode_to_mx(mx, "topic_practice")
-        _set_mock_page(mx, "TOPIC")
-        _clear_reset_practice_query_param()
-        st.rerun()
+    c3, _ = st.columns(2)
+    with c3:
+        st.markdown(
+            """
+            <section class="continue-card continue-card--start mx-mode-card" role="region"
+                     aria-label="주제별 답변 연습">
+              <div class="cc-title">주제별 답변 연습</div>
+              <div class="cc-meta">원하는 주제를 골라 3문항씩 연습하고 주제별 리포트를 받아요.</div>
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            "주제별 연습 시작",
+            type="primary",
+            use_container_width=True,
+            key="portal_start_topic_practice",
+        ):
+            st.session_state["mock_mode"] = "topic_practice"
+            st.session_state["practice_portal_selected"] = True
+            st.session_state["topic_practice_step"] = "select_topic"
+            st.session_state["selected_topic_id"] = None
+            st.session_state["topic_practice_question_index"] = 0
+            st.session_state["mock_page"] = "TOPIC"
+            _sync_portal_mode_to_mx(mx, "topic_practice")
+            _set_mock_page(mx, "TOPIC")
+            _clear_reset_practice_query_param()
+            st.rerun()
 
     _render_dev_portal_debug(mx)
 
@@ -658,7 +866,7 @@ def _render_topic_practice_card(topic: dict) -> None:
         st.session_state["selected_topic_id"] = topic_id
         st.session_state["topic_practice_question_index"] = 0
         st.session_state["topic_practice_results"] = []
-        st.session_state["topic_practice_step"] = "practice"
+        st.session_state["topic_practice_step"] = "question"
         st.rerun()
 
 
@@ -860,86 +1068,61 @@ def _topic_back_to_select_topic() -> None:
     st.session_state["topic_practice_step"] = "select_topic"
 
 
-def _topic_go_next_question(mx: dict) -> None:
+def _topic_advance_after_saved_answer(
+    mx: dict, topic_id: str, question_id: str, *, mic_key: str = ""
+) -> None:
+    from components.answer_recording import clear_mic_recording_cache, reset_recording_ui_for_question
+
     reset_recording_timer()
-    idx = _topic_practice_question_index()
+    timer_key = f"tp_{topic_id}_{question_id}"
+    reset_recording_ui_for_question(timer_key)
+    if mic_key:
+        clear_mic_recording_cache(mic_key)
     mx["audio_bytes"] = None
     mx.pop("preview_transcript", None)
+    st.session_state.pop(_topic_saved_confirm_key(topic_id, question_id), None)
+    idx = _topic_practice_question_index()
     if idx >= _TOPIC_PRACTICE_QUESTION_COUNT - 1:
-        st.session_state["topic_practice_step"] = "complete"
+        st.session_state["topic_practice_step"] = "answers_saved"
     else:
         st.session_state["topic_practice_question_index"] = idx + 1
-        st.session_state["topic_practice_step"] = "practice"
+        st.session_state["topic_practice_step"] = "question"
     st.rerun()
 
 
-def _render_answer_recording_stage(
+def _topic_commit_saved_answer(
     mx: dict,
     *,
-    question_key: str,
-    mic_key: str,
+    topic_id: str,
+    topic_title: str,
+    q_idx: int,
+    question: dict,
     audio_key: str,
-    recordings: dict | None = None,
-) -> bytes | None:
-    """Mic recorder + 2-minute timer (mock, coaching, topic practice)."""
-    from streamlit_mic_recorder import mic_recorder
+) -> bool:
+    from utils.topic_practice_state import get_topic_recordings, save_topic_unanalyzed_answer
+    from utils.speech_recording import classify_pre_analysis_blob, recording_byte_length, resolve_mime_for_analysis
 
-    rec = recordings if recordings is not None else mx.setdefault("recordings", {})
-    saved = mx.get("audio_bytes") or rec.get(audio_key)
-
-    render_recording_timer(question_key, has_saved_audio=bool(saved))
-
-    audio = None
-    mic_armed = bool(st.session_state.get("recording_mic_armed"))
-    timer_active = bool(st.session_state.get("recording_timer_active"))
-
-    if not saved and not mic_armed:
-        if st.button(
-            "🎤 답변 시작 (클릭)",
-            key=f"timer_arm_{mic_key}",
-            use_container_width=True,
-            type="primary",
-        ):
-            arm_recording_mic(question_key)
-            st.rerun()
-    elif not saved and mic_armed and not timer_active:
-        if st.button(
-            "⏺️ 말하기 (마이크)",
-            key=f"mic_timer_start_{mic_key}",
-            use_container_width=True,
-            type="primary",
-        ):
-            start_recording_timer(question_key)
-            st.rerun()
-    elif saved or timer_active:
-        mic_start = (
-            "⏺️ 말하기 (마이크)"
-            if timer_active
-            else "🎤 다시 녹음 (클릭)"
-        )
-        audio = mic_recorder(
-            start_prompt=mic_start,
-            stop_prompt="⏹️ 녹음 완료 (클릭)",
-            key=mic_key,
-        )
-    if audio and audio.get("bytes"):
-        rec[audio_key] = audio["bytes"]
-        mx["audio_bytes"] = audio["bytes"]
-        fmt = (audio.get("format") or audio.get("mime") or "").strip()
-        if fmt:
-            mx.setdefault("recording_mime_by_key", {})[audio_key] = fmt
-        stop_recording_timer()
-        saved = audio["bytes"]
-        mime_logged = resolve_mime_for_analysis(
-            saved, mx=mx, audio_key=audio_key
-        )
-        audio_pipeline_diag.log_captured(
-            q_index=int(mx.get("current_idx") or 0),
-            audio_bytes=saved,
-            mime_type=mime_logged,
-        )
-
-    return saved
+    recordings = get_topic_recordings()
+    blob = mx.get("audio_bytes") or recordings.get(audio_key)
+    if not blob:
+        st.error("녹음이 제대로 저장되지 않았어요. 같은 질문을 다시 말해 주세요.")
+        return False
+    if classify_pre_analysis_blob(blob) == "no_audio":
+        st.error("녹음이 제대로 저장되지 않았어요. 같은 질문을 다시 말해 주세요.")
+        return False
+    mime = resolve_mime_for_analysis(blob, mx=mx, audio_key=audio_key)
+    save_topic_unanalyzed_answer(
+        topic_id=topic_id,
+        topic_title=topic_title,
+        question_index=q_idx,
+        question=question,
+        audio_key=audio_key,
+        audio_bytes=blob,
+        mime_type=mime,
+    )
+    question_id = str(question.get("question_id") or "")
+    st.session_state[_topic_saved_confirm_key(topic_id, question_id)] = True
+    return True
 
 
 def _render_topic_api_delay_recovery_card(
@@ -960,11 +1143,16 @@ def _render_topic_api_delay_recovery_card(
           <div class="rv-eyebrow">AI 분석 지연</div>
           <div class="rv-title">AI 분석이 잠시 지연되고 있어요</div>
           <div class="rv-body">답변은 저장되었습니다.<br/>
-            지금은 다음 문항으로 넘어가고, 분석은 나중에 다시 시도할 수 있어요.</div>
+            다음 문항으로 넘어가도 괜찮아요. 나중에 다시 분석할 수 있어요.</div>
           <div class="rv-meta"><span>녹음 {html.escape(f"{audio_size:,}")} bytes 보존됨</span></div>
         </section>
         """,
         unsafe_allow_html=True,
+    )
+    from utils.ai_pending_diag import render_ai_pending_dev_expander
+
+    render_ai_pending_dev_expander(
+        st.session_state.get("last_result") if isinstance(st.session_state.get("last_result"), dict) else {},
     )
     in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
     c1, c2 = st.columns(2)
@@ -998,7 +1186,7 @@ def _render_topic_api_delay_recovery_card(
             key=f"tp_api_next_{topic_id}_{q_idx}",
             use_container_width=True,
         ):
-            _topic_go_next_question(mx)
+            _topic_advance_after_saved_answer(mx, topic_id, question_id)
 
 
 def _run_topic_practice_analysis(
@@ -1125,6 +1313,7 @@ def _run_topic_practice_analysis(
                     "mock_mode": "topic_practice",
                     "mock_page": mx.get("mock_page"),
                     "caller": "mock_exam._run_topic_practice_analysis",
+                    "mime_type": mime_for_gemini,
                 },
             )
         except Exception as exc:
@@ -1136,6 +1325,7 @@ def _run_topic_practice_analysis(
             finish_analysis_waiting_ui(wait_slot, submission_id)
 
         if _is_analysis_failed(result, last_error):
+            _empty_resp = bool(last_error and "비어" in last_error)
             pending = apply_topic_pending_result(
                 topic_id=topic_id,
                 topic_title=topic_title,
@@ -1144,6 +1334,11 @@ def _run_topic_practice_analysis(
                 audio_key=audio_key,
                 error_message=last_error or "AI 분석 실패",
                 attempts=attempts,
+                mode="topic_practice",
+                mime_type=mime_for_gemini,
+                model=str((result or {}).get("model_used") or ""),
+                audio_bytes_len=tp_nbytes,
+                empty_response=_empty_resp,
             )
             mx["analysis_result"] = pending
             mx["last_result"] = pending
@@ -1234,9 +1429,438 @@ def _run_topic_practice_analysis(
         st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = False
 
 
+def _run_mini_mock_analysis(
+    mx: dict,
+    question: dict,
+    q_idx: int,
+    audio_key: str,
+    api_key: str,
+    *,
+    from_retry: bool = False,
+    defer_rerun: bool = False,
+    manage_in_flight: bool = True,
+    external_wait_slot: Any | None = None,
+    external_submission_id: str | None = None,
+) -> None:
+    """Mini mock — same single-answer pipeline as real mock; separate result store."""
+    from utils.mini_mock_state import (
+        apply_mini_mock_completed_result,
+        apply_mini_mock_needs_review_result,
+        apply_mini_mock_non_english_result,
+        apply_mini_mock_no_audio_result,
+        apply_mini_mock_pending_result,
+        apply_mini_mock_unclear_speech_result,
+        find_mini_mock_result,
+        get_mini_mock_recordings,
+        mini_mock_audio_key,
+        mini_mock_needs_analysis,
+        save_mini_mock_placeholder_before_ai,
+    )
+
+    if manage_in_flight and st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY):
+        return
+
+    question_id = str(question.get("question_id") or "")
+    if not audio_key:
+        audio_key = mini_mock_audio_key(question_id)
+
+    row = find_mini_mock_result(question_id)
+    if row and not from_retry and not mini_mock_needs_analysis(row):
+        return
+
+    if manage_in_flight:
+        st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = True
+    try:
+        if not defer_rerun:
+            stop_recording_timer()
+        mx["preview_transcript"] = None
+
+        recordings = get_mini_mock_recordings()
+        blob = mx.get("audio_bytes") or recordings.get(audio_key)
+        if not blob:
+            if not defer_rerun:
+                st.error("오디오 데이터가 유실되었습니다. 다시 녹음해주세요.")
+            return
+
+        mm_nbytes = recording_byte_length(blob)
+        if classify_pre_analysis_blob(blob) == "no_audio":
+            if not from_retry:
+                save_mini_mock_placeholder_before_ai(
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    audio_bytes=blob,
+                )
+            apply_mini_mock_no_audio_result(
+                question_index=q_idx,
+                question=question,
+                audio_key=audio_key,
+                source_audio_size_bytes=mm_nbytes,
+            )
+            if not defer_rerun:
+                st.rerun()
+            return
+
+        if not from_retry:
+            save_mini_mock_placeholder_before_ai(
+                question_index=q_idx,
+                question=question,
+                audio_key=audio_key,
+                audio_bytes=blob,
+            )
+
+        difficulty = int(settings_session()["difficulty"])
+        result: dict | None = None
+        last_error = ""
+        attempts = 0
+        question_en = str(question.get("question_en") or "")
+
+        submission_id = external_submission_id or secrets.token_hex(4)
+        wait_slot = external_wait_slot if external_wait_slot is not None else st.empty()
+
+        def _show_analysis_wait(label: str = "AI가 발화를 진단 중입니다…") -> None:
+            if external_wait_slot is not None:
+                return
+            with wait_slot.container():
+                render_ai_analysis_waiting(submission_id, stage_label=label)
+
+        try:
+            if external_wait_slot is None:
+                _show_analysis_wait()
+
+            def _on_status(stage: str, label: str) -> None:
+                if external_wait_slot is not None:
+                    with wait_slot.container():
+                        render_ai_analysis_waiting(
+                            submission_id,
+                            title="AI가 3개 답변을 분석하고 있어요",
+                            subtitle=(
+                                "묘사, 경험, 롤플레이 답변을 바탕으로 현재 말하기 습관을 진단하는 중입니다.<br/>"
+                                "조금 시간이 걸릴 수 있어요."
+                            ),
+                            stage_label=label,
+                        )
+                else:
+                    _show_analysis_wait(label)
+
+            mime_for_gemini = resolve_mime_for_analysis(blob, mx=mx, audio_key=audio_key)
+            audio_pipeline_diag.log_before_gemini(
+                q_index=q_idx,
+                audio_bytes=blob,
+                mime_type=mime_for_gemini,
+            )
+            result, last_error, attempts = analyze_audio_with_retry(
+                blob,
+                question_en,
+                api_key,
+                difficulty,
+                mime_guess=mime_for_gemini,
+                on_status=_on_status,
+                diag={
+                    "submission_id": submission_id,
+                    "question_index": q_idx,
+                    "question_id": question_id,
+                    "mock_mode": "mini_mock",
+                    "mock_page": mx.get("mock_page"),
+                    "caller": "mock_exam._run_mini_mock_analysis",
+                    "mime_type": mime_for_gemini,
+                },
+            )
+        except Exception as exc:
+            logger.exception("Mini mock Gemini failure q=%s", question_id)
+            last_error = f"{type(exc).__name__}: {exc}"
+            result = None
+            attempts = max(attempts, 1)
+        finally:
+            if external_wait_slot is None:
+                finish_analysis_waiting_ui(wait_slot, submission_id)
+
+        if _is_analysis_failed(result, last_error):
+            _empty_resp = bool(last_error and "비어" in last_error)
+            apply_mini_mock_pending_result(
+                question_index=q_idx,
+                question=question,
+                audio_key=audio_key,
+                error_message=last_error or "AI 분석 실패",
+                attempts=attempts,
+                mode="mini_mock",
+                mime_type=mime_for_gemini,
+                model=str((result or {}).get("model_used") or ""),
+                audio_bytes_len=mm_nbytes,
+                empty_response=_empty_resp,
+            )
+            if not defer_rerun:
+                st.rerun()
+            return
+
+        speech_issue = classify_post_analysis_issue(blob, result)
+        audio_pipeline_diag.log_no_speech_gate(
+            q_index=q_idx,
+            audio_bytes=blob,
+            transcript=(result or {}).get("transcript") or "",
+            trust_result=audio_pipeline_diag.trust_result_label(result),
+            status=speech_issue,
+        )
+        if speech_issue != "ok":
+            mime_guess = resolve_mime_for_debug(blob, mx=mx, audio_key=audio_key, result=result)
+            if speech_issue == "no_audio":
+                apply_mini_mock_no_audio_result(
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=mm_nbytes,
+                )
+            elif speech_issue == "non_english":
+                preview = (result or {}).get("non_english_preview") or ""
+                kind = (result or {}).get("language_mismatch_kind") or "korean"
+                apply_mini_mock_non_english_result(
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=mm_nbytes,
+                    audio_mime_guess=mime_guess,
+                    non_english_preview=preview,
+                    language_mismatch_kind=kind,
+                )
+            elif speech_issue == "needs_review":
+                apply_mini_mock_needs_review_result(
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=mm_nbytes,
+                    audio_mime_guess=mime_guess,
+                )
+            else:
+                apply_mini_mock_unclear_speech_result(
+                    question_index=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                    source_audio_size_bytes=mm_nbytes,
+                    audio_mime_guess=mime_guess,
+                )
+            if not defer_rerun:
+                st.rerun()
+            return
+
+        result_to_store = cache_analysis_payload(result)
+        apply_mini_mock_completed_result(
+            question_index=q_idx,
+            question=question,
+            audio_key=audio_key,
+            result=result_to_store,
+        )
+        if not defer_rerun:
+            st.rerun()
+    finally:
+        if manage_in_flight:
+            st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = False
+
+
+def run_mini_mock_report_analysis(mx: dict) -> None:
+    """Analyze all 3 saved mini-mock answers — only after user requests the report."""
+    from data.mini_mock_questions import get_mini_mock_question
+    from services.exam_analytics import result_display_status
+    from utils.mini_mock_state import (
+        count_mini_mock_saved_answers,
+        get_mini_mock_answer_blob,
+        mini_mock_audio_key,
+        mini_mock_needs_analysis,
+        mini_mock_rows_sorted,
+        row_result,
+    )
+
+    if st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY):
+        return
+
+    saved_n = count_mini_mock_saved_answers()
+    if saved_n < _MINI_MOCK_QUESTION_COUNT:
+        st.warning("아직 3개 문항이 모두 저장되지 않았어요.")
+        st.session_state["mini_mock_page"] = "READY_FOR_REPORT"
+        st.rerun()
+        return
+
+    api_key = get_gemini_api_key()
+    if not api_key:
+        st.warning("API Key를 설정하면 AI 진단 리포트를 받을 수 있어요.")
+        st.session_state["mini_mock_page"] = "READY_FOR_REPORT"
+        st.rerun()
+        return
+
+    st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = True
+    submission_id = secrets.token_hex(4)
+    wait_slot = st.empty()
+
+    def _show_batch_wait(stage_label: str = "") -> None:
+        with wait_slot.container():
+            render_ai_analysis_waiting(
+                submission_id,
+                title="AI가 3개 답변을 분석하고 있어요",
+                subtitle=(
+                    "묘사, 경험, 롤플레이 답변을 바탕으로 현재 말하기 습관을 진단하는 중입니다.<br/>"
+                    "조금 시간이 걸릴 수 있어요."
+                ),
+                stage_label=stage_label or None,
+            )
+
+    try:
+        _show_batch_wait()
+        for q_idx in range(_MINI_MOCK_QUESTION_COUNT):
+            question = get_mini_mock_question(q_idx)
+            if not question:
+                continue
+            question_id = str(question.get("question_id") or "")
+            row = None
+            for r in mini_mock_rows_sorted():
+                if str(r.get("question_id") or "") == question_id:
+                    row = r
+                    break
+            if not row or not mini_mock_needs_analysis(row):
+                continue
+            audio_key = str(row.get("audio_key") or "") or mini_mock_audio_key(question_id)
+            blob = get_mini_mock_answer_blob(row)
+            if blob:
+                mx["audio_bytes"] = blob
+            _show_batch_wait(f"Q{q_idx + 1}/3 분석 중…")
+            _run_mini_mock_analysis(
+                mx,
+                question,
+                q_idx,
+                audio_key,
+                api_key,
+                from_retry=True,
+                defer_rerun=True,
+                manage_in_flight=False,
+                external_wait_slot=wait_slot,
+                external_submission_id=submission_id,
+            )
+
+        rows = mini_mock_rows_sorted()
+        completed = 0
+        pending = 0
+        for row in rows:
+            status = result_display_status(row_result(row))
+            if status == "분석 완료":
+                completed += 1
+            elif status == "AI 분석 대기 중":
+                pending += 1
+
+        st.session_state["mini_mock_completed"] = True
+        if completed == 0 and pending > 0:
+            st.session_state["mini_mock_page"] = "REPORT_PENDING"
+        else:
+            st.session_state["mini_mock_page"] = "REPORT"
+    finally:
+        finish_analysis_waiting_ui(wait_slot, submission_id)
+        st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = False
+    st.rerun()
+
+
+def _run_topic_mini_report_analysis(
+    mx: dict,
+    topic_id: str,
+    topic: dict,
+    api_key: str,
+    *,
+    from_retry: bool = False,
+) -> None:
+    """One Gemini call for all 3 saved answers → real AI report or pending retry."""
+    from services.feedback.topic_mini_report_analysis import (
+        TOPIC_REPORT_COMPLETED,
+        TOPIC_REPORT_FAILED,
+        TOPIC_REPORT_PENDING_RETRY,
+        is_real_topic_ai_report,
+        run_topic_mini_report_analysis,
+    )
+    from utils.topic_practice_state import topic_rows_for_session
+
+    if st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY):
+        return
+    if not api_key:
+        st.error("API Key가 설정되지 않아 분석을 시작할 수 없습니다.")
+        return
+
+    topic_title = str(topic.get("topic_title") or "")
+    rows = topic_rows_for_session(topic_id)
+    if len(rows) < _TOPIC_PRACTICE_QUESTION_COUNT:
+        st.warning("저장된 답변이 3개가 아닙니다. 각 문항을 녹음해 주세요.")
+        return
+
+    st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = True
+    st.session_state["topic_practice_step"] = "analyzing_report"
+    st.session_state["topic_report_status"] = "analyzing"
+    st.session_state.pop("topic_mini_report", None)
+    st.session_state.pop("topic_mini_report_pending", None)
+    st.session_state.pop("topic_report_last_error", None)
+
+    submission_id = secrets.token_hex(4)
+    wait_slot = st.empty()
+    difficulty = int(settings_session()["difficulty"])
+
+    def _show_wait(label: str) -> None:
+        with wait_slot.container():
+            render_topic_mini_report_waiting(submission_id, stage_label=label)
+
+    try:
+        _show_wait("복원 발화·문법·표현·답변 흐름을 정리하는 중…")
+        topic_category = str(topic.get("category") or topic.get("topic_category") or "")
+        outcome = run_topic_mini_report_analysis(
+            rows,
+            {
+                "topic_id": topic_id,
+                "topic_title": topic_title,
+                "topic_category": topic_category,
+            },
+            api_key,
+            difficulty=difficulty,
+            mx=mx,
+            consume_daily_slot=not from_retry,
+            from_retry=from_retry,
+        )
+        finish_analysis_waiting_ui(wait_slot, submission_id)
+        status = str(outcome.get("topic_report_status") or "")
+        st.session_state["topic_report_status"] = status
+
+        if status == TOPIC_REPORT_COMPLETED:
+            report = outcome.get("report")
+            if isinstance(report, dict) and is_real_topic_ai_report(report):
+                st.session_state["topic_mini_report"] = report
+                st.session_state.pop("topic_mini_report_pending", None)
+                st.session_state["topic_practice_step"] = "mini_report"
+            else:
+                st.session_state.pop("topic_mini_report", None)
+                st.session_state["topic_report_status"] = TOPIC_REPORT_PENDING_RETRY
+                st.session_state["topic_mini_report_pending"] = True
+                st.session_state["topic_practice_step"] = "answers_saved"
+        elif status == TOPIC_REPORT_PENDING_RETRY:
+            st.session_state.pop("topic_mini_report", None)
+            st.session_state["topic_mini_report_pending"] = True
+            st.session_state["topic_practice_step"] = "answers_saved"
+        else:
+            st.session_state.pop("topic_mini_report", None)
+            st.session_state.pop("topic_mini_report_pending", None)
+            st.session_state["topic_practice_step"] = "answers_saved"
+            msg = str(outcome.get("user_message") or "").strip()
+            if msg:
+                st.session_state["topic_report_last_error"] = msg
+    finally:
+        st.session_state[_ANALYSIS_IN_FLIGHT_KEY] = False
+    st.rerun()
+
+
 def render_topic_practice_question_page(mx: dict) -> None:
-    """Topic question + recorder; submits into topic-practice analysis."""
-    from utils.topic_practice_state import get_topic_recordings, topic_audio_key
+    """Topic question + recorder — save only; mini report after all 3 answers."""
+    from components.answer_recording import (
+        STATE_SAVED,
+        clear_mic_recording_cache,
+        get_recording_ui_state,
+        reset_recording_ui_for_question,
+    )
+    from utils.topic_practice_state import (
+        clear_topic_answer_for_question,
+        get_topic_recordings,
+        topic_audio_key,
+    )
+    from utils.speech_recording import recording_byte_length
 
     topic_id, topic, q_idx, question = _topic_practice_context()
     if not topic_id:
@@ -1252,198 +1876,245 @@ def render_topic_practice_question_page(mx: dict) -> None:
     title = str(topic.get("topic_title") or "주제")
     question_id = str(question.get("question_id") or "")
     audio_key = topic_audio_key(topic_id, question_id)
+    confirm_key = _topic_saved_confirm_key(topic_id, question_id)
+    is_last = q_idx >= _TOPIC_PRACTICE_QUESTION_COUNT - 1
 
     render_top_bar(
         "주제별 연습",
         back_href="?nav=MOCK",
-        eyebrow=f"{title} 콤보 연습",
+        eyebrow=f"{title} 콤보 연습 · Q{q_idx + 1}/3",
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     _render_topic_question_body(topic, question, q_idx)
 
-    st.markdown(
-        '<div class="mx-record-stage">'
-        '<p class="mx-record-eyebrow">답변 녹음</p>'
-        '<div class="mx-record-title">마이크 버튼을 눌러 답변을 시작하세요</div>'
-        '<p class="mx-record-hint">'
-        '먼저 <b>답변 시작</b>으로 녹음 준비를 한 뒤, <b>말하기(마이크)</b>로 타이머를 시작하고 녹음·<b>녹음 완료</b>로 저장합니다.'
-        '</p>',
-        unsafe_allow_html=True,
-    )
-
     recordings = get_topic_recordings()
     timer_key = f"tp_{topic_id}_{question_id}"
-    saved_audio = _render_answer_recording_stage(
-        mx,
-        question_key=timer_key,
-        mic_key=f"tp_rec_{topic_id}_{question_id}",
-        audio_key=audio_key,
-        recordings=recordings,
+    mic_key = f"tp_rec_{topic_id}_{question_id}"
+    saved_blob = mx.get("audio_bytes") or recordings.get(audio_key)
+    ui_state = get_recording_ui_state(timer_key, has_saved=bool(saved_blob))
+    show_saved = ui_state == STATE_SAVED or (
+        bool(st.session_state.get(confirm_key)) and bool(saved_blob)
     )
 
-    if saved_audio:
-        st.markdown(
-            f'<div class="mx-record-saved">녹음 저장됨 · {len(saved_audio):,} bytes</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            '<div class="mx-record-empty">먼저 녹음을 완료해 주세요.</div>',
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+    if not show_saved:
+        open_record_stage("🎤 답변 시작 → 말한 뒤 녹음 완료")
 
-    api_key = get_gemini_api_key()
-    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
-    if st.button(
-        "AI 테라피 진단받기",
-        type="primary",
-        use_container_width=True,
-        disabled=(not bool(api_key)) or (not bool(saved_audio)) or in_flight,
-        key=f"tp_analyze_{topic_id}_{q_idx}",
-    ):
-        _run_topic_practice_analysis(
-            mx, topic_id, topic, question, q_idx, audio_key, api_key
-        )
+        def _topic_on_recording_complete(_blob: bytes) -> bool:
+            return _topic_commit_saved_answer(
+                mx,
+                topic_id=topic_id,
+                topic_title=title,
+                q_idx=q_idx,
+                question=question,
+                audio_key=audio_key,
+            )
 
-    if st.button("주제 다시 선택", use_container_width=True, key=f"tp_reselect_{topic_id}_{q_idx}"):
+        _render_answer_recording_stage(
+            mx,
+            question_key=timer_key,
+            mic_key=mic_key,
+            audio_key=audio_key,
+            recordings=recordings,
+            analyzing=False,
+            on_recording_complete=_topic_on_recording_complete,
+        )
+        close_record_stage()
+        if st.button("주제 다시 선택", use_container_width=True, key=f"tp_reselect_{topic_id}_{q_idx}"):
+            _topic_back_to_select_topic()
+            st.rerun()
+        return
+
+    audio_len = recording_byte_length(saved_blob)
+    render_topic_answer_saved_card(q_idx=q_idx, audio_len=audio_len, is_last=is_last)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        next_label = "완료하고 리포트 받기" if is_last else "다음 질문으로"
+        if st.button(
+            next_label,
+            type="primary",
+            use_container_width=True,
+            key=f"tp_next_{topic_id}_{q_idx}",
+        ):
+            if not st.session_state.get(confirm_key):
+                if not _topic_commit_saved_answer(
+                    mx,
+                    topic_id=topic_id,
+                    topic_title=title,
+                    q_idx=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                ):
+                    return
+            _topic_advance_after_saved_answer(mx, topic_id, question_id, mic_key=mic_key)
+    with c2:
+        if st.button(
+            "같은 질문 다시 말하기",
+            use_container_width=True,
+            key=f"tp_rerecord_{topic_id}_{q_idx}",
+        ):
+            clear_topic_answer_for_question(topic_id, question_id)
+            reset_recording_ui_for_question(timer_key)
+            clear_mic_recording_cache(mic_key)
+            reset_recording_timer()
+            mx["audio_bytes"] = None
+            mx.pop("preview_transcript", None)
+            st.session_state.pop(confirm_key, None)
+            st.rerun()
+
+    if st.button("주제 다시 선택", use_container_width=True, key=f"tp_reselect_saved_{topic_id}_{q_idx}"):
         _topic_back_to_select_topic()
         st.rerun()
 
 
-def render_topic_practice_feedback(mx: dict) -> None:
-    from utils.topic_practice_state import find_topic_result, get_topic_recordings, topic_audio_key
 
-    topic_id, topic, q_idx, question = _topic_practice_context()
-    if not topic_id or not topic or not question:
+def render_topic_answers_saved_page(mx: dict) -> None:
+    from utils.topic_practice_state import all_topic_answers_saved, topic_rows_for_session
+
+    topic_id, topic, _q_idx, _question = _topic_practice_context()
+    if not topic_id or not topic:
         st.session_state["topic_practice_step"] = "select_topic"
         st.rerun()
-
-    title = str(topic.get("topic_title") or "")
-    question_id = str(question.get("question_id") or "")
-    audio_key = topic_audio_key(topic_id, question_id)
-    row = find_topic_result(topic_id, question_id)
-    lr = (row or {}).get("analysis_result") if isinstance(row, dict) else {}
-    if not isinstance(lr, dict):
-        lr = {}
-
-    render_top_bar(
-        "말하기 코칭",
-        back_href="?nav=MOCK",
-        eyebrow=f"{title} 콤보 연습 · Q{q_idx + 1}/3",
-    )
-    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-
-    _is_pending = _is_pending_result(lr)
-    _heard_raw = (lr.get("transcript") or "").strip()
-    _has_real_speech = bool(_heard_raw) and is_real_speech_transcript(_heard_raw)
-    _latest_ok_coaching = (
-        _has_real_speech
-        and lr.get("diagnosis_status") == "ok"
-        and not _is_pending
-    )
-    q_label = q_idx + 1
-    _speech_issue = "ok"
-
-    if _is_pending:
-        _topic_sync_audio_to_mx(mx, audio_key)
-        _render_topic_api_delay_recovery_card(mx, topic_id, topic, question, q_idx, audio_key)
-    elif not _has_real_speech:
-        _topic_sync_audio_to_mx(mx, audio_key)
-        _speech_issue = _render_speech_issue_hero(
-            mx, audio_key, lr, q_label=q_label, q_index=q_idx
-        )
-    elif _latest_ok_coaching:
-        _render_detailed_coaching_for_result(lr, q_label, _heard_raw)
-
-    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
-    if _speech_issue in ("unclear_speech", "needs_review", "non_english"):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            if st.button(
-                "같은 질문 다시 말하기",
-                use_container_width=True,
-                key=f"tp_retry_same_{topic_id}_{q_idx}",
-            ):
-                reset_recording_timer()
-                mx["audio_bytes"] = None
-                mx.pop("preview_transcript", None)
-                rec = get_topic_recordings()
-                rec.pop(audio_key, None)
-                st.session_state["topic_practice_step"] = "practice"
-                st.rerun()
-        with c2:
-            api_key = get_gemini_api_key()
-            if st.button(
-                "다시 분석하기",
-                use_container_width=True,
-                disabled=in_flight or not api_key,
-                key=f"tp_reanalyze_{topic_id}_{q_idx}",
-            ):
-                if not api_key:
-                    st.error("Gemini API Key가 없어 다시 시도할 수 없습니다.")
-                else:
-                    _run_topic_practice_analysis(
-                        mx,
-                        topic_id,
-                        topic,
-                        question,
-                        q_idx,
-                        audio_key,
-                        api_key,
-                        from_retry=True,
-                    )
-        with c3:
-            next_lbl = (
-                "연습 완료하기"
-                if q_idx >= _TOPIC_PRACTICE_QUESTION_COUNT - 1
-                else "다음 질문으로"
-            )
-            if st.button(
-                next_lbl,
-                type="primary",
-                use_container_width=True,
-                key=f"tp_feedback_next_{topic_id}_{q_idx}",
-            ):
-                _topic_go_next_question(mx)
         return
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
+    title = str(topic.get("topic_title") or "주제")
+    if not all_topic_answers_saved(topic_id):
+        st.session_state["topic_practice_step"] = "question"
+        st.rerun()
+        return
+
+    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 저장 완료")
+    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    render_topic_all_saved_card(title)
+
+    rows = topic_rows_for_session(topic_id)
+    st.markdown("##### 저장된 답변")
+    for row in rows:
+        ql = int(row.get("question_index") or 0) + 1
+        nbytes = int(row.get("audio_len") or 0)
+        st.markdown(f"- Q{ql} · 녹음 저장됨 · {nbytes:,} bytes")
+
+    from services.feedback.topic_mini_report_analysis import TOPIC_REPORT_PENDING_RETRY
+
+    api_key = get_gemini_api_key()
+    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
+    pending_retry = (
+        st.session_state.get("topic_report_status") == TOPIC_REPORT_PENDING_RETRY
+        or st.session_state.get("topic_mini_report_pending")
+    )
+    last_err = str(st.session_state.get("topic_report_last_error") or "").strip()
+    if last_err:
+        st.warning(last_err)
+
+    if pending_retry:
+        render_topic_report_pending_retry_screen(saved_count=len(rows))
+
+    if st.button(
+        "AI 풀 리포트 받기",
+        type="primary",
+        use_container_width=True,
+        key=f"tp_mini_report_{topic_id}",
+        disabled=in_flight or not api_key,
+    ):
+        _run_topic_mini_report_analysis(mx, topic_id, topic, api_key)
+
+    if pending_retry:
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button(
+                "AI 분석 다시 시도",
+                type="primary",
+                use_container_width=True,
+                key=f"tp_mini_retry_{topic_id}",
+                disabled=in_flight or not api_key,
+            ):
+                _run_topic_mini_report_analysis(
+                    mx, topic_id, topic, api_key, from_retry=True
+                )
+        with c2:
+            if st.button(
+                "주제 선택으로 돌아가기",
+                use_container_width=True,
+                key=f"tp_mini_back_topics_{topic_id}",
+            ):
+                _topic_back_to_select_topic()
+                st.rerun()
+    else:
         if st.button(
-            "같은 질문 다시 말하기",
+            "주제 선택으로 돌아가기",
             use_container_width=True,
-            key=f"tp_retry_same_{topic_id}_{q_idx}",
+            key=f"tp_mini_back_topics_{topic_id}",
         ):
-            reset_recording_timer()
-            mx["audio_bytes"] = None
-            mx.pop("preview_transcript", None)
-            rec = get_topic_recordings()
-            rec.pop(audio_key, None)
-            st.session_state["topic_practice_step"] = "practice"
-            st.rerun()
-    with c2:
-        next_lbl = (
-            "연습 완료하기"
-            if q_idx >= _TOPIC_PRACTICE_QUESTION_COUNT - 1
-            else "다음 질문으로"
-        )
-        if st.button(
-            next_lbl,
-            type="primary",
-            use_container_width=True,
-            key=f"tp_feedback_next_{topic_id}_{q_idx}",
-        ):
-            _topic_go_next_question(mx)
-    with c3:
-        if st.button(
-            "다른 주제 선택",
-            use_container_width=True,
-            key=f"tp_feedback_other_{topic_id}_{q_idx}",
-        ):
-            st.session_state["selected_topic_id"] = None
             _topic_back_to_select_topic()
             st.rerun()
+
+    if st.button("학습 방식 다시 선택", use_container_width=True, key="tp_mini_portal"):
+        _exit_topic_practice_to_mode_picker(mx)
+        st.rerun()
+
+
+def render_topic_mini_report_page(mx: dict) -> None:
+    from services.feedback.topic_mini_report_analysis import (
+        TOPIC_REPORT_COMPLETED,
+        is_real_topic_ai_report,
+    )
+
+    report = st.session_state.get("topic_mini_report")
+    status = str(st.session_state.get("topic_report_status") or "")
+    if (
+        not isinstance(report, dict)
+        or not is_real_topic_ai_report(report)
+        or status != TOPIC_REPORT_COMPLETED
+    ):
+        st.session_state.pop("topic_mini_report", None)
+        if status != TOPIC_REPORT_COMPLETED:
+            st.session_state["topic_report_status"] = "pending_retry"
+            st.session_state["topic_mini_report_pending"] = True
+        st.session_state["topic_practice_step"] = "answers_saved"
+        st.rerun()
+        return
+
+    title = str(report.get("topic_title") or "주제")
+    render_top_bar("주제별 풀 리포트", back_href="?nav=MOCK", eyebrow=title)
+    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    render_topic_mini_report(report)
+
+    if st.button("같은 주제 다시 연습", type="primary", use_container_width=True, key="mx_tp_restart_same"):
+        st.session_state["topic_practice_question_index"] = 0
+        st.session_state["topic_practice_results"] = []
+        st.session_state.pop("topic_mini_report", None)
+        st.session_state.pop("topic_mini_report_pending", None)
+        st.session_state.pop("topic_report_status", None)
+        st.session_state["topic_practice_step"] = "question"
+        st.rerun()
+
+    if st.button("다른 주제 선택", use_container_width=True, key="mx_tp_other_topic"):
+        st.session_state["selected_topic_id"] = None
+        _topic_back_to_select_topic()
+        st.rerun()
+
+    if st.button("학습 방식 다시 선택", use_container_width=True, key="mx_tp_mini_portal"):
+        _exit_topic_practice_to_mode_picker(mx)
+        st.rerun()
+
+
+def render_topic_practice_feedback(mx: dict) -> None:
+    """Legacy per-question feedback — redirect to report flow."""
+    from services.feedback.topic_mini_report_analysis import (
+        TOPIC_REPORT_COMPLETED,
+        is_real_topic_ai_report,
+    )
+
+    report = st.session_state.get("topic_mini_report")
+    if (
+        isinstance(report, dict)
+        and is_real_topic_ai_report(report)
+        and st.session_state.get("topic_report_status") == TOPIC_REPORT_COMPLETED
+    ):
+        st.session_state["topic_practice_step"] = "mini_report"
+    else:
+        st.session_state["topic_practice_step"] = "answers_saved"
+    st.rerun()
 
 
 def render_topic_practice_complete(mx: dict) -> None:
@@ -1474,7 +2145,7 @@ def render_topic_practice_complete(mx: dict) -> None:
     if st.button("같은 주제 다시 연습", type="primary", use_container_width=True, key="mx_tp_restart_same"):
         st.session_state["topic_practice_question_index"] = 0
         st.session_state["topic_practice_results"] = []
-        st.session_state["topic_practice_step"] = "practice"
+        st.session_state["topic_practice_step"] = "question"
         st.rerun()
 
     if st.button("다른 주제 선택", use_container_width=True, key="mx_tp_other_topic"):
@@ -1484,38 +2155,350 @@ def render_topic_practice_complete(mx: dict) -> None:
         st.session_state["topic_practice_step"] = "select_topic"
         st.rerun()
 
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("실전 모의고사로 이동", use_container_width=True, key="mx_tp_goto_real_mock"):
-            _clear_topic_practice_state()
-            st.session_state["practice_portal_selected"] = True
-            _set_mock_mode(mx, "real_mock")
-            mx["mock_page"] = "SURVEY"
-            st.rerun()
-    with c2:
-        if st.button("AI 코칭 연습으로 이동", use_container_width=True, key="mx_tp_goto_coaching"):
-            _clear_topic_practice_state()
-            st.session_state["mock_mode"] = "coaching"
-            st.session_state["practice_portal_selected"] = True
-            st.session_state["mock_page"] = "TEST"
-            _sync_portal_mode_to_mx(mx, "coaching")
-            _ensure_coaching_exam(mx)
-            _set_mock_page(mx, "TEST")
-            _clear_reset_practice_query_param()
-            st.rerun()
+    if st.button("실전 모의고사로 이동", use_container_width=True, key="mx_tp_goto_real_mock"):
+        _clear_topic_practice_state()
+        st.session_state["practice_portal_selected"] = True
+        _set_mock_mode(mx, "real_mock")
+        mx["mock_page"] = "SURVEY"
+        st.rerun()
 
-    if st.button("모의고사 화면으로 돌아가기", use_container_width=True, key="mx_tp_back_modes"):
+    if st.button("학습 방식 다시 선택", use_container_width=True, key="mx_tp_back_modes"):
         _exit_topic_practice_to_mode_picker(mx)
         st.rerun()
 
 
+def _render_mini_mock_question_body(question: dict, q_idx: int) -> None:
+    q_display = q_idx + 1
+    type_label = html.escape(str(question.get("type_label") or ""))
+    question_en = html.escape(str(question.get("question_en") or ""))
+    question_ko = html.escape(str(question.get("question_ko") or ""))
+    st.markdown(
+        f"""
+        <section class="continue-card continue-card--resume mx-landing-card" role="region"
+                 aria-label="진행 상황">
+          <div class="cc-eyebrow">진행</div>
+          <div class="cc-title">Q{q_display} <span class="cc-of">/ {_MINI_MOCK_QUESTION_COUNT}</span></div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+        <section class="mx-report-hero" role="region" aria-label="문항">
+          <p class="mx-rh-eyebrow">{type_label}</p>
+          <div class="mx-rh-title">{question_en}</div>
+          <div class="mx-rh-transcript">{question_ko}</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _mini_mock_sync_audio_to_mx(mx: dict, audio_key: str) -> None:
+    from utils.mini_mock_state import get_mini_mock_recordings
+
+    blob = get_mini_mock_recordings().get(audio_key)
+    if not blob:
+        return
+    rec = mx.setdefault("recordings", {})
+    if not isinstance(rec, dict):
+        rec = {}
+        mx["recordings"] = rec
+    rec[audio_key] = blob
+    mx["audio_bytes"] = blob
+
+
+def _mini_mock_advance_after_saved_answer(mx: dict, question_id: str, *, mic_key: str = "") -> None:
+    from components.answer_recording import clear_mic_recording_cache, reset_recording_ui_for_question
+
+    reset_recording_timer()
+    timer_key = f"mm_{question_id}"
+    reset_recording_ui_for_question(timer_key)
+    if mic_key:
+        clear_mic_recording_cache(mic_key)
+    mx["audio_bytes"] = None
+    mx.pop("preview_transcript", None)
+    st.session_state.pop(_mini_mock_saved_confirm_key(question_id), None)
+    idx = _mini_mock_question_index()
+    if idx >= _MINI_MOCK_QUESTION_COUNT - 1:
+        st.session_state["mini_mock_page"] = "READY_FOR_REPORT"
+    else:
+        st.session_state["mini_mock_question_index"] = idx + 1
+        st.session_state["mini_mock_page"] = "QUESTION"
+    st.rerun()
+
+
+def _mini_mock_commit_saved_answer(
+    mx: dict,
+    *,
+    q_idx: int,
+    question: dict,
+    audio_key: str,
+) -> bool:
+    from utils.mini_mock_state import get_mini_mock_recordings, save_mini_mock_unanalyzed_answer
+    from utils.speech_recording import classify_pre_analysis_blob, resolve_mime_for_analysis
+
+    recordings = get_mini_mock_recordings()
+    blob = mx.get("audio_bytes") or recordings.get(audio_key)
+    if not blob:
+        st.error("녹음이 제대로 저장되지 않았어요. 같은 질문을 다시 말해 주세요.")
+        return False
+    if classify_pre_analysis_blob(blob) == "no_audio":
+        st.error("녹음이 제대로 저장되지 않았어요. 같은 질문을 다시 말해 주세요.")
+        return False
+    mime = resolve_mime_for_analysis(blob, mx=mx, audio_key=audio_key)
+    save_mini_mock_unanalyzed_answer(
+        question_index=q_idx,
+        question=question,
+        audio_key=audio_key,
+        audio_bytes=blob,
+        mime_type=mime,
+    )
+    question_id = str(question.get("question_id") or "")
+    st.session_state[_mini_mock_saved_confirm_key(question_id)] = True
+    if q_idx >= _MINI_MOCK_QUESTION_COUNT - 1:
+        st.session_state["mini_mock_page"] = "READY_FOR_REPORT"
+    else:
+        st.session_state["mini_mock_page"] = "SAVED"
+    return True
+
+
+def _render_mini_mock_answer_saved_card(*, ready_for_report: bool = False) -> None:
+    if ready_for_report:
+        title = "3개 문항이 모두 저장되었어요"
+        meta = (
+            "묘사, 경험, 롤플레이 답변이 모두 저장되었습니다.<br/>"
+            "이제 AI가 3개 답변을 바탕으로 5분 진단 리포트를 만들어드릴게요."
+        )
+    else:
+        title = "답변이 저장되었어요"
+        meta = (
+            "좋아요. 지금은 흐름을 끊지 않고 다음 문항으로 넘어갈게요.<br/>"
+            "3문항을 모두 끝낸 뒤 AI가 한 번에 진단 리포트를 만들어 드릴게요."
+        )
+    st.markdown(
+        f"""
+        <section class="continue-card continue-card--resume mx-landing-card" role="status">
+          <div class="cc-eyebrow">저장 완료</div>
+          <div class="cc-title">{html.escape(title)}</div>
+          <div class="cc-meta">{meta}</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_mini_mock_question_page(mx: dict) -> None:
+    from components.answer_recording import (
+        STATE_SAVED,
+        clear_mic_recording_cache,
+        get_recording_ui_state,
+        reset_recording_ui_for_question,
+    )
+    from data.mini_mock_questions import get_mini_mock_question
+    from utils.mini_mock_state import (
+        clear_mini_mock_answer_for_question,
+        get_mini_mock_recordings,
+        mini_mock_audio_key,
+    )
+
+    page = _mini_mock_page()
+    if page == "READY_FOR_REPORT":
+        render_top_bar("5분 진단", back_href="?nav=MOCK", eyebrow="미니 모의고사 · 저장 완료")
+        st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+        _render_mini_mock_answer_saved_card(ready_for_report=True)
+        if st.button(
+            "AI 진단 리포트 받기",
+            type="primary",
+            use_container_width=True,
+            key="mini_mock_get_report",
+        ):
+            st.session_state["mini_mock_page"] = "ANALYZING_REPORT"
+            st.rerun()
+        if st.button("학습 방식 다시 선택", use_container_width=True, key="mm_ready_back_portal"):
+            reset_to_learning_portal()
+            st.rerun()
+        return
+
+    q_idx = _mini_mock_question_index()
+    question = get_mini_mock_question(q_idx)
+    if not question:
+        st.warning("문항을 불러올 수 없습니다.")
+        if st.button("학습하기로 돌아가기", key="mm_missing_back"):
+            reset_to_learning_portal()
+            st.rerun()
+        return
+
+    question_id = str(question.get("question_id") or "")
+    audio_key = mini_mock_audio_key(question_id)
+    confirm_key = _mini_mock_saved_confirm_key(question_id)
+
+    render_top_bar(
+        "5분 진단",
+        back_href="?nav=MOCK",
+        eyebrow=f"미니 모의고사 · Q{q_idx + 1}/3",
+    )
+    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_mini_mock_question_body(question, q_idx)
+
+    recordings = get_mini_mock_recordings()
+    timer_key = f"mm_{question_id}"
+    mic_key = f"mm_rec_{question_id}"
+    saved_blob = mx.get("audio_bytes") or recordings.get(audio_key)
+    ui_state = get_recording_ui_state(timer_key, has_saved=bool(saved_blob))
+    show_saved = ui_state == STATE_SAVED or (
+        bool(st.session_state.get(confirm_key)) and bool(saved_blob)
+    )
+
+    if not show_saved:
+        open_record_stage("🎤 답변 시작 → 말한 뒤 녹음 완료")
+
+        def _mm_on_recording_complete(_blob: bytes) -> bool:
+            return _mini_mock_commit_saved_answer(
+                mx,
+                q_idx=q_idx,
+                question=question,
+                audio_key=audio_key,
+            )
+
+        _render_answer_recording_stage(
+            mx,
+            question_key=timer_key,
+            mic_key=mic_key,
+            audio_key=audio_key,
+            recordings=recordings,
+            analyzing=False,
+            on_recording_complete=_mm_on_recording_complete,
+        )
+        close_record_stage()
+        if st.button("학습 방식 다시 선택", use_container_width=True, key=f"mm_back_portal_{q_idx}"):
+            reset_to_learning_portal()
+            st.rerun()
+        return
+
+    if page == "SAVED" or show_saved:
+        _render_mini_mock_answer_saved_card(ready_for_report=False)
+        if st.button(
+            "다음 문항으로",
+            type="primary",
+            use_container_width=True,
+            key=f"mini_mock_next_{q_idx}",
+        ):
+            if not st.session_state.get(confirm_key):
+                if not _mini_mock_commit_saved_answer(
+                    mx,
+                    q_idx=q_idx,
+                    question=question,
+                    audio_key=audio_key,
+                ):
+                    return
+            _mini_mock_advance_after_saved_answer(mx, question_id, mic_key=mic_key)
+
+    if st.button(
+        "같은 질문 다시 말하기",
+        use_container_width=True,
+        key=f"mm_rerecord_{question_id}_{q_idx}",
+    ):
+        clear_mini_mock_answer_for_question(question_id)
+        reset_recording_ui_for_question(timer_key)
+        clear_mic_recording_cache(mic_key)
+        reset_recording_timer()
+        mx["audio_bytes"] = None
+        mx.pop("preview_transcript", None)
+        st.session_state.pop(confirm_key, None)
+        st.session_state["mini_mock_page"] = "QUESTION"
+        st.rerun()
+
+    if st.button("학습 방식 다시 선택", use_container_width=True, key=f"mm_back_saved_{q_idx}"):
+        reset_to_learning_portal()
+        st.rerun()
+
+
+def render_mini_mock_report_page(mx: dict) -> None:
+    from components.mini_mock_report_ui import (
+        render_mini_mock_report,
+        render_mini_mock_report_actions,
+        render_mini_mock_report_download,
+    )
+    from services.feedback.mini_mock_report import build_mini_mock_report_data
+    from utils.mini_mock_state import mini_mock_rows_sorted
+
+    if st.session_state.pop("_mm_retry_pending", None):
+        st.session_state["mini_mock_page"] = "ANALYZING_REPORT"
+        st.rerun()
+        return
+
+    render_top_bar("5분 진단", back_href="?nav=MOCK", eyebrow="미니 진단 리포트")
+    st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+
+    rows = mini_mock_rows_sorted()
+    report = build_mini_mock_report_data(rows)
+    render_mini_mock_report(report)
+    render_mini_mock_report_download(report, rows)
+    render_mini_mock_report_actions(on_retry_pending=bool(report.get("has_pending")))
+
+    if st.button("학습 방식 다시 선택", use_container_width=True, key="mm_report_back_portal"):
+        reset_to_learning_portal()
+        st.rerun()
+
+
+def render_mini_mock_report_pending_page(mx: dict) -> None:
+    from utils.mini_mock_state import count_mini_mock_saved_answers
+
+    render_top_bar("5분 진단", back_href="?nav=MOCK", eyebrow="미니 진단 리포트")
+    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    saved_n = count_mini_mock_saved_answers()
+    st.markdown(
+        f"""
+        <section class="recovery-card" role="alert" aria-live="polite">
+          <div class="rv-eyebrow">AI 분석</div>
+          <div class="rv-title">AI 분석을 다시 시도해야 해요</div>
+          <div class="rv-body">3개 답변은 모두 안전하게 저장되어 있습니다.<br/>
+            현재 AI 분석 요청이 정상적으로 완료되지 않았어요.<br/>
+            잠시 후 다시 분석을 눌러 미니 진단 리포트를 받아보세요.</div>
+          <div class="rv-meta"><span>저장된 답변 {saved_n}개</span></div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        "AI 분석 다시 시도",
+        type="primary",
+        use_container_width=True,
+        key="mm_report_retry_analysis",
+    ):
+        st.session_state["mini_mock_page"] = "ANALYZING_REPORT"
+        st.rerun()
+    if st.button("학습 방식 다시 선택", use_container_width=True, key="mm_pending_back_portal"):
+        reset_to_learning_portal()
+        st.rerun()
+
+
+def render_mini_mock_flow(mx: dict) -> None:
+    page = _mini_mock_page()
+    if page == "ANALYZING_REPORT":
+        run_mini_mock_report_analysis(mx)
+        return
+    if page == "REPORT":
+        render_mini_mock_report_page(mx)
+        return
+    if page == "REPORT_PENDING":
+        render_mini_mock_report_pending_page(mx)
+        return
+    render_mini_mock_question_page(mx)
+
+
 def render_topic_practice_flow(mx: dict) -> None:
-    step = _topic_practice_step() or "select_topic"
-    if step == "complete":
-        render_topic_practice_complete(mx)
+    step = _normalize_topic_practice_step(_topic_practice_step() or "select_topic")
+    if step == "mini_report":
+        render_topic_mini_report_page(mx)
+    elif step == "analyzing_report":
+        render_topic_answers_saved_page(mx)
+    elif step == "answers_saved" or step == "complete":
+        render_topic_answers_saved_page(mx)
     elif step == "feedback":
         render_topic_practice_feedback(mx)
-    elif step == "practice":
+    elif step == "question" or step == "practice":
         render_topic_practice_question_page(mx)
     else:
         render_topic_selection(mx)
@@ -1673,16 +2656,15 @@ def _render_speech_issue_hero(
 
 def _go_to_next_question(mx: dict, q_id: int) -> None:
     """Advance after a saved answer (pending or completed) without losing data."""
+    from components.answer_recording import reset_recording_ui_for_question
+
     reset_recording_timer()
     reconcile_mock_exam_pointer(mx)
     mx["audio_bytes"] = None
     mx["preview_transcript"] = None
     clear_pending_recovery(mx)
-    if int(q_id) >= 15:
-        mx["exam_finished"] = True
-        mx["mock_page"] = "FINAL"
-        mx["_show_exam_celebration"] = True
-        mx["_view_completed_report"] = True
+    if is_last_mock_question(mx, q_id):
+        mark_mock_exam_completed(mx, st.session_state)
     else:
         mx["mock_page"] = "TEST"
     st.rerun()
@@ -1724,14 +2706,10 @@ def _mock_query_param() -> str | None:
 
 
 def _should_show_completed_final_report(mx: dict) -> bool:
-    """True when the user explicitly wants the archived report, not the landing."""
+    """True when the user explicitly opens the final report (not the completion card)."""
     if not is_completed_mock(mx):
         return False
-    if mx.get("_show_exam_celebration"):
-        return True
-    if mx.get("_view_completed_report"):
-        return True
-    return _mock_query_param() == "FINAL"
+    return bool(mx.get("_view_completed_report"))
 
 
 def render_completed_exam_landing(mx: dict) -> None:
@@ -1785,7 +2763,7 @@ def render_mock_exam_shell() -> None:
     _sync_mock_routing_state(mx)
 
     page = _get_mock_page(mx)
-    if page not in {"PICK", "TOPIC", "SURVEY", "TEST", "REPORT", "FINAL"}:
+    if page not in {"PICK", "TOPIC", "MINI_MOCK", "SURVEY", "TEST", "REPORT", "FINAL"}:
         _set_mock_page(mx, "PICK")
         page = "PICK"
 
@@ -1797,11 +2775,13 @@ def render_mock_exam_shell() -> None:
         _set_mock_page(mx, "PICK")
         page = "PICK"
 
+    if page == "MINI_MOCK" and not _practice_portal_selected():
+        _set_mock_page(mx, "PICK")
+        page = "PICK"
+
     mock_q = _mock_query_param()
     if is_completed_mock(mx):
-        if mock_q == "FINAL":
-            mx["_view_completed_report"] = True
-        elif mock_q is None:
+        if mock_q is None and mx.get("mock_page") != "FINAL":
             mx.pop("_view_completed_report", None)
 
     if mock_q == "PICK" and not _practice_portal_selected():
@@ -1846,14 +2826,17 @@ def render_mock_flow() -> None:
         render_learning_portal(mx)
         return
 
+    if _redirect_hidden_coaching_mode():
+        return
+
     mode = _session_mock_mode() or _mock_mode(mx)
 
     if mode == "topic_practice":
         render_topic_practice_flow(mx)
         return
 
-    if mode == "coaching":
-        _render_coaching_flow(mx)
+    if mode == "mini_mock":
+        render_mini_mock_flow(mx)
         return
 
     if mode == "real_mock":
@@ -2284,6 +3267,16 @@ def _render_test(mx: dict) -> None:
     # styled, expander cards). Stays invisible (``display:none`` via empty
     # element) so it only acts as a CSS sentinel.
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    if _is_real_mock(mx):
+        from services.final_report_preview import build_final_report_preview
+
+        _prev = build_final_report_preview(mx.get("results") or [], total_count=total)
+        render_real_mock_progress_chip(
+            current_q=int(q_id),
+            total_q=int(total),
+            answered_count=int(_prev.get("answered_count") or 0),
+            completed_count=int(_prev.get("completed_count") or 0),
+        )
     _render_learning_portal_back_button(mx)
 
     # --- Pending recovery branch -----------------------------------------
@@ -2337,43 +3330,17 @@ def _render_test(mx: dict) -> None:
     # 3) Listen stage — TTS loads lazily (never blocks recorder below).
     _render_mock_question_listen_stage(mx, q, q_id)
 
-    # 4) Record stage — the dark-teal "studio" panel. The mic_recorder
-    # component renders an iframe so we can only style the wrapper, but
-    # the wrapper alone shifts the screen's emotional focus to recording.
-    st.markdown(
-        '<div class="mx-record-stage">'
-        '<p class="mx-record-eyebrow">답변 녹음</p>'
-        '<div class="mx-record-title">마이크 버튼을 눌러 답변을 시작하세요</div>'
-        '<p class="mx-record-hint">'
-        '먼저 <b>답변 시작</b>으로 녹음 준비를 한 뒤, <b>말하기(마이크)</b>로 타이머를 시작하고 녹음·<b>녹음 완료</b>로 저장합니다.'
-        '</p>',
-        unsafe_allow_html=True,
-    )
-
+    open_record_stage("🎤 답변 시작 → 말한 뒤 녹음 완료")
     timer_key = f"mock_{audio_key}"
-    saved_audio = _render_answer_recording_stage(
+    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
+    _render_answer_recording_stage(
         mx,
         question_key=timer_key,
         mic_key=f"rec_{q_id}",
         audio_key=audio_key,
+        analyzing=in_flight,
     )
-
-    if saved_audio:
-        st.markdown(
-            f'<div class="mx-record-saved">'
-            f'녹음 저장됨 · {len(saved_audio):,} bytes'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            '<div class="mx-record-empty">'
-            '먼저 녹음을 완료해 주세요. 녹음이 저장되면 진단 버튼이 활성화됩니다.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    close_record_stage()
 
     # 5) Status / error messages — same logic as before, just calmer cards.
     if mx["analysis_status"]:
@@ -2396,22 +3363,21 @@ def _render_test(mx: dict) -> None:
     if mx["analysis_done"]:
         mx["analysis_done"] = False
 
-    # 6) Primary CTA — restyled to mint pill via :has() scope (see ui/styles.py).
-    in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
-    if not st.button(
-        "AI 테라피 진단받기",
-        type="primary",
-        use_container_width=True,
-        disabled=(not bool(api_key)) or (not bool(saved_audio)) or in_flight,
-        help=(
-            "AI 분석이 진행 중이에요. 잠시만 기다려 주세요."
-            if in_flight
-            else None
-        ),
-    ):
-        return
+    def _mock_analyze() -> None:
+        _run_analysis(mx, q, q_id, audio_key, api_key)
 
-    _run_analysis(mx, q, q_id, audio_key, api_key)
+    render_post_record_actions(
+        mx,
+        question_key=timer_key,
+        audio_key=audio_key,
+        mic_key=f"rec_{q_id}",
+        on_analyze=_mock_analyze,
+        analyze_key=f"mock_analyze_{q_id}",
+        rerecord_key=f"mock_rerecord_{q_id}",
+        analyze_disabled=(not bool(api_key)) or in_flight,
+    )
+    if in_flight:
+        return
 
 
 def _run_analysis(
@@ -2538,6 +3504,7 @@ def _run_analysis(
                     "attempt_id": mx.get("attempt_no"),
                     "mock_page": mx.get("mock_page"),
                     "caller": "mock_exam._run_analysis",
+                    "mime_type": mime_for_gemini,
                 },
             )
         except Exception as exc:
@@ -2557,14 +3524,27 @@ def _run_analysis(
                 err_kind,
             )
             logger.warning("Gemini last_error detail (server log): %s", last_error)
+            _empty_resp = bool(
+                (last_error and "비어" in last_error)
+                or (
+                    isinstance(result, dict)
+                    and str(result.get("error") or "").strip()
+                    and "비어" in str(result.get("error"))
+                )
+            )
             pending = apply_pending_analysis_result(
                 mx,
                 q,
                 q_id=int(q_id),
                 question_index=q_index,
                 audio_key=audio_key,
-                error_message=last_error,
+                error_message=last_error or "AI 분석 실패",
                 attempts=attempts,
+                mode=_mock_mode(mx) or "",
+                mime_type=mime_for_gemini,
+                model=str((result or {}).get("model_used") or ""),
+                audio_bytes_len=nbytes,
+                empty_response=_empty_resp,
             )
             mx["analysis_result"] = pending
             mx["last_result"] = pending
@@ -2574,6 +3554,15 @@ def _run_analysis(
                 audio_key=audio_key,
                 error_message=last_error or "AI 분석 실패",
                 attempts=attempts,
+                pending_meta={
+                    "analysis_error_category": pending.get("analysis_error_category"),
+                    "analysis_error_short": pending.get("analysis_error_short"),
+                    "analysis_error_type": pending.get("analysis_error_type"),
+                    "mime_type": mime_for_gemini,
+                    "model": pending.get("model_used") or "",
+                    "pending_audio_bytes": nbytes,
+                    "retry_count": attempts,
+                },
             )
             reconcile_mock_exam_pointer(mx)
             _nav_after_question_analysis(mx, q["id"])
@@ -2748,7 +3737,7 @@ _RECOVERY_COPY: dict[str, tuple[str, str]] = {
     "unknown": (
         "AI 분석이 잠시 지연되고 있어요",
         "답변은 저장되었습니다. "
-        "지금은 다음 문항으로 넘어가고, 분석은 나중에 다시 시도할 수 있어요.",
+        "다음 문항으로 넘어가도 괜찮아요. 나중에 다시 분석할 수 있어요.",
     ),
 }
 
@@ -2763,11 +3752,19 @@ def _render_api_delay_recovery_card(mx: dict, q: dict, q_id: int, audio_key: str
           <div class="rv-eyebrow">AI 분석 지연</div>
           <div class="rv-title">AI 분석이 잠시 지연되고 있어요</div>
           <div class="rv-body">답변은 저장되었습니다.<br/>
-            지금은 다음 문항으로 넘어가고, 분석은 나중에 다시 시도할 수 있어요.</div>
+            다음 문항으로 넘어가도 괜찮아요. 나중에 다시 분석할 수 있어요.</div>
           <div class="rv-meta"><span>녹음 {html.escape(f"{audio_size:,}")} bytes 보존됨</span></div>
         </section>
-        """.replace("<motion class=\"rv-meta\">", "<div class=\"rv-meta\">"),
+        """,
         unsafe_allow_html=True,
+    )
+    row = find_result_row(mx, int(q_id))
+    lr = (row or {}).get("result", {}) if isinstance(row, dict) else {}
+    from utils.ai_pending_diag import render_ai_pending_dev_expander
+
+    render_ai_pending_dev_expander(
+        lr if isinstance(lr, dict) else {},
+        pending_recovery=mx.get("pending_recovery"),
     )
     in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))
     c1, c2 = st.columns(2)
@@ -2873,6 +3870,15 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
             lr if isinstance(lr, dict) else {},
             q_index=int(mx.get("current_idx") or 0),
             blob=saved_audio,
+        )
+    else:
+        row = find_result_row(mx, int(q_id))
+        lr = (row or {}).get("result", {}) if isinstance(row, dict) else {}
+        from utils.ai_pending_diag import render_ai_pending_dev_expander
+
+        render_ai_pending_dev_expander(
+            lr if isinstance(lr, dict) else {},
+            pending_recovery=pr,
         )
 
     in_flight = bool(st.session_state.get(_ANALYSIS_IN_FLIGHT_KEY))

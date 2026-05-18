@@ -288,6 +288,11 @@ def analyze_audio_with_retry(
                 last_error,
             )
             ai_diag.log_retry_failure(attempts=attempts, error_message=last_error)
+            _log_pending_from_retry_ctx(
+                last_error,
+                attempts=attempts,
+                empty_response="비어" in (last_error or ""),
+            )
             return None, last_error, attempts
 
         logger.warning(
@@ -303,7 +308,43 @@ def analyze_audio_with_retry(
         last_error,
     )
     ai_diag.log_retry_failure(attempts=attempts, error_message=last_error)
+    _log_pending_from_retry_ctx(
+        last_error,
+        attempts=attempts,
+        empty_response="비어" in (last_error or ""),
+    )
     return None, last_error, attempts
+
+
+def _log_pending_from_retry_ctx(
+    error_message: str,
+    *,
+    attempts: int,
+    empty_response: bool = False,
+) -> None:
+    try:
+        from services.evaluation.ai_diag import _DIAG_CTX
+        from utils.ai_pending_diag import log_ai_pending_reason
+
+        ctx = dict(_DIAG_CTX.get())
+    except Exception:
+        ctx = {}
+    try:
+        from services.evaluation.eval_config import MODEL_NAME as _model_default
+
+        model_default = _model_default
+    except Exception:
+        model_default = ""
+    log_ai_pending_reason(
+        question_index=ctx.get("question_index") if isinstance(ctx, dict) else None,
+        mode=str(ctx.get("mock_mode") or "") if isinstance(ctx, dict) else "",
+        audio_bytes_len=int(ctx.get("audio_bytes_len") or 0) if isinstance(ctx, dict) else 0,
+        mime_type=str(ctx.get("mime_type") or "") if isinstance(ctx, dict) else "",
+        model=str(ctx.get("model_used") or model_default) if isinstance(ctx, dict) else model_default,
+        error_message=error_message or "",
+        retry_count=attempts,
+        empty_response=empty_response,
+    )
 
 
 def analyze_answer(audio_bytes: bytes, question_text: str, api_key: str) -> Dict[str, Any]:

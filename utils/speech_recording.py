@@ -226,7 +226,11 @@ def render_recording_debug_block(
     blob: Any = None,
     gemini_error: str = "",
 ) -> None:
+    """Audio pipeline diagnostics — hidden from students unless ``show_dev_debug``."""
     import streamlit as st
+
+    if not st.session_state.get("show_dev_debug", False):
+        return
 
     lines = build_recording_debug_lines(
         mx,
@@ -236,13 +240,5 @@ def render_recording_debug_block(
         blob=blob,
         gemini_error=gemini_error,
     )
-    body = "<br/>".join(html.escape(line) for line in lines)
-    st.markdown(
-        f"""
-        <div class="mx-speech-debug" role="note">
-          <p class="mx-speech-debug-label">개발 확인</p>
-          <p class="mx-speech-debug-body">{body}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.expander("개발 확인", expanded=False):
+        st.code("\n".join(lines), language=None)

@@ -41,6 +41,28 @@ def prepare_recording_timer_question(question_key: str) -> None:
         st.session_state["recording_timer_question_key"] = qk
 
 
+def prepare_recording_timer(
+    question_key: str | None = None,
+    duration_sec: int | None = None,
+) -> None:
+    """
+    Prepare inactive timer state for a question (safe on page render).
+
+    Does not start the countdown — use ``start_recording_timer`` when recording begins.
+    """
+    if duration_sec is not None:
+        try:
+            st.session_state["recording_timer_duration_sec"] = max(
+                1, int(duration_sec)
+            )
+        except (TypeError, ValueError):
+            st.session_state["recording_timer_duration_sec"] = RECORDING_TIMER_DURATION_SEC
+    elif "recording_timer_duration_sec" not in st.session_state:
+        st.session_state["recording_timer_duration_sec"] = RECORDING_TIMER_DURATION_SEC
+    if question_key:
+        prepare_recording_timer_question(str(question_key))
+
+
 def start_recording_timer(question_key: str) -> None:
     """Start countdown when the user begins actual recording (mic / 말하기)."""
     prepare_recording_timer_question(question_key)
@@ -120,7 +142,7 @@ def _timer_html(rem: int, *, active: bool, state: str) -> str:
             helper = "2분 안에 핵심을 정리해 보세요."
     else:
         label = "답변 시간"
-        helper = "마이크 버튼을 누르면 타이머가 시작돼요."
+        helper = "답변 시작을 누르면 타이머가 시작돼요."
 
     state_esc = html.escape(state)
     return f"""
