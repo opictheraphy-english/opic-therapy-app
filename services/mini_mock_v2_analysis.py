@@ -40,13 +40,58 @@ def _student_answer_text(row: Dict[str, Any]) -> str:
     return ""
 
 
+def _question_type_kind(question_type: str, question_text: str) -> str:
+    """Map saved labels to rubric bucket (description / experience / roleplay / general)."""
+    t = (question_type or "").lower()
+    q = (question_text or "").lower()
+    if "roleplay" in t or "롤플레" in t or "role play" in t:
+        return "roleplay"
+    if "experience" in t or "memorable" in t or "기억" in t or "경험" in t:
+        return "experience"
+    if "description" in t or "묘사" in t or "describe" in t:
+        return "description"
+    if ("ask me" in q or "ask you" in q) and "question" in q:
+        return "roleplay"
+    if "tell me about" in q and "experience" in q:
+        return "experience"
+    if "tell me about" in q and ("place" in q or "often go" in q):
+        return "description"
+    return "general"
+
+
+def _evaluation_focus(type_kind: str, question_text: str) -> str:
+    if type_kind == "roleplay":
+        return (
+            "ROLEPLAY: Judge ONLY against question_text. Check whether the student speaks "
+            "to the imagined person directly, fulfills the prompt (e.g. asks 2–3 natural "
+            "questions if required), and uses polite conversational English. "
+            "Do NOT require an unrelated past experience, schedule change, or narration "
+            "unless question_text explicitly asks for it."
+        )
+    if type_kind == "experience":
+        return (
+            "EXPERIENCE: Judge whether the student describes a clear past event, sequence, "
+            "feelings or why it was memorable, and enough detail. Do not apply roleplay rules."
+        )
+    if type_kind == "description":
+        return (
+            "DESCRIPTION: Judge specific details, clear description, personal preference, "
+            "and sufficient length. Do not apply roleplay or past-event rules."
+        )
+    return (
+        "GENERAL: Judge relevance strictly against question_text only; do not assume a "
+        "different task type than the prompt states."
+    )
+
+
 def _row_analysis_status(row: Dict[str, Any], text: str) -> str:
     """Whether a saved row is sent to Gemini as analyzable."""
     word_count = count_english_words(text)
     if word_count < MIN_USABLE_WORDS:
         return "insufficient_response"
-    if str(row.get("stt_status") or "").strip() == "manual_text":
-        return "saved"
+    stt_status = str(row.get("stt_status") or "").strip()
+    if stt_status in ("manual_text", "transcript_ready"):
+        return "saved" if word_count >= MIN_USABLE_WORDS else "insufficient_response"
     raw_status = str(row.get("status") or "saved").strip().lower()
     if not text or raw_status == "insufficient_response":
         return "insufficient_response"
@@ -112,8 +157,12 @@ def _log_v2_analysis_input(
                 )
         for item in inputs:
             logger.info(
-                "[MINI_V2_ANALYSIS_INPUT] gemini_payload q=%s status=%s student_answer_len=%s",
+                "[MINI_V2_ANALYSIS_INPUT] gemini_payload q=%s question_type=%s "
+                "question_text_len=%s type_kind=%s status=%s student_answer_len=%s",
                 item.get("question_index"),
+                item.get("question_type"),
+                len(str(item.get("question_text") or "")),
+                item.get("type_kind"),
                 item.get("status"),
                 len(str(item.get("student_answer") or "")),
             )
@@ -133,11 +182,16 @@ def build_mini_mock_v2_analysis_inputs(answers: List[Dict[str, Any]]) -> List[Di
         if status == "insufficient_response":
             text = ""
         q_idx = int(row.get("question_index") or 0)
+        question_type = str(row.get("question_type") or "").strip()
+        question_text = str(row.get("question_text") or "").strip()
+        type_kind = _question_type_kind(question_type, question_text)
         items.append(
             {
                 "question_index": q_idx + 1,
-                "question_type": str(row.get("question_type") or ""),
-                "question_text": str(row.get("question_text") or ""),
+                "question_type": question_type,
+                "question_text": question_text,
+                "type_kind": type_kind,
+                "evaluation_focus": _evaluation_focus(type_kind, question_text),
                 "student_answer": text,
                 "status": status,
             }
@@ -177,26 +231,41 @@ def _all_insufficient_report(inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
 def _build_gemini_prompt(inputs: List[Dict[str, Any]]) -> str:
     lines = [
         "You are an expert OPIc (Oral Proficiency Interview - computer) speaking coach for Korean learners.",
-        "Evaluate THREE mini mock answers using standard OPIc-style criteria.",
+        "Evaluate EACH mini mock answer separately using that item's question_text, "
+        "question_type, type_kind, and evaluation_focus.",
         "Use ONLY the student_answer text provided. Do NOT invent transcripts.",
-        "Write feedback in Korean. estimated levels use OPIc bands: NH, IL, IM1, IM2, IM3, IH, AL.",
+        "Write ALL feedback in Korean. Be student-friendly: specific, useful, OPIc-focused, "
+        "and encouraging—not harsh. estimated levels use OPIc bands: NH, IL, IM1, IM2, IM3, IH, AL.",
         "",
-        "Evaluation criteria (apply across all answers):",
-        "1. Overall estimated OPIc level",
-        "2. Response amount (quantity / development)",
-        "3. Question relevance",
-        "4. Answer structure (organization, discourse)",
-        "5. Grammar control",
-        "6. Vocabulary range",
-        "7. Naturalness / conversational flow",
-        "8. Repetition (penalize excessive repetition)",
-        "9. Strengths",
-        "10. Weaknesses",
-        "11. Next practice mission",
-        "12. Sample upgraded answer direction (brief, not a full script)",
+        "CRITICAL — per-question alignment:",
+        "- Never judge an answer against a different question than its question_text.",
+        "- Never assume Q3 is a schedule-change roleplay; read question_text for every item.",
+        "- Use evaluation_focus for that item; do not apply description/experience rules to roleplay.",
+        "",
+        "ROLEPLAY (type_kind=roleplay):",
+        "- Evaluate whether the student speaks to the imagined person directly.",
+        "- Check they do what the prompt requires (e.g. 2–3 natural questions if asked).",
+        "- Reward polite, natural conversational English.",
+        "- Do NOT penalize for omitting an unrelated past experience or narrative monologue.",
+        "",
+        "DESCRIPTION (type_kind=description):",
+        "- Evaluate specific details, clear description, personal preference, enough length.",
+        "",
+        "EXPERIENCE (type_kind=experience):",
+        "- Evaluate a clear past event, sequence, feelings / why memorable, enough detail.",
+        "",
+        "SCORING (0–100 integers in score_breakdown):",
+        "- Base scores on the actual student_answer text.",
+        "- If status is saved and the answer has enough text and generally addresses question_text, "
+        "relevance should not be extremely low unless the answer clearly misses the prompt.",
+        "- Penalize repetition only when excessive.",
+        "",
+        "FEEDBACK STYLE:",
+        "- Avoid vague lines like '질문의 핵심을 다루지 못했습니다' without saying what was missing.",
+        "- Say what the student did well and one concrete next step per question.",
         "",
         "For items with status insufficient_response: do NOT fabricate grammar fixes; "
-        'set feedback to note insufficient response only.',
+        "set feedback to note insufficient response only.",
         "",
         "Return ONLY one JSON object (no markdown fences):",
         "{",

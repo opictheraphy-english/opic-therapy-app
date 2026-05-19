@@ -34,6 +34,7 @@ _KEY_ANALYSIS_STARTED_ATTEMPT = "mini_v2_analysis_started_attempt"
 _KEY_ANALYSIS_FINISHED_ATTEMPT = "mini_v2_analysis_finished_attempt"
 _KEY_RECORDINGS = "mini_v2_recordings"
 
+_MIN_ANSWER_MIN_WORDS = 5
 _MIN_TEXT_MIN_WORDS = 5
 
 _ANALYSIS_TIMEOUT_SEC = 60
@@ -252,30 +253,129 @@ def _set_v2_step_saved(q_idx: int) -> None:
     st.session_state[_KEY_LAST_SAVED] = int(q_idx)
 
 
-def _commit_mini_v2_text_answer(q_idx: int, text: str) -> bool:
-    """Persist typed answer and route to saved screen."""
+def _v2_recordings() -> Dict[str, bytes]:
+    raw = st.session_state.get(_KEY_RECORDINGS)
+    if not isinstance(raw, dict):
+        raw = {}
+        st.session_state[_KEY_RECORDINGS] = raw
+    return raw
+
+
+def _mini_v2_mic_key(q_idx: int) -> str:
+    return f"mini_v2_mic_{q_idx}"
+
+
+def _mini_v2_audio_storage_key(q_idx: int) -> str:
+    return f"mini_v2_audio_{q_idx}"
+
+
+def _extract_mini_v2_audio_bytes(mic_result: Any) -> tuple[bytes, str]:
+    """Normalize streamlit_mic_recorder return value to (bytes, mime_type)."""
+    if mic_result is None:
+        return b"", ""
+    if isinstance(mic_result, bytes):
+        return mic_result, "audio/webm"
+    if isinstance(mic_result, dict):
+        mime_type = (
+            str(mic_result.get("mime_type") or mic_result.get("type") or mic_result.get("format") or "")
+            .strip()
+        )
+        for key in ("bytes", "audio", "blob"):
+            raw = mic_result.get(key)
+            if raw is None:
+                continue
+            if isinstance(raw, bytes):
+                return raw, mime_type or "audio/webm"
+            try:
+                return bytes(raw), mime_type or "audio/webm"
+            except (TypeError, ValueError):
+                continue
+        return b"", mime_type or ""
+    return b"", ""
+
+
+def _commit_mini_v2_recording_answer(
+    q_idx: int,
+    audio_bytes: bytes,
+    mime_type: str,
+) -> bool:
+    """STT + persist row after mic returns audio; then route to saved."""
     idx = max(0, min(_QUESTION_COUNT - 1, int(q_idx)))
     question = _question_at(idx)
     question_id = str(question.get("question_id") or f"mini_v2_q{idx + 1}")
-    trimmed = (text or "").strip()
-    word_count = _english_word_count(trimmed)
-    row_status = "saved" if word_count >= _MIN_TEXT_MIN_WORDS else "insufficient_response"
+    question_text = str(question.get("question_en") or "")
+    blob = bytes(audio_bytes) if audio_bytes else b""
+    audio_len = len(blob)
+    resolved_mime = (mime_type or "audio/webm").strip() or "audio/webm"
+
+    if audio_len > 0:
+        _v2_recordings()[_mini_v2_audio_storage_key(idx)] = blob
+
+    from services.stt_service import transcribe_answer_audio
+
+    stt_result: Dict[str, Any] = {}
+    if audio_len > 0:
+        stt_result = transcribe_answer_audio(
+            blob,
+            mime_type=resolved_mime,
+            language_hint="en",
+            question_text=question_text,
+            mode="mini_mock_v2",
+            question_id=question_id,
+        )
+    else:
+        stt_result = {
+            "ok": False,
+            "transcript": "",
+            "raw_transcript": "",
+            "error_category": "empty_audio",
+            "error_message": "empty_audio_bytes",
+        }
+
+    transcript = str(stt_result.get("transcript") or "").strip()
+    raw_transcript = str(stt_result.get("raw_transcript") or transcript).strip()
+    stt_error_category = str(stt_result.get("error_category") or "")
+    stt_error_message = str(stt_result.get("error_message") or "")
+    word_count = _english_word_count(transcript)
+
+    if audio_len == 0:
+        return False
+
+    if stt_result.get("ok") and transcript:
+        stt_status = "transcript_ready"
+    elif stt_result.get("ok") and not transcript:
+        stt_status = "stt_pending"
+    elif not transcript:
+        stt_status = "stt_pending"
+    else:
+        stt_status = "stt_error"
+
+    if transcript and word_count >= _MIN_ANSWER_MIN_WORDS:
+        row_status = "saved"
+        if stt_status == "stt_error":
+            stt_status = "transcript_ready"
+    elif transcript:
+        row_status = "insufficient_response"
+        stt_status = "insufficient_response"
+    else:
+        row_status = "stt_pending"
+        stt_status = "stt_pending"
 
     row = {
         "question_index": idx,
         "question_id": question_id,
         "question_type": str(question.get("type_label") or question.get("type") or ""),
-        "question_text": str(question.get("question_en") or ""),
-        "audio_saved": False,
-        "audio_len": 0,
-        "has_audio_bytes": False,
-        "mime_type": "",
-        "transcript": trimmed,
-        "raw_transcript": trimmed,
-        "student_answer": trimmed,
-        "stt_status": "manual_text",
-        "stt_error_category": "",
-        "stt_error_message": "",
+        "question_text": question_text,
+        "audio_saved": audio_len > 0,
+        "audio_len": audio_len,
+        "has_audio_bytes": audio_len > 0,
+        "mime_type": resolved_mime,
+        "transcript": transcript,
+        "raw_transcript": raw_transcript or transcript,
+        "student_answer": transcript,
+        "stt_status": stt_status,
+        "stt_error_category": stt_error_category,
+        "stt_error_message": stt_error_message,
         "status": row_status,
         "created_at": iso_now(),
     }
@@ -283,14 +383,14 @@ def _commit_mini_v2_text_answer(q_idx: int, text: str) -> bool:
     _set_v2_step_saved(idx)
     try:
         logger.info(
-            "[MINI_V2_TEXT_SAVE] q=%s question_index=%s word_count=%s status=%s "
-            "student_answer_len=%s answers_count=%s",
+            "[MINI_V2_RECORDING_SAVE] q=%s audio_len=%s transcript_len=%s "
+            "student_answer_len=%s status=%s stt_status=%s",
             idx + 1,
-            idx,
-            word_count,
+            audio_len,
+            len(transcript),
+            len(transcript),
             row_status,
-            len(trimmed),
-            len(_answers()),
+            stt_status,
         )
     except Exception:
         pass
@@ -352,17 +452,11 @@ def _render_v2_answers_dev_debug() -> None:
         q_idx = int(row.get("question_index") or 0)
         transcript = str(row.get("transcript") or "")
         student_answer = str(row.get("student_answer") or "")
-        has_bytes = row.get("audio_bytes") is not None and _answer_row_audio_len(row) > 0
         st.markdown(
-            f"- **Q{q_idx + 1}** · `question_index={q_idx}` · "
-            f"`status={row.get('status')}` · `audio_saved={row.get('audio_saved')}` · "
-            f"`audio_len={_answer_row_audio_len(row)}` · "
-            f"`transcript_len={len(transcript)}` · "
-            f"`student_answer_len={len(student_answer)}` · "
-            f"`stt_status={row.get('stt_status')}` · "
-            f"`stt_error_category={row.get('stt_error_category') or '—'}` · "
-            f"`has_audio_bytes={has_bytes}` · "
-            f"`created_at={row.get('created_at')}`"
+            f"**Q{q_idx + 1}** · audio_len={_answer_row_audio_len(row)} · "
+            f"transcript_len={len(transcript)} · "
+            f"student_answer_len={len(student_answer)} · "
+            f"stt_status={row.get('stt_status')}"
         )
 
 
@@ -572,27 +666,41 @@ def _render_question_step(q_idx: int) -> None:
         st.rerun()
 
     try:
-        logger.info("[MINI_V2_TEXT_RENDER] idx=%s step=question", q_idx)
+        logger.info("[MINI_V2_QUESTION_RENDER] idx=%s step=question", q_idx)
     except Exception:
         pass
 
     _render_v2_question_header(q_idx)
-    st.caption(
-        "현재 테스트 버전에서는 녹음 대신 답변 텍스트로 AI 리포트를 먼저 확인합니다."
-    )
-    answer_text = st.text_area(
-        "영어 답변을 입력해 주세요",
-        key=f"mini_v2_text_answer_{q_idx}",
-        height=160,
-    )
-    if st.button(
-        "답변 저장",
-        type="primary",
+
+    from streamlit_mic_recorder import mic_recorder
+
+    mic_key = _mini_v2_mic_key(q_idx)
+    mic_result = mic_recorder(
+        start_prompt="🎤 답변 시작",
+        stop_prompt="■ 녹음 완료",
+        key=mic_key,
         use_container_width=True,
-        key=f"mini_v2_save_text_{q_idx}",
-    ):
-        _commit_mini_v2_text_answer(q_idx, answer_text or "")
-        st.rerun()
+        just_once=True,
+    )
+
+    if mic_result is not None:
+        audio_bytes, mime_type = _extract_mini_v2_audio_bytes(mic_result)
+        try:
+            logger.info(
+                "[MINI_V2_MIC_RESULT] q=%s result_type=%s audio_len=%s mime_type=%s",
+                q_idx + 1,
+                type(mic_result).__name__,
+                len(audio_bytes),
+                mime_type or "—",
+            )
+        except Exception:
+            pass
+        if len(audio_bytes) > 0:
+            with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
+                _commit_mini_v2_recording_answer(q_idx, audio_bytes, mime_type)
+            st.rerun()
+        else:
+            st.warning("음성이 저장되지 않았어요. 다시 녹음해 주세요.")
 
 
 def _render_saved_step(q_idx: int) -> None:
@@ -609,6 +717,16 @@ def _render_saved_step(q_idx: int) -> None:
         st.caption(
             "답변이 짧거나 음성이 충분히 인식되지 않았지만, 답변 시도는 저장되었습니다."
         )
+
+    if saved_row:
+        transcript = str(
+            saved_row.get("transcript") or saved_row.get("student_answer") or ""
+        ).strip()
+        st.markdown("##### 인식된 답변")
+        if transcript:
+            st.caption(transcript)
+        else:
+            st.caption("답변은 저장되었지만, 음성 인식이 지연되었어요.")
 
     if is_last:
         st.markdown(
@@ -905,7 +1023,7 @@ def _exit_to_portal() -> None:
 
 
 def render_mini_mock_v2() -> None:
-    """Main V2 router — question (text) → saved → analyzing → report | pending."""
+    """Main V2 router — question (mic+STT) → saved → analyzing → report | pending."""
     if not is_mini_mock_v2_active():
         mx = st.session_state.get("mock")
         begin_mini_mock_v2_session(mx if isinstance(mx, dict) else {})
