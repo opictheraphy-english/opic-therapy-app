@@ -84,8 +84,8 @@ def _router_debug(tag: str, ss: Any, nav_p: str | None, mock_p: str | None) -> N
     """Server-side only — never shown in UI."""
     mx = ss.get("mock") if isinstance(ss.get("mock"), dict) else {}
     logger.debug(
-        "app_router[%s] nav=%r mock=%r page=%r mx_page=%r idx=%r exam_finished=%r "
-        "analysis_status=%r audio_bytes=%s pending_recovery=%s restored_flag=%r",
+        "[APP_ROUTER] tag=%s nav=%r mock=%r page=%r mx_page=%r real_mock_page=%r idx=%r "
+        "exam_finished=%r analysis_status=%r audio_bytes=%s pending_recovery=%s restored_flag=%r",
         tag,
         nav_p,
         mock_p,
