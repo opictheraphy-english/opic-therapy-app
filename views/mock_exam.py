@@ -714,6 +714,8 @@ def _mock_mode(mx: dict) -> str | None:
         return "coaching"
     if mode in ("topic_practice", "topic"):
         return "topic_practice"
+    if mode in ("topic_practice_v2", "topic_v2"):
+        return "topic_practice_v2"
     if mode in ("mini_mock", "mini"):
         return "mini_mock"
     return None
@@ -725,6 +727,8 @@ def _mock_mode_label(mode: str | None) -> str:
     if mode == "coaching":
         return "AI 코칭 연습"
     if mode == "topic_practice":
+        return "주제별 답변 연습"
+    if mode == "topic_practice_v2":
         return "주제별 답변 연습"
     if mode == "mini_mock":
         return "5분 진단 미니 모의고사"
@@ -1918,7 +1922,7 @@ def _has_mock_mode(mx: dict) -> bool:
 
 
 def _set_mock_mode(mx: dict, mode: str) -> None:
-    if mode not in ("real_mock", "coaching", "topic_practice", "mini_mock"):
+    if mode not in ("real_mock", "coaching", "topic_practice", "topic_practice_v2", "mini_mock"):
         mode = "real_mock"
     st.session_state["mock_mode"] = mode
     mx["mock_mode"] = mode
@@ -2024,6 +2028,12 @@ def reset_to_learning_portal() -> None:
     mx.pop("_resume_confirmed", None)
     st.session_state.pop("mock_mode", None)
     try:
+        from views.topic_practice_v2 import clear_topic_v2_session
+
+        clear_topic_v2_session()
+    except Exception:
+        pass
+    try:
         logger.debug(
             "[STATE_RESET] mode=portal cleared_keys=%s (mini/topic via helpers; mx.results preserved)",
             cleared,
@@ -2116,6 +2126,8 @@ def _session_mock_mode() -> str | None:
         return "coaching"
     if mode in ("topic_practice", "topic"):
         return "topic_practice"
+    if mode in ("topic_practice_v2", "topic_v2"):
+        return "topic_practice_v2"
     if mode in ("mini_mock", "mini"):
         return "mini_mock"
     return None
@@ -2492,17 +2504,19 @@ def render_learning_portal(mx: dict) -> None:
             use_container_width=True,
             key="portal_start_topic_practice",
         ):
-            _clear_topic_practice_state()
-            st.session_state["mock_mode"] = "topic_practice"
+            from views.topic_practice_v2 import MOCK_MODE_TOPIC_V2, clear_topic_v2_session
+
+            clear_topic_v2_session()
+            st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
             st.session_state["practice_portal_selected"] = True
-            st.session_state["topic_practice_step"] = "select_topic"
-            st.session_state["selected_topic_id"] = None
-            st.session_state["topic_practice_question_index"] = 0
-            st.session_state["topic_practice_results"] = []
-            st.session_state["mock_page"] = "TOPIC"
-            _sync_portal_mode_to_mx(mx, "topic_practice")
-            _set_mock_page(mx, "TOPIC")
+            st.session_state["mock_page"] = "TOPIC_V2"
+            _sync_portal_mode_to_mx(mx, MOCK_MODE_TOPIC_V2)
+            _set_mock_page(mx, "TOPIC_V2")
             _clear_reset_practice_query_param()
+            try:
+                logger.info("[TOPIC_PRACTICE_V2] portal_start mode=%s page=TOPIC_V2", MOCK_MODE_TOPIC_V2)
+            except Exception:
+                pass
             st.rerun()
     with c4:
         st.markdown(
@@ -5614,6 +5628,12 @@ def render_mock_flow() -> None:
         return
 
     mode = _session_mock_mode() or _mock_mode(mx)
+
+    if mode == "topic_practice_v2":
+        from views.topic_practice_v2 import render_topic_practice_v2
+
+        render_topic_practice_v2()
+        return
 
     if mode == "topic_practice":
         render_topic_practice_flow(mx)

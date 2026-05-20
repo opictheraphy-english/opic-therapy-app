@@ -101,7 +101,16 @@ def _router_debug(tag: str, ss: Any, nav_p: str | None, mock_p: str | None) -> N
 
 
 _ALLOWED_PAGES = {"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS"}
-_ALLOWED_MOCK_SUBPAGES = {"PICK", "TOPIC", "MINI_MOCK", "SURVEY", "TEST", "REPORT", "FINAL"}
+_ALLOWED_MOCK_SUBPAGES = {
+    "PICK",
+    "TOPIC",
+    "TOPIC_V2",
+    "MINI_MOCK",
+    "SURVEY",
+    "TEST",
+    "REPORT",
+    "FINAL",
+}
 
 nav_param = _q_one("nav")
 mock_param = _q_one("mock")
@@ -136,7 +145,7 @@ if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
         prev_m = mx.get("mock_page")
         mx["mock_page"] = mock_param
         st.session_state["mock_page"] = mock_param
-        if mock_param in {"SURVEY", "TEST", "REPORT", "FINAL", "TOPIC", "MINI_MOCK"}:
+        if mock_param in {"SURVEY", "TEST", "REPORT", "FINAL", "TOPIC", "TOPIC_V2", "MINI_MOCK"}:
             st.session_state["practice_portal_selected"] = True
         if mock_param == "FINAL":
             mx["exam_finished"] = True
