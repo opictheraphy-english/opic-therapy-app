@@ -18,9 +18,10 @@ from services.exam_analytics import (
     detect_risk_flags,
     exam_results_summary_stats,
     result_display_status,
+    result_is_no_speech_row,
     summary_rows_for_table,
 )
-from utils.exam_state import reset_exam_state, start_new_mock_attempt
+from utils.exam_state import reset_exam_state, reset_real_mock_attempt, start_new_mock_attempt
 from utils.local_profile import sync_user_progress
 from utils.streamlit_ui import clean_visible_label
 from utils.text_utils import (
@@ -101,6 +102,11 @@ _REPORT_CSS = """
 """
 
 
+def _mock_mode_real(mx: Dict[str, Any]) -> bool:
+    mode = str(st.session_state.get("mock_mode") or mx.get("mock_mode") or "").strip().lower()
+    return mode in ("real_mock", "real", "exam")
+
+
 def _ensure_analytics(mx: Dict[str, Any]) -> Dict[str, Any]:
     results: List[Dict[str, Any]] = mx.get("results") or []
     sig = (len(results), tuple(r.get("q_id") for r in results))
@@ -131,10 +137,27 @@ def render_final_report(mx: Dict[str, Any]) -> None:
     st.markdown(_REPORT_CSS, unsafe_allow_html=True)
 
     if mx.get("_final_report_demo"):
-        st.info(
-            "**데모 모드** — 가짜 15문항 데이터로 UI를 보여줍니다. "
-            "실제 시험을 끝까지 보면 본인 녹음·분석 결과로 대체됩니다."
+        st.markdown(
+            """
+            <section class="continue-card continue-card--resume mx-landing-card" role="status"
+                     aria-label="샘플 리포트 안내">
+              <div class="cc-eyebrow">샘플</div>
+              <div class="cc-title">샘플 리포트입니다</div>
+              <div class="cc-meta">이 화면은 데모 데이터로 만든 리포트입니다.<br/>
+                실제 모의고사를 완료하면 내 답변 기준의 최종 리포트가 생성됩니다.</div>
+            </section>
+            """,
+            unsafe_allow_html=True,
         )
+        if st.button(
+            "학습하기로 돌아가기",
+            use_container_width=True,
+            key="demo_final_back_portal",
+        ):
+            from services.final_report_demo import exit_demo_final_report
+
+            exit_demo_final_report(mx)
+            st.rerun()
 
     if mx.pop("_show_exam_celebration", False):
         st.balloons()
@@ -143,10 +166,15 @@ def render_final_report(mx: Dict[str, Any]) -> None:
     results: List[Dict[str, Any]] = mx.get("results") or []
     stats = exam_results_summary_stats(results)
 
-    if stats["pending"] > 0:
+    if stats.get("pending", 0) > 0:
         st.info(
             "일부 문항은 AI 분석 대기 중입니다. "
             "분석이 완료된 문항 기준으로 리포트를 먼저 보여드릴게요."
+        )
+    elif stats.get("no_speech", 0) > 0 and stats.get("completed", 0) == 0:
+        st.info(
+            "대부분의 문항에서 충분한 음성이 인식되지 않아 정상적인 등급 산정이 어렵습니다. "
+            "실제 시험에서는 매우 낮은 평가로 이어질 수 있습니다."
         )
 
     # --- Hero ---
@@ -164,7 +192,7 @@ def render_final_report(mx: Dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
-    ov = agg.get("overall_display", "NH")
+    ov = agg.get("overall_display") or "측정 불가 · 응답 부족"
     conf = agg.get("confidence", 0)
     note = agg.get("confidence_note", "")
 
@@ -185,7 +213,7 @@ def render_final_report(mx: Dict[str, Any]) -> None:
 <div class="section-card">
   <div style="font-size:0.85rem;color:#64748b;font-weight:700;letter-spacing:0.08em;">전체 요약</div>
   <p style="margin:0.5rem 0 0;line-height:1.55;color:#334155;">
-    답변 저장 <b>{stats["answered"]}</b>문항 · 분석 완료 <b>{stats["completed"]}</b> · 분석 대기 <b>{stats["pending"]}</b>
+    답변 저장 <b>{stats["answered"]}</b>문항 · 분석 완료 <b>{stats["completed"]}</b> · 분석 대기 <b>{stats.get("pending", 0)}</b> · 응답 부족 <b>{stats.get("no_speech", 0)}</b>
   </p>
   <p style="margin:0.35rem 0 0;color:#64748b;font-size:0.92rem;">
     예상 레벨 <b>{html.escape(str(ov))}</b> · 신뢰도 {conf}%
@@ -235,10 +263,21 @@ def render_final_report(mx: Dict[str, Any]) -> None:
     st.divider()
     att = int(mx.get("attempt_no") or 1)
     st.caption(f"{att}회 모의고사 · 종합 리포트")
-    b_new, b_home, b_refresh = st.columns([1.2, 1, 0.9])
+    b_new, b_portal, b_refresh = st.columns([1.2, 1, 0.9])
     with b_new:
-        if st.button("새 모의고사 시작하기", type="primary", use_container_width=True, key="mx_final_new_attempt"):
-            if start_new_mock_attempt(mx, st.session_state):
+        if st.button("새 모의고사 시작", type="primary", use_container_width=True, key="mx_final_new_attempt"):
+            if _mock_mode_real(mx):
+                reset_real_mock_attempt(mx, st.session_state)
+                clear_mock_question_tts_keys()
+                sync_user_progress(st.session_state)
+                try:
+                    st.query_params.clear()
+                    st.query_params["nav"] = "MOCK"
+                    st.query_params["mock"] = "SURVEY"
+                except Exception:
+                    pass
+                st.rerun()
+            elif start_new_mock_attempt(mx, st.session_state):
                 clear_mock_question_tts_keys()
                 sync_user_progress(st.session_state)
                 try:
@@ -250,12 +289,18 @@ def render_final_report(mx: Dict[str, Any]) -> None:
                 st.rerun()
             else:
                 st.error("설문 데이터가 없거나 종료된 시험이 아니면 새 시험을 시작할 수 없습니다.")
-    with b_home:
-        if st.button("홈으로 가기", use_container_width=True, key="mx_final_go_home"):
-            reset_exam_state(mx, st.session_state)
-            st.session_state.page = "HOME"
-            st.query_params.clear()
-            st.query_params["nav"] = "HOME"
+    with b_portal:
+        if st.button("학습하기로 돌아가기", use_container_width=True, key="mx_final_go_portal"):
+            mx.pop("_view_completed_report", None)
+            st.session_state.pop("_view_completed_report", None)
+            from views.mock_exam import reset_to_learning_portal
+
+            reset_to_learning_portal()
+            try:
+                st.query_params.clear()
+                st.query_params["nav"] = "MOCK"
+            except Exception:
+                pass
             st.rerun()
     with b_refresh:
         if st.button("리포트 다시 보기", use_container_width=True, key="mx_final_refresh"):
@@ -359,14 +404,27 @@ def render_final_report(mx: Dict[str, Any]) -> None:
             st.markdown("##### [A] 질문 내용")
             st.write(r.get("question") or "—")
 
-            st.markdown("##### [B] 나의 답변 (Transcript)")
+            st.markdown("##### [B] AI가 인식한 답변")
             tx_raw = (res.get("transcript") or "").strip()
             tx_is_real = False
+            _no_speech = result_is_no_speech_row(res)
             _pending = (
-                res.get("diagnosis_status") == "analysis_pending"
-                or str(res.get("analysis_status") or "").lower() == "pending"
+                not _no_speech
+                and (
+                    res.get("diagnosis_status") == "analysis_pending"
+                    or str(res.get("analysis_status") or "").lower() == "pending"
+                )
             )
-            if _pending:
+            if _no_speech:
+                st.markdown(
+                    '<div class="mono-tx" style="opacity:.9;">'
+                    "<b>응답이 충분하지 않았어요</b><br/>"
+                    "이 문항은 말소리가 충분히 인식되지 않아 문법, 표현, 구조 피드백을 제공하기 어렵습니다.<br/>"
+                    "다시 연습할 때는 최소 20~30초 이상 영어로 답변해 주세요."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+            elif _pending:
                 st.markdown(
                     '<div class="mono-tx" style="opacity:.9;">'
                     "<b>AI 분석 대기 중</b><br/>"
@@ -406,7 +464,9 @@ def render_final_report(mx: Dict[str, Any]) -> None:
                     )
 
             st.markdown("##### [C] 에이바(Ava)의 상세 피드백")
-            if _pending:
+            if _no_speech:
+                st.info(res.get("summary_speech_rehab") or "응답이 충분하지 않았어요.")
+            elif _pending:
                 st.info("AI 분석이 완료되면 이 영역에 상세 피드백이 표시됩니다.")
             else:
                 st.info(res.get("semantic_feedback") or res.get("summary_speech_rehab") or "—")
@@ -484,21 +544,23 @@ def render_final_report(mx: Dict[str, Any]) -> None:
     dc1, dc2, dc3 = st.columns(3)
     pdf_bytes = mx.get("downloadable_report_bytes")
     pdf_ok = pdf_export_available()
+    is_demo = bool(mx.get("_final_report_demo"))
+    pdf_filename = (
+        "opic_final_report_sample.pdf" if is_demo else "opic_final_report.pdf"
+    )
     if pdf_ok and pdf_bytes:
-        fn = f"opic_therapy_report_{datetime.now().strftime('%Y%m%d')}.pdf"
         dc1.download_button(
-            "📄 PDF로 저장하기",
+            "PDF 리포트 다운로드",
             data=pdf_bytes,
-            file_name=fn,
+            file_name=pdf_filename,
             mime="application/pdf",
             use_container_width=True,
         )
     elif pdf_ok and not pdf_bytes:
-        dc1.caption("📄 PDF 생성에 실패했습니다. 잠시 후 페이지를 새로고침하거나 로그를 확인하세요.")
+        dc1.caption("PDF 생성에 실패했습니다. 잠시 후 페이지를 새로고침해 주세요.")
     else:
         dc1.caption(
-            "📄 PDF 저장은 **`pip install reportlab pillow`** 설치 후 사용할 수 있습니다. "
-            "(선택 기능 · 나머지 리포트는 그대로 이용 가능)"
+            "PDF 생성 기능을 사용할 수 없어요. 화면 리포트를 먼저 확인해 주세요."
         )
 
     export_obj = {

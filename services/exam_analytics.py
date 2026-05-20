@@ -4,10 +4,13 @@ Aggregate mock-exam results without calling Gemini — semantic scores from cach
 
 from __future__ import annotations
 
+import logging
 from statistics import mean, pstdev
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.evaluation.eval_config import LEVEL_COMPRESS, LEVEL_ORDER
+
+logger = logging.getLogger(__name__)
 
 _SEMANTIC_KEYS_AVG = (
     "semantic_density",
@@ -40,7 +43,9 @@ def parse_level_to_token(text: Optional[str]) -> Optional[str]:
 def level_to_index(level: Optional[str]) -> int:
     if not level:
         return 0
-    lv = parse_level_to_token(level) or "NH"
+    lv = parse_level_to_token(level)
+    if not lv:
+        return 0
     try:
         return LEVEL_ORDER.index(lv)
     except ValueError:
@@ -52,31 +57,149 @@ def index_to_level(idx: int) -> str:
     return LEVEL_ORDER[idx]
 
 
+def result_is_no_speech_row(res: Dict[str, Any]) -> bool:
+    if not isinstance(res, dict):
+        return False
+    if res.get("no_speech_detected") or res.get("insufficient_response"):
+        return True
+    stt = str(res.get("stt_status") or "").lower()
+    if stt == "insufficient_response":
+        return True
+    ast = str(res.get("analysis_status") or "").lower()
+    diag = str(res.get("diagnosis_status") or "").lower()
+    return ast in ("no_speech", "insufficient_response") or diag == "no_speech"
+
+
+def result_is_api_pending_row(res: Dict[str, Any]) -> bool:
+    if not isinstance(res, dict):
+        return False
+    if result_is_no_speech_row(res):
+        return False
+    ast = str(res.get("analysis_status") or "").lower()
+    diag = str(res.get("diagnosis_status") or "").lower()
+    return diag == "analysis_pending" or ast == "pending" or bool(res.get("analysis_pending"))
+
+
+def result_is_gradable_for_aggregate(res: Dict[str, Any]) -> bool:
+    """Only completed analyses with real level/score data affect overall level."""
+    if not isinstance(res, dict):
+        return False
+    if res.get("is_gradable") is False:
+        return False
+    if result_is_no_speech_row(res):
+        return False
+    if result_display_status(res) != "분석 완료":
+        return False
+    diag = str(res.get("diagnosis_status") or "").lower()
+    if diag not in ("ok", ""):
+        return False
+    return True
+
+
+def _level_token_for_aggregate(res: Dict[str, Any]) -> Optional[str]:
+    """Resolve OPIc token from completed result — never invent NH for missing fields."""
+    if not result_is_gradable_for_aggregate(res):
+        return None
+    lvl = res.get("estimated_level") or res.get("estimated_level_display") or ""
+    tok = parse_level_to_token(str(lvl))
+    if tok:
+        return tok
+    fg = res.get("final_grade_score")
+    if isinstance(fg, (int, float)):
+        return _score_to_level(float(fg))
+    return None
+
+
+def level_display_for_summary(res: Dict[str, Any]) -> str:
+    """Row level column — status label for non-completed rows, never NH for pending."""
+    status = result_display_status(res)
+    if status in ("분석 대기", "AI 분석 대기 중"):
+        return "분석 대기"
+    if status == "응답 부족":
+        return "응답 부족"
+    if status == "말소리 인식 불명확":
+        return "음성 확인 필요"
+    if status == "영어 답변 필요":
+        return "영어 답변 필요"
+    if status == "음성 미감지":
+        return "음성 미감지"
+    if status == "녹음 없음":
+        return "녹음 없음"
+    if status != "분석 완료":
+        return "—"
+    disp = str(res.get("estimated_level_display") or res.get("estimated_level") or "").strip()
+    if not disp or disp in ("측정 대기", "측정 불가"):
+        return "—"
+    tok = parse_level_to_token(disp)
+    if tok:
+        return _compress_display(tok)
+    return disp
+
+
+def _count_aggregate_buckets(items: List[Dict[str, Any]]) -> Tuple[int, int, int]:
+    gradable = 0
+    no_speech = 0
+    pending = 0
+    for row in items:
+        if not isinstance(row, dict):
+            continue
+        res = row.get("result") or {}
+        if not isinstance(res, dict):
+            continue
+        if result_is_gradable_for_aggregate(res):
+            gradable += 1
+        elif result_is_no_speech_row(res):
+            no_speech += 1
+        elif result_is_api_pending_row(res):
+            pending += 1
+    return gradable, no_speech, pending
+
+
+def resolve_overall_level_display(items: List[Dict[str, Any]]) -> Tuple[str, str]:
+    """Overall predicted level — never show 분석 대기 when only silence rows exist."""
+    gradable, no_speech, pending = _count_aggregate_buckets(items)
+    if gradable > 0:
+        disp, raw = weighted_overall_level(items)
+    elif pending > 0:
+        disp, raw = "분석 대기", "UNKNOWN"
+    elif no_speech > 0:
+        disp, raw = "응답 부족", "NO_SPEECH"
+    else:
+        disp, raw = "측정 불가 · 응답 부족", "NO_SPEECH"
+    try:
+        logger.debug(
+            "[FINAL_AGGREGATE] gradable_count=%s no_speech_count=%s pending_count=%s overall=%s",
+            gradable,
+            no_speech,
+            pending,
+            disp,
+        )
+    except Exception:
+        pass
+    return disp, raw
+
+
 def weighted_overall_level(items: List[Dict[str, Any]]) -> Tuple[str, str]:
     """
     Ordinal median with slight weight on Q14–15 (comparison / issue).
     Returns (compressed_display, raw_token).
+    Skips pending/missing rows — they must not count as NH.
     """
     weights: List[float] = []
     indices: List[int] = []
     for row in items:
         qid = int(row.get("q_id") or 0)
         res = row.get("result") or {}
-        w = 1.35 if qid >= 14 else 1.0
-        lvl = res.get("estimated_level") or res.get("estimated_level_display") or ""
-        tok = parse_level_to_token(str(lvl))
+        tok = _level_token_for_aggregate(res)
         if not tok:
-            fg = res.get("final_grade_score")
-            if isinstance(fg, (int, float)):
-                tok = _score_to_level(float(fg))
-            else:
-                tok = "NH"
+            continue
+        w = 1.35 if qid >= 14 else 1.0
         idx = level_to_index(tok)
         weights.append(w)
         indices.append(idx)
 
     if not indices:
-        return "NH", "NH"
+        return "분석 대기", "UNKNOWN"
 
     acc = sum(i * w for i, w in zip(indices, weights))
     sw = sum(weights)
@@ -110,6 +233,8 @@ def confidence_from_results(items: List[Dict[str, Any]]) -> Tuple[float, str]:
     grades: List[float] = []
     for row in items:
         res = row.get("result") or {}
+        if not result_is_gradable_for_aggregate(res):
+            continue
         sem = res.get("semantic_dimensions") or {}
         d = sem.get("semantic_density")
         c = sem.get("discourse_continuity")
@@ -144,8 +269,10 @@ def confidence_from_results(items: List[Dict[str, Any]]) -> Tuple[float, str]:
 def strongest_weakest_topic(items: List[Dict[str, Any]]) -> Tuple[str, str]:
     by_topic: Dict[str, List[float]] = {}
     for row in items:
-        topic = str(row.get("topic") or "—")
         res = row.get("result") or {}
+        if not result_is_gradable_for_aggregate(res):
+            continue
+        topic = str(row.get("topic") or "—")
         fg = res.get("final_grade_score")
         if isinstance(fg, (int, float)):
             by_topic.setdefault(topic, []).append(float(fg))
@@ -178,8 +305,15 @@ def filler_trend_note(items: List[Dict[str, Any]]) -> str:
 def compute_exam_aggregates(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Single dict for final report + PDF + JSON."""
     items = [r for r in results if isinstance(r, dict)]
-    disp, raw = weighted_overall_level(items)
+    gradable, no_speech, pending = _count_aggregate_buckets(items)
+    disp, raw = resolve_overall_level_display(items)
     conf, conf_note = confidence_from_results(items)
+    if gradable == 0 and no_speech > 0 and pending == 0:
+        conf_note = (
+            "대부분의 문항에서 충분한 음성이 인식되지 않아 정상적인 등급 산정이 어렵습니다. "
+            "실제 시험에서는 매우 낮은 평가로 이어질 수 있습니다."
+        )
+        conf = min(conf, 55.0)
     strong, weak = strongest_weakest_topic(items)
 
     wpms: List[float] = []
@@ -187,6 +321,8 @@ def compute_exam_aggregates(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     sem_dns: List[float] = []
     for row in items:
         res = row.get("result") or {}
+        if not result_is_gradable_for_aggregate(res):
+            continue
         m = res.get("metrics") or {}
         w = m.get("wpm")
         if isinstance(w, (int, float)):
@@ -203,7 +339,10 @@ def compute_exam_aggregates(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     for key in _SEMANTIC_KEYS_AVG:
         vals: List[float] = []
         for row in items:
-            sem = (row.get("result") or {}).get("semantic_dimensions") or {}
+            res = row.get("result") or {}
+            if not result_is_gradable_for_aggregate(res):
+                continue
+            sem = res.get("semantic_dimensions") or {}
             v = sem.get(key)
             if isinstance(v, (int, float)):
                 vals.append(float(v))
@@ -213,7 +352,10 @@ def compute_exam_aggregates(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     rubric_avg = {"fluency": 0.0, "lexical": 0.0, "logic": 0.0, "grammar": 0.0}
     rs_counts = {k: 0 for k in rubric_avg}
     for row in items:
-        rs = (row.get("result") or {}).get("rubric_scores") or {}
+        res = row.get("result") or {}
+        if not result_is_gradable_for_aggregate(res):
+            continue
+        rs = res.get("rubric_scores") or {}
         for k in rubric_avg:
             v = rs.get(k)
             if isinstance(v, (int, float)):
@@ -237,6 +379,9 @@ def compute_exam_aggregates(results: List[Dict[str, Any]]) -> Dict[str, Any]:
         "radar_dimensions": radar_dims,
         "rubric_averages": rubric_avg,
         "item_count": len(items),
+        "gradable_count": gradable,
+        "no_speech_count": no_speech,
+        "pending_count": pending,
     }
 
 
@@ -246,8 +391,12 @@ def result_display_status(res: Dict[str, Any]) -> str:
         return "—"
     ast = str(res.get("analysis_status") or "").lower()
     diag = str(res.get("diagnosis_status") or "").lower()
-    if diag == "analysis_pending" or ast == "pending":
-        return "AI 분석 대기 중"
+    if result_is_no_speech_row(res):
+        if ast == "insufficient_response" or res.get("insufficient_response"):
+            return "응답 부족"
+        return "음성 미감지"
+    if diag == "analysis_pending" or ast == "pending" or res.get("analysis_pending"):
+        return "분석 대기"
     if ast == "non_english" or diag == "non_english":
         return "영어 답변 필요"
     if ast in ("unclear_speech", "needs_review") or diag in (
@@ -269,6 +418,7 @@ def exam_results_summary_stats(items: List[Dict[str, Any]]) -> Dict[str, int]:
     answered = len([r for r in items if isinstance(r, dict)])
     completed = 0
     pending = 0
+    no_speech = 0
     for row in items:
         if not isinstance(row, dict):
             continue
@@ -276,9 +426,16 @@ def exam_results_summary_stats(items: List[Dict[str, Any]]) -> Dict[str, int]:
         status = result_display_status(res)
         if status == "분석 완료":
             completed += 1
-        elif status == "AI 분석 대기 중":
+        elif status in ("분석 대기", "AI 분석 대기 중"):
             pending += 1
-    return {"answered": answered, "completed": completed, "pending": pending}
+        elif status in ("음성 미감지", "응답 부족"):
+            no_speech += 1
+    return {
+        "answered": answered,
+        "completed": completed,
+        "pending": pending,
+        "no_speech": no_speech,
+    }
 
 
 def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -287,8 +444,10 @@ def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         qid = row.get("q_id")
         res = row.get("result") or {}
         rs = res.get("rubric_scores") or {}
-        lvl = res.get("estimated_level_display") or res.get("estimated_level") or "—"
+        status = result_display_status(res)
+        lvl = level_display_for_summary(res)
         fg = res.get("final_grade_score")
+        rubric_val = lambda k: rs.get(k, "—") if status == "분석 완료" else "—"
         feedback = (
             (res.get("summary_speech_rehab") or res.get("semantic_feedback") or "")
             .strip()
@@ -298,12 +457,12 @@ def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "Q": qid,
                 "Topic": row.get("topic") or "—",
                 "Type": row.get("type") or "—",
-                "Status": result_display_status(res),
+                "Status": status,
                 "Est. Level": lvl,
-                "Fluency": rs.get("fluency", "—"),
-                "Logic": rs.get("logic", "—"),
-                "Grammar": rs.get("grammar", "—"),
-                "Overall": fg if fg is not None else "—",
+                "Fluency": rubric_val("fluency"),
+                "Logic": rubric_val("logic"),
+                "Grammar": rubric_val("grammar"),
+                "Overall": fg if status == "분석 완료" and fg is not None else "—",
                 "Feedback": feedback or "—",
             }
         )

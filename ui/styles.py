@@ -112,6 +112,9 @@ GLOBAL_CSS = """
       padding-top: 0.6rem !important;
       padding-bottom: 96px !important;
     }
+    section.main:has(.mx-record-stage) > div {
+      padding-bottom: 120px !important;
+    }
 
     /* Subtle fade-in on each rerun so the rerender feels like a transition
      * instead of a hard repaint. Kept short (140ms) and opacity-only so it
@@ -2413,6 +2416,63 @@ GLOBAL_CSS = """
       }
     }
 
+    /* Learning portal — sample report vs practice mode grid */
+    section.main:has(.mx-landing-marker) .mx-portal-sample-section {
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-practice-intro {
+      margin: 4px 0 14px;
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-section-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.02em;
+    }
+    section.main:has(.mx-landing-marker) .mx-muted-note {
+      margin: 10px 0 0;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: #6b7280;
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-practice-marker ~ div[data-testid="stHorizontalBlock"] {
+      gap: 14px;
+      align-items: stretch;
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-practice-marker ~ div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: flex-start;
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-mode-card {
+      min-height: 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1 1 auto;
+      margin-bottom: 0;
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-mode-spacer {
+      min-height: 1px;
+      visibility: hidden;
+    }
+    section.main:has(.mx-landing-marker) .mx-portal-practice-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button {
+      width: 100%;
+    }
+    @media (max-width: 640px) {
+      section.main:has(.mx-landing-marker) .mx-portal-sample-section {
+        margin-bottom: 22px;
+        padding-bottom: 16px;
+      }
+      section.main:has(.mx-landing-marker) .mx-portal-mode-card {
+        min-height: 112px;
+      }
+    }
+
     /* ==================================================================
      * Mock exam screen (UI redesign step 4) — premium speaking studio.
      *
@@ -2554,6 +2614,40 @@ GLOBAL_CSS = """
       color: #0f766e;
       margin: 0 0 8px 0;
     }
+    .mx-listen-compact {
+      margin: 0 0 14px 0;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid rgba(17, 24, 39, 0.08);
+    }
+    .mx-listen-compact-label {
+      margin: 0 0 8px 0;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .mx-listen-compact-cap {
+      margin: 8px 0 0 0;
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button {
+      font-size: 0.88rem !important;
+      padding: 0.35rem 0.75rem !important;
+      min-height: 2.25rem !important;
+      background: #ffffff !important;
+      color: #0f766e !important;
+      border: 1px solid rgba(13, 148, 136, 0.35) !important;
+      box-shadow: none !important;
+    }
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[kind="primary"],
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: #ffffff !important;
+      color: #0f766e !important;
+    }
 
     /* --- Record stage (the screen's emotional center) ---------------- */
     .mx-record-stage {
@@ -2617,13 +2711,47 @@ GLOBAL_CSS = """
       color: #0f172a !important;
       text-align: center;
     }
-    .mx-record-stage .mx-rec-timer-label {
+    .mx-record-stage .mx-rec-timer-label,
+    .mx-record-stage .mx-answer-timer-label {
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #0f766e !important;
-      margin: 0 0 6px 0;
+      margin: 0;
+    }
+    .mx-answer-timer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .mx-answer-timer-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: rgba(13, 148, 136, 0.12);
+      color: #0f766e !important;
+    }
+    .mx-answer-timer-status--idle {
+      background: rgba(100, 116, 139, 0.14);
+      color: #64748b !important;
+    }
+    .mx-answer-timer-status--warn,
+    .mx-answer-timer-status--up {
+      background: rgba(234, 88, 12, 0.14);
+      color: #c2410c !important;
+    }
+    .mx-record-title--live {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: #ffffff !important;
     }
     .mx-record-stage .mx-rec-timer-value {
       font-size: 2rem;
@@ -2708,6 +2836,16 @@ GLOBAL_CSS = """
       margin-top: 6px;
       font-size: 0.9rem;
       color: var(--text-secondary);
+    }
+    /* Hide internal Streamlit / iframe widget key labels (e.g. mic_*_follow_right) */
+    section.main div[data-testid="stCustomComponent"] [data-testid="stWidgetLabel"],
+    section.main div[data-testid="stCustomComponent"] label {
+      display: none !important;
+      height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      visibility: hidden !important;
     }
     .mx-record-status {
       margin: 8px 0 4px 0;

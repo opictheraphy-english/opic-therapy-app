@@ -2,7 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import copy
+from typing import Any, Dict, List, Optional
+
+_DEMO_RESTORE_KEY = "_demo_mx_restore_snapshot"
+
+_DEMO_STASH_KEYS = (
+    "results",
+    "exam_finished",
+    "mock_page",
+    "current_exam",
+    "exam",
+    "current_idx",
+    "recordings",
+    "audio_bytes",
+    "mock_mode",
+    "analytics_cache",
+    "_analytics_sig",
+    "_view_completed_report",
+    "final_report_generated",
+    "overall_estimated_level",
+    "downloadable_report_bytes",
+    "last_result",
+    "preview_transcript",
+    "analysis_status",
+    "analysis_done",
+)
 
 _TOPICS = (
     ("Movies", "Past Experience"),
@@ -98,6 +123,7 @@ def seed_demo_final_report(mx: Dict[str, Any]) -> None:
     mx["mock_page"] = "FINAL"
     mx["_show_exam_celebration"] = False
     mx["_final_report_demo"] = True
+    mx["_view_completed_report"] = True
     mx.setdefault("attempt_no", 1)
     mx["survey_completed"] = True
     # Minimal valid survey so "새 모의고사 시작하기" can regenerate a set in demo mode.
@@ -129,3 +155,85 @@ def seed_demo_final_report(mx: Dict[str, Any]) -> None:
         "_analytics_sig",
     ):
         mx.pop(k, None)
+
+
+def _maybe_stash_mx_before_demo(mx: Dict[str, Any]) -> None:
+    """Preserve in-progress or completed real attempt before opening sample report."""
+    import streamlit as st
+
+    from utils.exam_state import has_resumable_exam
+
+    if mx.get("_final_report_demo"):
+        return
+    has_progress = has_resumable_exam(mx) or bool(mx.get("results"))
+    if not has_progress:
+        return
+    st.session_state[_DEMO_RESTORE_KEY] = copy.deepcopy(
+        {k: mx.get(k) for k in _DEMO_STASH_KEYS}
+    )
+
+
+def open_demo_final_report(mx: Dict[str, Any]) -> None:
+    """Seed synthetic 15-question results and route to the full final report UI."""
+    import streamlit as st
+
+    _maybe_stash_mx_before_demo(mx)
+    seed_demo_final_report(mx)
+    st.session_state["_final_report_demo"] = True
+    st.session_state["practice_portal_selected"] = True
+    st.session_state["mock_mode"] = "real_mock"
+    st.session_state["mock_page"] = "FINAL"
+    mx["mock_mode"] = "real_mock"
+    mx["mock_mode_label"] = "실전 모의고사"
+    try:
+        st.query_params.clear()
+        st.query_params["nav"] = "MOCK"
+        st.query_params["mock"] = "FINAL"
+    except Exception:
+        pass
+
+
+def exit_demo_final_report(mx: Dict[str, Any]) -> None:
+    """Leave sample report and restore a stashed real session when present."""
+    import streamlit as st
+
+    snap = st.session_state.pop(_DEMO_RESTORE_KEY, None)
+    for key in ("_final_report_demo", "_demo_preview_loaded", "_view_completed_report"):
+        mx.pop(key, None)
+        st.session_state.pop(key, None)
+    if isinstance(snap, dict):
+        mx.update(snap)
+    else:
+        mx["results"] = []
+        mx["exam_finished"] = False
+        mx.pop("analytics_cache", None)
+        mx.pop("_analytics_sig", None)
+        mx.pop("downloadable_report_bytes", None)
+    st.session_state["practice_portal_selected"] = False
+    st.session_state["mock_page"] = "PICK"
+    mx["mock_page"] = "PICK"
+    try:
+        st.query_params.clear()
+        st.query_params["nav"] = "MOCK"
+    except Exception:
+        pass
+
+
+def build_demo_sample_pdf_bytes() -> Optional[bytes]:
+    """PDF bytes from demo results only — no Gemini."""
+    from services.exam_analytics import compute_exam_aggregates, summary_rows_for_table
+    from services.pdf_report import build_exam_pdf, pdf_export_available
+
+    if not pdf_export_available():
+        return None
+    results = build_demo_results()
+    try:
+        agg = compute_exam_aggregates(results)
+        return build_exam_pdf(
+            agg,
+            summary_rows_for_table(results),
+            results,
+            patient_label="OPIc Sample Report",
+        )
+    except Exception:
+        return None

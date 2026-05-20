@@ -7,8 +7,14 @@ from typing import Any, Optional, Tuple
 
 def mime_from_audio_format(audio_format: str) -> str:
     f = (audio_format or "audio/mp3").lower()
+    if "webm" in f:
+        return "audio/webm"
+    if "ogg" in f:
+        return "audio/ogg"
     if "wav" in f:
         return "audio/wav"
+    if "mp3" in f or "mpeg" in f:
+        return "audio/mpeg"
     return "audio/mpeg"
 
 

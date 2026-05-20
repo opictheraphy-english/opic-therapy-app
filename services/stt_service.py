@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
-import concurrent.futures
 import logging
 import re
-from typing import Any, Dict
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
+from services.api_retry_policy import (
+    STT_MAX_ATTEMPTS,
+    STT_RETRY_DELAYS_SEC,
+    is_retryable_error,
+    log_api_call_result,
+    should_try_next_model,
+    sleep_before_retry,
+)
+from services.evaluation.eval_config import build_stt_model_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +45,12 @@ def _classify_stt_error(exc_or_msg: str) -> tuple[str, str]:
         return "quota_or_rate_limit", msg[:240]
     if any(tok in upper for tok in ("TIMEOUT", "DEADLINE", "TIMED OUT")):
         return "timeout", msg[:240]
-    if "503" in upper or "UNAVAILABLE" in upper:
+    if "503" in upper or "UNAVAILABLE" in upper or "OVERLOADED" in upper:
         return "temporary_overload", msg[:240]
+    if any(tok in upper for tok in ("500", "502", "504", "INTERNAL")):
+        return "api_error", msg[:240]
+    if "404" in upper or "NOT_FOUND" in upper:
+        return "model_not_found", msg[:240]
     return "unknown", msg[:240]
 
 
@@ -64,9 +78,16 @@ def _build_stt_prompt(question_text: str, language_hint: str) -> str:
 
 
 def _extract_response_text(response: Any) -> str:
+    if response is None:
+        return ""
     raw = (getattr(response, "text", "") or "").strip()
     if raw:
         return raw
+    if isinstance(response, dict):
+        for key in ("text", "transcript", "content"):
+            val = response.get(key)
+            if isinstance(val, str) and val.strip():
+                return val.strip()
     parts: list[str] = []
     for cand in getattr(response, "candidates", None) or []:
         content = getattr(cand, "content", None)
@@ -74,7 +95,18 @@ def _extract_response_text(response: Any) -> str:
             t = getattr(part, "text", None)
             if t:
                 parts.append(str(t))
-    return "\n".join(parts).strip()
+    if parts:
+        return "\n".join(parts).strip()
+    try:
+        results = getattr(response, "results", None)
+        if results:
+            alt = results[0].alternatives[0]
+            t = getattr(alt, "transcript", None) or getattr(alt, "text", None)
+            if t:
+                return str(t).strip()
+    except Exception:
+        pass
+    return ""
 
 
 def _normalize_transcript(raw: str) -> str:
@@ -89,9 +121,98 @@ def _normalize_transcript(raw: str) -> str:
     return text
 
 
+def _stt_empty_result(*, provider: str = "gemini") -> Dict[str, Any]:
+    return {
+        "ok": False,
+        "transcript": "",
+        "raw_transcript": "",
+        "text": "",
+        "language": "unknown",
+        "confidence": None,
+        "word_count": 0,
+        "error_category": "",
+        "error_message": "",
+        "provider": provider,
+        "model_used": "",
+        "attempts": 0,
+        "retry_exhausted": False,
+    }
+
+
+def _stt_success_result(
+    *,
+    transcript: str,
+    raw_transcript: str,
+    model_used: str,
+    attempts: int,
+    provider: str = "gemini",
+) -> Dict[str, Any]:
+    word_count = count_english_words(transcript)
+    return {
+        "ok": True,
+        "transcript": transcript,
+        "raw_transcript": raw_transcript,
+        "text": transcript,
+        "language": "en" if word_count > 0 else "unknown",
+        "confidence": None,
+        "word_count": word_count,
+        "error_category": "",
+        "error_message": "",
+        "provider": provider,
+        "model_used": model_used,
+        "attempts": attempts,
+        "retry_exhausted": False,
+    }
+
+
+def _invoke_stt_model(
+    *,
+    api_key: str,
+    audio_bytes: bytes,
+    mime_type: str,
+    question_text: str,
+    language_hint: str,
+    model_name: str,
+) -> Tuple[Optional[str], str, str]:
+    """Single Gemini STT call. Returns (raw_text or None, error_category, error_message)."""
+    from google import genai
+    from google.genai import types as genai_types
+
+    from services.evaluation.audio_mime import resolve_audio_mime
+
+    resolved_mime = resolve_audio_mime(audio_bytes, mime_type)
+    client = genai.Client(
+        api_key=api_key,
+        http_options=genai_types.HttpOptions(timeout=STT_TIMEOUT_SEC * 1000),
+    )
+    prompt = _build_stt_prompt(question_text, language_hint)
+    parts = [
+        genai_types.Part.from_text(text=prompt),
+        genai_types.Part.from_bytes(data=audio_bytes, mime_type=resolved_mime),
+    ]
+    contents = [genai_types.Content(role="user", parts=parts)]
+    config = genai_types.GenerateContentConfig(
+        temperature=0.0,
+        max_output_tokens=2048,
+    )
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=config,
+        )
+        return _extract_response_text(response), "", ""
+    except Exception as exc:
+        category, message = _classify_stt_error(exc)
+        return None, category, message or f"{type(exc).__name__}: {exc}"
+
+
 def derive_stt_status(stt: Dict[str, Any]) -> str:
     if not stt.get("ok"):
-        return "stt_pending"
+        cat = str(stt.get("error_category") or "")
+        if is_retryable_error(cat) or stt.get("retry_exhausted"):
+            return "stt_pending"
+        return "stt_failed"
     transcript = (stt.get("transcript") or "").strip()
     if count_english_words(transcript) < MIN_ENGLISH_WORDS_FOR_TRANSCRIPT:
         return "insufficient_response"
@@ -165,17 +286,28 @@ def transcribe_answer_audio(
     question_id: str = "",
     api_key: str | None = None,
 ) -> Dict[str, Any]:
-    """Transcribe answer audio via Gemini (transcription-only prompt)."""
-    empty = {
-        "ok": False,
-        "transcript": "",
-        "raw_transcript": "",
-        "language": "unknown",
-        "confidence": None,
-        "word_count": 0,
-        "error_category": "",
-        "error_message": "",
-    }
+    """Transcribe answer audio via Gemini with retry and model fallback."""
+    provider = "gemini"
+    empty = _stt_empty_result(provider=provider)
+
+    try:
+        audio_len = len(audio_bytes) if audio_bytes else 0
+    except Exception:
+        audio_len = 0
+    try:
+        logger.info(
+            "[STT_INPUT] audio_len=%s mime_type=%s language_hint=%s mode=%s question_id=%s",
+            audio_len,
+            mime_type,
+            language_hint,
+            mode,
+            question_id,
+        )
+        if 0 < audio_len < 1000:
+            logger.warning("[STT_AUDIO_TOO_SMALL] audio_len=%s mode=%s", audio_len, mode)
+    except Exception:
+        pass
+
     if not audio_bytes:
         empty["error_category"] = "empty_audio"
         empty["error_message"] = "empty_audio_bytes"
@@ -190,102 +322,141 @@ def transcribe_answer_audio(
         empty["error_message"] = "API key not configured"
         return empty
 
-    def _call_gemini() -> str:
-        from google import genai
-        from google.genai import types as genai_types
+    models = build_stt_model_candidates()
+    if not models:
+        empty["error_category"] = "config_error"
+        empty["error_message"] = "no_stt_models_configured"
+        return empty
 
-        from services.evaluation.audio_mime import resolve_audio_mime
-        from services.evaluation.eval_config import MODEL_NAME
+    t0 = time.perf_counter()
+    last_category = ""
+    last_message = ""
+    model_idx = 0
+    attempt_num = 0
 
-        resolved_mime = resolve_audio_mime(audio_bytes, mime_type)
-        client = genai.Client(api_key=api_key)
-        prompt = _build_stt_prompt(question_text, language_hint)
-        parts = [
-            genai_types.Part.from_text(text=prompt),
-            genai_types.Part.from_bytes(data=audio_bytes, mime_type=resolved_mime),
-        ]
-        contents = [genai_types.Content(role="user", parts=parts)]
-        config = genai_types.GenerateContentConfig(
-            temperature=0.0,
-            max_output_tokens=2048,
-        )
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=contents,
-            config=config,
-        )
-        return _extract_response_text(response)
+    while attempt_num < STT_MAX_ATTEMPTS and model_idx < len(models):
+        attempt_num += 1
+        sleep_before_retry(attempt_num, STT_RETRY_DELAYS_SEC)
+        model_name = models[model_idx]
 
-    try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_call_gemini)
-            raw_text = future.result(timeout=STT_TIMEOUT_SEC)
-    except concurrent.futures.TimeoutError:
         try:
-            logger.warning(
-                "[STT] timeout mode=%s question_id=%s timeout_sec=%s",
-                mode,
-                question_id,
-                STT_TIMEOUT_SEC,
+            logger.info(
+                "[STT_API_CALL_START] provider=%s model=%s mime_type=%s audio_len=%s attempt=%s",
+                provider,
+                model_name,
+                mime_type,
+                audio_len,
+                attempt_num,
             )
         except Exception:
             pass
-        empty["error_category"] = "timeout"
-        empty["error_message"] = f"stt_timeout_over_{STT_TIMEOUT_SEC}s"
-        return empty
-    except Exception as exc:
-        category, message = _classify_stt_error(exc)
+
+        raw_text, err_cat, err_msg = _invoke_stt_model(
+            api_key=api_key,
+            audio_bytes=audio_bytes,
+            mime_type=mime_type,
+            question_text=question_text,
+            language_hint=language_hint,
+            model_name=model_name,
+        )
+
+        if raw_text is not None:
+            raw_transcript = raw_text.strip()
+            transcript = _normalize_transcript(raw_transcript)
+            if not transcript and raw_transcript:
+                transcript = raw_transcript
+            if raw_transcript:
+                elapsed = time.perf_counter() - t0
+                result = _stt_success_result(
+                    transcript=transcript,
+                    raw_transcript=raw_transcript,
+                    model_used=model_name,
+                    attempts=attempt_num,
+                    provider=provider,
+                )
+                try:
+                    logger.info(
+                        "[STT_FINAL_RESULT] success=True attempts=%s model_used=%s "
+                        "error_category=—",
+                        attempt_num,
+                        model_name,
+                    )
+                except Exception:
+                    pass
+                log_api_call_result(
+                    service="stt",
+                    model_used=model_name,
+                    attempts=attempt_num,
+                    success=True,
+                    error_category="",
+                    elapsed=elapsed,
+                )
+                return result
+            err_cat = "empty_response"
+            err_msg = "empty_stt_response"
+
+        last_category = err_cat or "unknown"
+        last_message = err_msg or last_category
+
         try:
             logger.warning(
-                "[STT] failure mode=%s question_id=%s category=%s exc=%s",
-                mode,
-                question_id,
-                category,
-                type(exc).__name__,
+                "[STT_RETRY] attempt=%s model=%s delay_next=%s error_category=%s",
+                attempt_num,
+                model_name,
+                STT_RETRY_DELAYS_SEC[min(attempt_num - 1, len(STT_RETRY_DELAYS_SEC) - 1)]
+                if attempt_num < STT_MAX_ATTEMPTS
+                else 0,
+                last_category,
             )
         except Exception:
             pass
-        empty["error_category"] = category
-        empty["error_message"] = message or f"{type(exc).__name__}: {exc}"
-        return empty
 
-    raw_transcript = (raw_text or "").strip()
-    transcript = _normalize_transcript(raw_transcript)
-    word_count = count_english_words(transcript)
-    language = "en" if word_count > 0 else "unknown"
-    if not raw_transcript:
-        return {
-            "ok": False,
-            "transcript": "",
-            "raw_transcript": "",
-            "language": "unknown",
-            "confidence": None,
-            "word_count": 0,
-            "error_category": "empty_response",
-            "error_message": "empty_stt_response",
-        }
+        if last_category == "model_not_found":
+            model_idx += 1
+            continue
+
+        if not is_retryable_error(last_category):
+            break
+
+        if should_try_next_model(last_category) and model_idx + 1 < len(models):
+            model_idx += 1
+            continue
+
+        if attempt_num >= STT_MAX_ATTEMPTS:
+            break
+
+    elapsed = time.perf_counter() - t0
+    retry_exhausted = is_retryable_error(last_category)
 
     try:
-        logger.debug(
-            "[STT] ok mode=%s question_id=%s word_count=%s transcript_len=%s",
-            mode,
-            question_id,
-            word_count,
-            len(transcript),
+        logger.warning(
+            "[STT_FINAL_RESULT] success=False attempts=%s model_used=%s error_category=%s",
+            attempt_num,
+            models[min(model_idx, len(models) - 1)] if models else "—",
+            last_category,
         )
     except Exception:
         pass
 
-    return {
-        "ok": True,
-        "transcript": transcript,
-        "raw_transcript": raw_transcript,
-        "language": language,
-        "confidence": None,
-        "word_count": word_count,
-        "error_category": "",
-        "error_message": "",
-    }
+    log_api_call_result(
+        service="stt",
+        model_used=models[min(model_idx, len(models) - 1)] if models else "",
+        attempts=attempt_num,
+        success=False,
+        error_category=last_category,
+        elapsed=elapsed,
+    )
+
+    empty.update(
+        {
+            "error_category": last_category or "unknown",
+            "error_message": last_message or "stt_failed",
+            "model_used": models[min(model_idx, len(models) - 1)] if models else "",
+            "attempts": attempt_num,
+            "retry_exhausted": retry_exhausted,
+        }
+    )
+    return empty
 
 
 def render_stt_dev_debug_capsule(result: Dict[str, Any], *, key_suffix: str = "") -> None:
@@ -308,6 +479,6 @@ def render_stt_dev_debug_capsule(result: Dict[str, Any], *, key_suffix: str = ""
             disabled=True,
             key=f"stt_dev_transcript_{key_suffix}",
         )
-    err_cat = str(result.get("stt_error_category") or "").strip()
+    err_cat = str(result.get("error_category") or "").strip()
     if err_cat:
         st.caption(f"[dev] STT error: {err_cat}")

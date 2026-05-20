@@ -1,0 +1,80 @@
+"""Central Gemini API retry policy — STT and report analysis."""
+
+from __future__ import annotations
+
+import logging
+import time
+from typing import FrozenSet, List, Tuple
+
+logger = logging.getLogger(__name__)
+
+RETRYABLE_ERRORS: FrozenSet[str] = frozenset(
+    {
+        "temporary_overload",
+        "quota_or_rate_limit",
+        "rate_limit",
+        "timeout",
+        "unavailable",
+        "api_error",  # 5xx-style failures from classifiers
+    }
+)
+
+# Errors that should advance to the next model candidate (not only backoff).
+MODEL_FALLBACK_ERRORS: FrozenSet[str] = frozenset(
+    {
+        "temporary_overload",
+        "unavailable",
+    }
+)
+
+STT_MAX_ATTEMPTS = 3
+STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (2, 5, 10)
+
+REPORT_MAX_ATTEMPTS = 2
+REPORT_RETRY_DELAYS_SEC: Tuple[int, ...] = (3, 8)
+
+
+def is_retryable_error(category: str) -> bool:
+    return str(category or "").strip().lower() in RETRYABLE_ERRORS
+
+
+def should_try_next_model(category: str) -> bool:
+    return str(category or "").strip().lower() in MODEL_FALLBACK_ERRORS
+
+
+def retry_delay_before_attempt(attempt_index: int, delays: Tuple[int, ...]) -> float:
+    """attempt_index is 1-based; first attempt has no delay."""
+    if attempt_index <= 1:
+        return 0.0
+    idx = min(attempt_index - 2, len(delays) - 1)
+    return float(delays[idx]) if delays else 0.0
+
+
+def sleep_before_retry(attempt_index: int, delays: Tuple[int, ...]) -> None:
+    delay = retry_delay_before_attempt(attempt_index, delays)
+    if delay > 0:
+        time.sleep(delay)
+
+
+def log_api_call_result(
+    *,
+    service: str,
+    model_used: str,
+    attempts: int,
+    success: bool,
+    error_category: str,
+    elapsed: float,
+) -> None:
+    try:
+        logger.info(
+            "[API_CALL_RESULT] service=%s model_used=%s attempts=%s success=%s "
+            "error_category=%s elapsed=%.2f",
+            service,
+            model_used or "—",
+            attempts,
+            success,
+            error_category or "—",
+            elapsed,
+        )
+    except Exception:
+        pass

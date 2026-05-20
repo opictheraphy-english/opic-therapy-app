@@ -36,6 +36,7 @@ These four states are mutually exclusive in practice:
 
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 from copy import deepcopy
@@ -76,8 +77,48 @@ def is_last_mock_question(mx: Dict[str, Any], q_id: int) -> bool:
     return int(q_id) >= get_mock_total_questions(mx)
 
 
+def _saved_answers_meet_total(mx: Dict[str, Any]) -> bool:
+    """True when every exam slot has a saved result row (pending analysis counts)."""
+    if not isinstance(mx, dict):
+        return False
+    exam = mx.get("current_exam") or mx.get("exam") or []
+    if not isinstance(exam, list) or not exam:
+        return False
+    total = len(exam)
+    results = [r for r in (mx.get("results") or []) if isinstance(r, dict)]
+    if len(results) >= total:
+        return True
+    return count_completed_exam_prefix(mx) >= total
+
+
+def mark_real_mock_exam_completed(
+    mx: Dict[str, Any],
+    ss: MutableMapping[str, Any],
+    *,
+    preserve_report_view: bool = False,
+) -> None:
+    """Single completion contract for real mock — does not touch mini/topic state."""
+    import logging
+
+    log = logging.getLogger(__name__)
+    log.debug("[REAL_MOCK_COMPLETE] mark_real_mock_exam_completed preserve_view=%s", preserve_report_view)
+    mx["exam_finished"] = True
+    mx["exam_completed"] = True
+    ss["mock_exam_completed"] = True
+    mx["mock_page"] = "FINAL"
+    ss["mock_page"] = "FINAL"
+    if not preserve_report_view:
+        mx.pop("_view_completed_report", None)
+        ss.pop("_view_completed_report", None)
+    mx.pop("_show_exam_celebration", None)
+
+
 def mark_mock_exam_completed(mx: Dict[str, Any], ss: MutableMapping[str, Any]) -> None:
-    """After the final question — completion screen first, report on demand."""
+    """After the final question — completion screen first, report on demand (coaching / legacy)."""
+    mode = str(ss.get("mock_mode") or mx.get("mock_mode") or "").strip().lower()
+    if mode in ("real_mock", "real", "exam"):
+        mark_real_mock_exam_completed(mx, ss)
+        return
     mx["exam_finished"] = True
     mx["exam_completed"] = True
     mx["mock_page"] = "FINAL"
@@ -169,6 +210,103 @@ def reset_exam_state(
     # Force the progress signature to refresh so the very next sync writes.
     ss.pop("_progress_sig", None)
     ss.pop("mock_exam_completed", None)
+    for flag_key in (
+        "_analysis_in_flight",
+        "real_mock_analysis_in_flight",
+        "real_mock_final_batch_in_flight",
+        "mini_mock_analysis_in_flight",
+        "topic_practice_analysis_in_flight",
+        "coaching_analysis_in_flight",
+    ):
+        ss.pop(flag_key, None)
+    logging.getLogger(__name__).debug(
+        "[STATE_RESET] mode=exam_state_full cleared_keys=%s",
+        list(_RESET_DEFAULTS.keys()) + list(_POP_KEYS) + ["mock_mode", "analysis_flags"],
+    )
+
+
+def reset_real_mock_attempt(
+    mx: Dict[str, Any],
+    ss: MutableMapping[str, Any],
+) -> None:
+    """Clear only the current real-mock attempt; keep survey / portal settings."""
+    import logging
+
+    log = logging.getLogger(__name__)
+    log.debug("[REAL_MOCK_COMPLETE] reset_real_mock_attempt")
+
+    clear_pending_recovery(mx)
+    for key in (
+        "results",
+        "last_result",
+        "recordings",
+        "current_idx",
+        "exam_finished",
+        "exam_completed",
+        "final_report_generated",
+        "overall_estimated_level",
+        "analytics_cache",
+        "downloadable_report_bytes",
+        "audio_bytes",
+        "preview_transcript",
+        "analysis_status",
+        "analysis_done",
+        "analysis_error_msg",
+        "analysis_result",
+        "question_play_counts",
+        "exam_listen_nonce",
+        "exam_started_at",
+        "exam_last_seen_at",
+        "survey_completed",
+        "survey_results",
+    ):
+        mx.pop(key, None)
+    mx["survey_completed"] = False
+    mx["survey_results"] = {}
+    for key in _POP_KEYS:
+        mx.pop(key, None)
+    mx.pop("recording_mime_by_key", None)
+    mx["current_exam"] = []
+    mx["exam"] = []
+    mx["mock_page"] = "SURVEY"
+
+    ss.pop("_view_completed_report", None)
+    ss.pop("mock_exam_completed", None)
+    ss.pop("real_mock_page", None)
+    ss.pop("real_mock_last_saved_q_id", None)
+    mx.pop("real_mock_page", None)
+    mx.pop("real_mock_last_saved_q_id", None)
+    mx.pop("real_mock_post_save_lock", None)
+    for k in list(ss.keys()):
+        if isinstance(k, str) and k.startswith("real_mock_saved_confirm_"):
+            ss.pop(k, None)
+    for flag_key in (
+        "_analysis_in_flight",
+        "real_mock_analysis_in_flight",
+        "real_mock_final_batch_in_flight",
+    ):
+        ss.pop(flag_key, None)
+    try:
+        from components.answer_recording import clear_all_real_mock_empty_commit_guards
+
+        clear_all_real_mock_empty_commit_guards()
+    except Exception:
+        log.debug("clear_all_real_mock_empty_commit_guards failed", exc_info=True)
+    ss.pop("_progress_sig", None)
+    ss["mock_mode"] = "real_mock"
+    ss["practice_portal_selected"] = True
+    ss["mock_page"] = "SURVEY"
+    ss["_suppress_disk_restore"] = True
+    cleared_mx = [
+        "results",
+        "recordings",
+        "current_idx",
+        "exam_finished",
+        "exam_completed",
+        "analytics_cache",
+        "_view_completed_report",
+    ]
+    log.debug("[STATE_RESET] mode=real_mock cleared_keys=%s", cleared_mx)
 
 
 # ---------------------------------------------------------------------------
@@ -352,24 +490,39 @@ def _row_counts_as_answered(row: Dict[str, Any]) -> bool:
     res = row.get("result") if isinstance(row.get("result"), dict) else row
     if not isinstance(res, dict):
         return bool(row)
+    if res.get("is_answered") is True:
+        return True
     ast = str(res.get("analysis_status") or "").lower()
     dst = str(res.get("diagnosis_status") or "").lower()
-    if ast in (
+    nbytes = int(res.get("source_audio_size_bytes") or 0)
+    if ast == "saved_unanalyzed" or dst == "saved_unanalyzed":
+        return True
+    # Real-mock save-only: user submitted audio even if speech was insufficient.
+    if nbytes > 0 and ast in (
         "no_speech",
-        "no_audio",
+        "insufficient_response",
+        "pending",
         "unclear_speech",
         "needs_review",
         "non_english",
         "failed",
-    ) or dst in (
+        "completed",
+    ):
+        return True
+    if nbytes > 0 and dst in (
         "no_speech",
-        "no_audio",
+        "analysis_pending",
         "unclear_speech",
         "needs_review",
         "non_english",
         "language_mismatch",
+        "ok",
     ):
+        return True
+    if ast in ("no_audio",) or dst in ("no_audio",):
         return False
+    if ast in ("no_speech",) or dst in ("no_speech",):
+        return bool(nbytes > 0)
     return True
 
 
@@ -484,6 +637,103 @@ def _result_row(
     }
 
 
+def save_real_mock_unanalyzed_answer(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    audio_bytes: bytes,
+) -> None:
+    """Persist recording for real mock — no per-question Gemini call."""
+    rec = mx.setdefault("recordings", {})
+    if not isinstance(rec, dict):
+        rec = {}
+        mx["recordings"] = rec
+    rec[audio_key] = audio_bytes
+    mx["audio_bytes"] = audio_bytes
+    nbytes = len(audio_bytes) if audio_bytes else 0
+    stored: Dict[str, Any] = {
+        "analysis_status": "saved_unanalyzed",
+        "diagnosis_status": "saved_unanalyzed",
+        "saved_before_ai": True,
+        "source_audio_size_bytes": nbytes,
+    }
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=stored,
+        ),
+    )
+
+
+def apply_stt_to_mock_exam_saved_row(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    audio_bytes: bytes,
+    mime_type: str = "",
+) -> Dict[str, Any] | None:
+    """Run STT after audio save and persist transcript fields on the exam result row."""
+    import logging
+
+    from services.stt_service import merge_stt_into_answer_result, transcribe_answer_audio
+
+    row = find_result_row(mx, int(q_id))
+    if not isinstance(row, dict):
+        return None
+    res = row.get("result")
+    base = dict(res) if isinstance(res, dict) else {}
+    nbytes = len(audio_bytes) if audio_bytes else 0
+    question_text = str(q.get("question") or "")
+    stt = transcribe_answer_audio(
+        audio_bytes,
+        mime_type=mime_type or "audio/webm",
+        language_hint="en",
+        question_text=question_text,
+        mode="real_mock",
+        question_id=str(q_id),
+    )
+    merged = merge_stt_into_answer_result(
+        base,
+        stt,
+        question_text=question_text,
+        question_index=question_index,
+        question_id=str(q_id),
+        audio_key=audio_key,
+        audio_len=nbytes,
+    )
+    upsert_mock_exam_result(
+        mx,
+        _result_row(
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            result=merged,
+        ),
+    )
+    try:
+        logging.getLogger(__name__).debug(
+            "[REAL_MOCK_STT] q_id=%s stt_status=%s word_count=%s ok=%s",
+            q_id,
+            merged.get("stt_status"),
+            merged.get("stt_word_count"),
+            stt.get("ok"),
+        )
+    except Exception:
+        pass
+    return merged
+
+
 def save_answer_placeholder_before_ai(
     mx: Dict[str, Any],
     q: Dict[str, Any],
@@ -526,7 +776,9 @@ def apply_completed_analysis_result(
     result: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Update the existing row for this question with a completed analysis."""
-    stored = dict(result)
+    from services.report_service import normalize_result_score_fields
+
+    stored = normalize_result_score_fields(dict(result))
     stored["analysis_status"] = "completed"
     if stored.get("diagnosis_status") not in ("no_speech", "no_audio"):
         stored["diagnosis_status"] = stored.get("diagnosis_status") or "ok"
@@ -718,7 +970,7 @@ def apply_needs_review_result(
     return res
 
 
-def apply_no_speech_result(
+def apply_insufficient_response_result(
     mx: Dict[str, Any],
     q: Dict[str, Any],
     *,
@@ -726,14 +978,37 @@ def apply_no_speech_result(
     question_index: int,
     audio_key: str,
     source_audio_size_bytes: int = 0,
+    audio_mime_guess: str = "",
 ) -> Dict[str, Any]:
-    """Legacy no-speech row — prefer ``apply_unclear_speech_result`` when audio exists."""
+    """Silence / no usable speech — not API pending; not gradable for overall level."""
+    summary = (
+        "이 문항은 말소리가 충분히 인식되지 않아 문법, 표현, 구조 피드백을 제공하기 어렵습니다."
+    )
+    prescription = "다시 연습할 때는 최소 20~30초 이상 영어로 답변해 주세요."
     res = _speech_issue_result_base(
         analysis_status="no_speech",
         diagnosis_status="no_speech",
-        summary="음성이 감지되지 않았어요. 다시 녹음해 주세요.",
-        prescription="마이크와 주변 소음을 확인한 뒤 또렷하게 다시 답변해 주세요.",
+        summary=summary,
+        prescription=prescription,
         source_audio_size_bytes=source_audio_size_bytes,
+        audio_mime_guess=audio_mime_guess,
+    )
+    res.update(
+        {
+            "insufficient_response": True,
+            "is_gradable": False,
+            "is_answered": True,
+            "pending_reason": None,
+            "analysis_pending": False,
+            "estimated_level": "응답 부족",
+            "estimated_level_display": "응답 부족",
+            "level_token": "NO_SPEECH",
+            "summary_speech_rehab": "응답이 충분하지 않았어요",
+            "semantic_feedback": "",
+            "semantic_dimensions": {},
+            "rubric_scores": {"fluency": 0, "lexical": 0, "logic": 0, "grammar": 0},
+            "final_grade_score": None,
+        }
     )
     upsert_mock_exam_result(
         mx,
@@ -746,6 +1021,26 @@ def apply_no_speech_result(
         ),
     )
     return res
+
+
+def apply_no_speech_result(
+    mx: Dict[str, Any],
+    q: Dict[str, Any],
+    *,
+    q_id: int,
+    question_index: int,
+    audio_key: str,
+    source_audio_size_bytes: int = 0,
+) -> Dict[str, Any]:
+    """Legacy alias — routes to insufficient-response row shape."""
+    return apply_insufficient_response_result(
+        mx,
+        q,
+        q_id=q_id,
+        question_index=question_index,
+        audio_key=audio_key,
+        source_audio_size_bytes=source_audio_size_bytes,
+    )
 
 
 def apply_pending_analysis_result(
@@ -770,6 +1065,53 @@ def apply_pending_analysis_result(
         build_pending_error_metadata,
         category_to_legacy_error_kind,
     )
+    from utils.speech_recording import (
+        QUOTA_VS_NO_SPEECH_AUDIO_BYTES,
+        should_treat_analysis_failure_as_no_speech,
+    )
+
+    if audio_bytes_len > 0 and audio_bytes_len < QUOTA_VS_NO_SPEECH_AUDIO_BYTES:
+        return apply_insufficient_response_result(
+            mx,
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            source_audio_size_bytes=audio_bytes_len,
+            audio_mime_guess=mime_type,
+        )
+
+    err_kind_pre = classify_analysis_error(error_message or "")
+    if err_kind_pre in ("no_speech", "no_audio"):
+        if err_kind_pre == "no_audio":
+            return apply_no_audio_result(
+                mx,
+                q,
+                q_id=q_id,
+                question_index=question_index,
+                audio_key=audio_key,
+                source_audio_size_bytes=audio_bytes_len,
+            )
+        return apply_insufficient_response_result(
+            mx,
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            source_audio_size_bytes=audio_bytes_len,
+            audio_mime_guess=mime_type,
+        )
+
+    if empty_response and audio_bytes_len > 0 and audio_bytes_len < QUOTA_VS_NO_SPEECH_AUDIO_BYTES:
+        return apply_insufficient_response_result(
+            mx,
+            q,
+            q_id=q_id,
+            question_index=question_index,
+            audio_key=audio_key,
+            source_audio_size_bytes=audio_bytes_len,
+            audio_mime_guess=mime_type,
+        )
 
     meta = build_pending_error_metadata(
         error_message or "",
@@ -899,10 +1241,42 @@ def is_completed_exam(snap: Dict[str, Any]) -> bool:
 
 
 def is_completed_mock(mx: Dict[str, Any]) -> bool:
-    """Finished attempt — not an active in-progress test (Mock tab landing)."""
+    """Finished mock attempt — real mock only when explicitly marked complete."""
     if not isinstance(mx, dict):
         return False
-    if mx.get("exam_finished"):
+    mode = str(mx.get("mock_mode") or "").strip().lower()
+    try:
+        import streamlit as st
+
+        session_mode = str(st.session_state.get("mock_mode") or "").strip().lower()
+    except Exception:
+        session_mode = ""
+    is_real = mode in ("real_mock", "real", "exam") or session_mode in (
+        "real_mock",
+        "real",
+        "exam",
+    )
+    if is_real:
+        if mx.get("exam_finished") or mx.get("exam_completed"):
+            return True
+        try:
+            import streamlit as st
+
+            if st.session_state.get("mock_exam_completed"):
+                return True
+        except Exception:
+            pass
+        return False
+    if mx.get("exam_finished") or mx.get("exam_completed"):
+        return True
+    try:
+        import streamlit as st
+
+        if st.session_state.get("mock_exam_completed"):
+            return True
+    except Exception:
+        pass
+    if _saved_answers_meet_total(mx):
         return True
     page = mx.get("mock_page")
     if page in ("FINAL", "REPORT") and (mx.get("results") or mx.get("analytics_cache")):

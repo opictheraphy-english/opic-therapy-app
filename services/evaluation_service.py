@@ -148,6 +148,7 @@ def analyze_audio_with_ai(
     difficulty: int = 5,
     *,
     mime_guess: Optional[str] = None,
+    q_label: str = "",
 ) -> Dict[str, Any]:
     """Single-shot Gemini analysis (no retry, no lock).
 
@@ -162,6 +163,7 @@ def analyze_audio_with_ai(
         api_key,
         difficulty,
         mime_guess=mime_guess,
+        q_label=q_label,
     )
 
 
@@ -174,6 +176,7 @@ def analyze_audio_with_retry(
     mime_guess: Optional[str] = None,
     on_status: Optional[Callable[[str, str], None]] = None,
     diag: Optional[Mapping[str, Any]] = None,
+    q_label: str = "",
 ) -> Tuple[Optional[Dict[str, Any]], str, int]:
     """Smart-retry wrapper.
 
@@ -217,6 +220,7 @@ def analyze_audio_with_retry(
     ctx = dict(diag or {})
     ctx.setdefault("caller", "analyze_audio_with_retry")
     ctx["audio_bytes_len"] = len(audio_bytes or b"")
+    ql = str(q_label or ctx.get("q_label") or ctx.get("question_id") or "").strip()
     ai_diag.set_diag_context(ctx)
     ai_diag.log_retry_start()
 
@@ -258,6 +262,7 @@ def analyze_audio_with_retry(
                     api_key,
                     difficulty,
                     mime_guess=mime_guess,
+                    q_label=ql,
                 )
             except Exception as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
@@ -278,6 +283,23 @@ def analyze_audio_with_retry(
         if result is not None and not last_error:
             ai_diag.log_retry_success(attempts=attempts)
             return result, "", attempts
+
+        from utils.ai_pending_diag import classify_ai_error
+
+        if classify_ai_error(last_error) == "quota_or_rate_limit":
+            logger.info(
+                "Quota/rate-limit on attempt %d/%d (not retrying): %s",
+                attempts,
+                _MAX_ATTEMPTS,
+                last_error,
+            )
+            ai_diag.log_retry_failure(attempts=attempts, error_message=last_error)
+            _log_pending_from_retry_ctx(
+                last_error,
+                attempts=attempts,
+                empty_response="비어" in (last_error or ""),
+            )
+            return None, last_error, attempts
 
         if not is_transient_error(last_error):
             # Permanent / structural failure — don't waste user time.

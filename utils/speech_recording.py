@@ -19,6 +19,12 @@ from utils.text_utils import is_real_speech_transcript
 # Below this size we treat the browser/recorder as not having saved real audio.
 MIN_RECORDED_AUDIO_BYTES = 3000
 
+# Short clips / near-silent recordings — classify as no speech, not API pending.
+VERY_SMALL_SPEECH_AUDIO_BYTES = 12_000
+
+# API failures on audio smaller than this are treated as no_speech, not quota pending.
+QUOTA_VS_NO_SPEECH_AUDIO_BYTES = 30_000
+
 
 def recording_byte_length(blob: Any) -> int:
     if not blob or not isinstance(blob, (bytes, bytearray)):
@@ -50,11 +56,13 @@ def analysis_has_real_transcript(result: Optional[dict]) -> bool:
 
 
 def classify_post_analysis_issue(blob: Any, result: Optional[dict]) -> str:
-    """``ok`` | ``no_audio`` | ``non_english`` | ``needs_review`` | ``unclear_speech``."""
+    """``ok`` | ``no_audio`` | ``no_speech`` | ``non_english`` | ``needs_review`` | ``unclear_speech``."""
     if not has_substantial_recording(blob):
         return "no_audio"
     if isinstance(result, dict):
         diagnosis = str(result.get("diagnosis_status") or "").lower()
+        if result.get("no_speech_detected") or diagnosis == "no_speech":
+            return "no_speech"
         if diagnosis in ("non_english", "language_mismatch"):
             return "non_english"
         lang_text = transcript_for_language_check(result)
@@ -64,7 +72,8 @@ def classify_post_analysis_issue(blob: Any, result: Optional[dict]) -> str:
             return "needs_review"
     if analysis_has_real_transcript(result):
         return "ok"
-    return "unclear_speech"
+    # Substantial file but no usable speech — insufficient response, not API pending.
+    return "no_speech"
 
 
 def classify_pre_analysis_blob(blob: Any) -> str:
@@ -72,6 +81,55 @@ def classify_pre_analysis_blob(blob: Any) -> str:
     if not has_substantial_recording(blob):
         return "no_audio"
     return "ok"
+
+
+def classify_pre_gemini_speech(blob: Any) -> str:
+    """``no_audio`` | ``no_speech`` | ``ok`` — before any Gemini call."""
+    if not blob or not isinstance(blob, (bytes, bytearray)):
+        return "no_audio"
+    nbytes = recording_byte_length(blob)
+    if nbytes < MIN_RECORDED_AUDIO_BYTES:
+        return "no_audio"
+    if nbytes < VERY_SMALL_SPEECH_AUDIO_BYTES:
+        return "no_speech"
+    return "ok"
+
+
+def should_treat_analysis_failure_as_no_speech(
+    blob: Any,
+    result: Optional[dict],
+    last_error: str,
+    *,
+    audio_len: int | None = None,
+) -> bool:
+    """True when failure is likely silence/empty audio, not quota/API pending."""
+    nbytes = int(audio_len) if audio_len is not None else recording_byte_length(blob)
+    if nbytes > 0 and nbytes < QUOTA_VS_NO_SPEECH_AUDIO_BYTES:
+        return True
+    if isinstance(result, dict):
+        if result.get("no_speech_detected"):
+            return True
+        if str(result.get("diagnosis_status") or "").lower() == "no_speech":
+            return True
+        if str(result.get("analysis_status") or "").lower() in (
+            "no_speech",
+            "insufficient_response",
+        ):
+            return True
+    err = (last_error or "").strip()
+    if not err:
+        if isinstance(result, dict) and str(result.get("error") or "").strip():
+            err = str(result.get("error") or "").strip()
+    upper = err.upper()
+    if upper in ("NO_SPEECH", "NO_AUDIO"):
+        return True
+    lowered = err.lower()
+    if "no speech" in lowered or "no_speech" in lowered or "음성" in err and "없" in err:
+        return True
+    if err and ("비어" in err or "empty" in lowered):
+        if nbytes < QUOTA_VS_NO_SPEECH_AUDIO_BYTES:
+            return True
+    return False
 
 
 def resolve_mime_for_analysis(
@@ -120,7 +178,7 @@ def speech_issue_copy(issue: str) -> tuple[str, str, str]:
             "말소리 인식 어려움",
             "말소리가 정확히 인식되지 않았어요",
             "녹음은 저장되었지만, AI가 답변을 충분히 읽지 못했어요. "
-            "조금 더 또렷하게 다시 말하거나, 저장하고 다음 문항으로 넘어갈 수 있어요.",
+            "조금 더 또렷하게 다시 말하거나, 다음 문항으로 넘어갈 수 있어요.",
         )
     if issue == "needs_review":
         return (
@@ -135,6 +193,13 @@ def speech_issue_copy(issue: str) -> tuple[str, str, str]:
             "언어 안내",
             language_mismatch_title(kind),
             language_mismatch_body(kind),
+        )
+    if issue in ("no_speech", "insufficient_response"):
+        return (
+            "응답 부족",
+            "응답이 충분하지 않았어요",
+            "이 문항은 말소리가 충분히 인식되지 않아 문법, 표현, 구조 피드백을 제공하기 어렵습니다. "
+            "다시 연습할 때는 최소 20~30초 이상 영어로 답변해 주세요.",
         )
     return (
         "음성 미감지",

@@ -6,7 +6,6 @@ Remove after call-count investigation is complete.
 from __future__ import annotations
 
 import logging
-import sys
 import time
 from contextvars import ContextVar
 from datetime import datetime, timezone
@@ -41,15 +40,11 @@ def _q_label() -> str:
 
 
 def _emit_terminal(line: str) -> None:
-    """Stdout print for ``streamlit run`` in Cursor — never raises."""
+    """Developer diagnostics for ``streamlit run`` — logger only, never raises."""
     try:
-        print(line, flush=True)
+        logger.debug("%s", line)
     except Exception:
-        try:
-            sys.stdout.write(line + "\n")
-            sys.stdout.flush()
-        except Exception:
-            pass
+        pass
 
 
 def ensure_ai_diag_session() -> None:

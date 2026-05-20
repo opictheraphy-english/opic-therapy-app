@@ -24,7 +24,7 @@ from google.genai import types as genai_types
 from .audio_mime import resolve_audio_mime
 from utils import audio_pipeline_diag
 from .eval_audio import build_audio_info
-from .eval_config import MODEL_NAME
+from .eval_config import MODEL_NAME, build_report_model_candidates
 from .eval_grading import evaluate_grading_logic as run_hybrid_grading, strip_json_fence
 from utils.language_detection import detect_language_mismatch, language_mismatch_body
 from utils.text_utils import is_real_speech_transcript
@@ -201,11 +201,9 @@ def _slice_semantic(parsed: Dict[str, Any]) -> Dict[str, Any]:
 
 def _safe_debug_print(message: str) -> None:
     try:
-        print(message, flush=True)
-    except BrokenPipeError:
-        logger.warning("stdout pipe closed")
+        logger.debug("%s", message)
     except Exception:
-        logger.exception("debug print failed")
+        pass
 
 
 def _list_available_models(api_key: str) -> List[str]:
@@ -244,22 +242,8 @@ def _normalize_model_name(model_name: str) -> str:
 
 
 def _build_model_candidates() -> List[str]:
-    """Fixed Flash stack for mock exam — no ``models.list`` on the hot path.
-
-    Order: configured ``MODEL_NAME`` (default ``gemini-2.5-flash``, overridable
-    via ``GEMINI_MODEL``), then stable fallbacks. Duplicates removed.
-    """
-    out: List[str] = []
-    for raw in (
-        MODEL_NAME,
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-    ):
-        n = _normalize_model_name(raw)
-        if n and n not in out:
-            out.append(n)
-    return out
+    """Fixed Flash stack for mock exam — uses ``GEMINI_REPORT_MODEL`` / fallbacks."""
+    return [_normalize_model_name(m) for m in build_report_model_candidates() if m]
 
 
 def evaluate_grading_logic(
@@ -268,9 +252,12 @@ def evaluate_grading_logic(
     question_text: str = "",
     *,
     semantic: Optional[Dict[str, Any]] = None,
+    q_label: str = "",
 ) -> Dict[str, Any]:
     """Rule + calibration layer (Gemini scores optional). 외부 호환 시 semantic 생략 가능."""
-    return run_hybrid_grading(audio_info, transcript, question_text, semantic=semantic)
+    return run_hybrid_grading(
+        audio_info, transcript, question_text, semantic=semantic, q_label=q_label
+    )
 
 
 def analyze_audio_with_ai(
@@ -280,6 +267,7 @@ def analyze_audio_with_ai(
     difficulty: int = 5,
     *,
     mime_guess: Optional[str] = None,
+    q_label: str = "",
 ):
     if not audio_bytes:
         ai_diag.log_pipeline_end(outcome="no_audio_bytes")
@@ -413,6 +401,18 @@ def analyze_audio_with_ai(
                 "raw_parse_fragment": True,
             }
 
+        try:
+            from utils.grade_debug import log_parsed_model_response
+
+            ql = q_label or (question_text or "")[:40]
+            log_parsed_model_response(
+                ql,
+                parsed if isinstance(parsed, dict) else {},
+                parse_error=parse_fragment,
+            )
+        except Exception:
+            pass
+
         # Trust gate (single source of truth lives in utils.text_utils):
         # reject anything that doesn't look like genuine recognized speech
         # — placeholder phrases, question-echo, JSON fragments, etc.
@@ -436,7 +436,11 @@ def analyze_audio_with_ai(
             preview = raw_transcription[:120]
             semantic_slice = _slice_semantic(parsed)
             grading = run_hybrid_grading(
-                audio_info, "", question_text, semantic=semantic_slice
+                audio_info,
+                "",
+                question_text,
+                semantic=semantic_slice,
+                q_label=q_label or (question_text or "")[:40],
             )
             metrics = grading.get("metrics") or {}
             ai_diag.log_pipeline_end(outcome="non_english")
@@ -509,7 +513,10 @@ def analyze_audio_with_ai(
         )
 
         semantic_slice = _slice_semantic(parsed)
-        grading = run_hybrid_grading(audio_info, transcription, question_text, semantic=semantic_slice)
+        ql = q_label or (question_text or "")[:40]
+        grading = run_hybrid_grading(
+            audio_info, transcription, question_text, semantic=semantic_slice, q_label=ql
+        )
 
         metrics = grading.get("metrics") or {}
         priority_scores = grading.get("priority_scores") or {}
@@ -544,7 +551,9 @@ def analyze_audio_with_ai(
             parse_failed = raw_text[:1200]
 
         ai_diag.log_pipeline_end(outcome=diagnosis_status)
-        return {
+        from services.report_service import normalize_result_score_fields
+
+        out = normalize_result_score_fields({
             "diagnosis_status": diagnosis_status,
             "no_speech_detected": no_speech,
             "trust_gate_passed": trust_passed,
@@ -563,6 +572,7 @@ def analyze_audio_with_ai(
             "word_count": metrics.get("word_count", 0),
             "fact_scores": fact_scores,
             "rubric_scores": rubric_scores,
+            "priority_scores": dict(priority_scores),
             "model_used": model_used or "unknown",
             "audio_mime_guess": mime_type,
             "source_audio_size_bytes": len(audio_bytes),
@@ -580,7 +590,20 @@ def analyze_audio_with_ai(
                 "duration_method": audio_info.get("duration_method"),
             },
             "raw_text_parse_failed": parse_failed,
-        }
+        })
+        out["analysis_status"] = "completed" if diagnosis_status == "ok" else out.get("analysis_status")
+        try:
+            from utils.grade_debug import grade_debug
+
+            grade_debug(
+                f"q={ql} question_type={grading.get('question_type')!r} "
+                f"analysis_function=analyze_audio_with_ai "
+                f"prompt_template_name=semantic_evaluation "
+                f"result_keys={sorted(out.keys())}"
+            )
+        except Exception:
+            pass
+        return out
     except Exception as e:
         logger.exception("Gemini multimodal pipeline unexpected failure: %s", e)
         ai_diag.log_pipeline_end(outcome="exception")

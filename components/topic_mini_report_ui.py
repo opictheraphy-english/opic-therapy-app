@@ -51,15 +51,31 @@ def render_topic_all_saved_card(topic_title: str) -> None:
         )
 
 
-def render_topic_report_pending_retry_screen(*, saved_count: int = 3) -> None:
+def render_topic_report_pending_retry_screen(
+    *,
+    saved_count: int = 3,
+    is_quota: bool = False,
+) -> None:
+    if is_quota:
+        _tp_pending_title = "AI 분석 요청이 잠시 많아요"
+        _tp_pending_body = (
+            "3개 답변은 모두 안전하게 저장되어 있습니다.<br/>"
+            "현재 AI 분석 요청이 많아 리포트 생성이 잠시 지연되고 있어요.<br/>"
+            "잠시 후 다시 분석을 눌러 주제별 리포트를 받아보세요."
+        )
+    else:
+        _tp_pending_title = "AI 분석을 다시 시도해야 해요"
+        _tp_pending_body = (
+            "3개 답변은 모두 안전하게 저장되어 있습니다.<br/>"
+            "현재 AI 분석 요청이 정상적으로 완료되지 않았어요.<br/>"
+            "잠시 후 다시 분석을 눌러 풀 리포트를 받아보세요."
+        )
     st.markdown(
         f"""
         <section class="recovery-card" role="alert" aria-live="polite">
           <div class="rv-eyebrow">AI 분석</div>
-          <div class="rv-title">AI 분석을 다시 시도해야 해요</div>
-          <div class="rv-body">3개 답변은 모두 안전하게 저장되어 있습니다.<br/>
-            현재 AI 분석 요청이 정상적으로 완료되지 않았어요.<br/>
-            잠시 후 다시 분석을 눌러 풀 리포트를 받아보세요.</div>
+          <div class="rv-title">{html.escape(_tp_pending_title)}</div>
+          <div class="rv-body">{_tp_pending_body}</div>
           <div class="rv-meta"><span>저장된 답변 {int(saved_count)}개</span></div>
         </section>
         """,
@@ -82,17 +98,22 @@ def render_topic_mini_report(report: Dict[str, Any]) -> None:
 
     restored = report.get("restored_transcripts") or []
     if restored:
-        st.markdown("##### 복원 발화")
+        st.markdown("##### AI가 인식한 답변")
         for item in restored:
             if not isinstance(item, dict):
                 continue
             lbl = html.escape(str(item.get("question_label") or "Q?"))
             tr = str(item.get("transcript") or "").strip()
+            st.markdown(f"**{lbl}**")
             if tr:
-                st.markdown(f"**{lbl}**")
                 st.markdown(f'<p class="mx-tp-transcript">{html.escape(tr)}</p>', unsafe_allow_html=True)
             else:
-                st.markdown(f"**{lbl}** — 발화를 복원하지 못했어요.")
+                st.markdown(
+                    '<p class="mx-tp-transcript mx-tp-transcript--empty">'
+                    "응답이 충분하지 않았어요."
+                    "</p>",
+                    unsafe_allow_html=True,
+                )
 
     flow = str(report.get("overall_flow_summary") or report.get("flow_summary") or "")
     st.markdown("##### 전체 흐름 총평")

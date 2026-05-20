@@ -14,6 +14,44 @@ from utils.text_utils import is_real_speech_transcript
 _DEFAULT_TOTAL = 15
 
 
+def _row_counts_as_preview_answered(row: Dict[str, Any]) -> bool:
+    """Completion preview tally — pending / saved rows count as answered."""
+    if not isinstance(row, dict):
+        return False
+    if row.get("q_id") is None:
+        return False
+    res = row.get("result") if isinstance(row.get("result"), dict) else {}
+    if not res:
+        return True
+    ast = str(res.get("analysis_status") or "").lower()
+    dst = str(res.get("diagnosis_status") or "").lower()
+    if int(res.get("source_audio_size_bytes") or 0) > 0:
+        return True
+    if ast in (
+        "saved_unanalyzed",
+        "pending",
+        "completed",
+        "non_english",
+        "unclear_speech",
+        "needs_review",
+        "no_speech",
+        "no_audio",
+        "failed",
+    ) or dst in (
+        "saved_unanalyzed",
+        "analysis_pending",
+        "ok",
+        "non_english",
+        "unclear_speech",
+        "needs_review",
+        "no_speech",
+        "no_audio",
+        "language_mismatch",
+    ):
+        return True
+    return True
+
+
 def build_final_report_preview(
     results: List[Dict[str, Any]],
     *,
@@ -29,9 +67,10 @@ def build_final_report_preview(
     if total < 1:
         total = _DEFAULT_TOTAL
 
-    answered_count = len(items)
+    answered_count = sum(1 for row in items if _row_counts_as_preview_answered(row))
     completed_count = 0
     pending_count = 0
+    no_speech_count = 0
     unclear_count = 0
     non_english_count = 0
     completed_transcripts: List[str] = []
@@ -44,8 +83,10 @@ def build_final_report_preview(
             tx = safe_get_transcript(res)
             if is_real_speech_transcript(tx):
                 completed_transcripts.append(tx)
-        elif status == "AI 분석 대기 중":
+        elif status in ("분석 대기", "AI 분석 대기 중"):
             pending_count += 1
+        elif status in ("음성 미감지", "응답 부족"):
+            no_speech_count += 1
         elif status == "말소리 인식 불명확":
             unclear_count += 1
         elif status == "영어 답변 필요":
@@ -58,6 +99,7 @@ def build_final_report_preview(
         "total_count": total,
         "completed_count": completed_count,
         "pending_count": pending_count,
+        "no_speech_count": no_speech_count,
         "unclear_count": unclear_count,
         "non_english_count": non_english_count,
         "preview_insights": preview_insights,

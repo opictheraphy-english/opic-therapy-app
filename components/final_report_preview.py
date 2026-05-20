@@ -14,6 +14,7 @@ def render_final_report_preview_card(preview: Dict[str, Any]) -> None:
     answered = int(preview.get("answered_count") or 0)
     completed = int(preview.get("completed_count") or 0)
     pending = int(preview.get("pending_count") or 0)
+    no_speech = int(preview.get("no_speech_count") or 0)
     unclear = int(preview.get("unclear_count") or 0)
     non_english = int(preview.get("non_english_count") or 0)
     insights: List[str] = list(preview.get("preview_insights") or [])
@@ -25,6 +26,8 @@ def render_final_report_preview_card(preview: Dict[str, Any]) -> None:
         f'<span class="mx-frp-val">{completed}/{total}</span></li>'
         f'<li><span class="mx-frp-label">분석 대기</span>'
         f'<span class="mx-frp-val">{pending}개</span></li>'
+        f'<li><span class="mx-frp-label">응답 부족</span>'
+        f'<span class="mx-frp-val">{no_speech}개</span></li>'
         f'<li><span class="mx-frp-label">음성 확인 필요</span>'
         f'<span class="mx-frp-val">{unclear}개</span></li>'
         f'<li><span class="mx-frp-label">영어 답변 필요</span>'

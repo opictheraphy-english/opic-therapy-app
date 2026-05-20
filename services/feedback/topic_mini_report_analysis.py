@@ -574,7 +574,10 @@ def _prepare_saved_answer_payloads(
         q_idx = int(row.get("question_index") or 0)
         topic_id = str(row.get("topic_id") or "")
         question_id = str(row.get("question_id") or "")
-        audio_key = str(row.get("audio_key") or "") or topic_audio_key(topic_id, question_id)
+        q_idx = int(row.get("question_index") or 0)
+        audio_key = str(row.get("audio_key") or "") or topic_audio_key(
+            topic_id, question_id, q_idx
+        )
         blob = get_blob(row)
         nbytes = recording_byte_length(blob) if blob else int(row.get("audio_len") or 0)
         mime = str(row.get("mime_type") or "").strip()
@@ -760,8 +763,14 @@ def run_topic_mini_report_analysis(
         )
         return _result_pending_retry(reason="lock_timeout", saved_count=len(payloads))
 
-    use_text_only = len(meaningful) >= MIN_MEANINGFUL_TRANSCRIPTS_FOR_TEXT_ONLY
-    path = "text_only" if use_text_only else "one_call_audio_batch"
+    # Transcript-first: never send raw answer audio for active topic report evaluation.
+    if len(meaningful) < 1:
+        return _result_pending_retry(
+            reason="insufficient_transcripts",
+            saved_count=len(payloads),
+        )
+    use_text_only = True
+    path = "text_only"
 
     try:
         if consume_daily_slot and not from_retry:
@@ -775,23 +784,14 @@ def run_topic_mini_report_analysis(
                 if not ok:
                     return _result_failed(msg)
 
-        if use_text_only:
-            report, err = _path_text_only(
-                payloads,
-                topic_title=topic_title,
-                topic_category=topic_category,
-                meaningful=meaningful,
-                api_key=api_key,
-            )
-            raw_parsed = None
-        else:
-            report, err, raw_parsed = _path_one_call_audio_batch(
-                payloads,
-                topic_title=topic_title,
-                topic_category=topic_category,
-                api_key=api_key,
-                difficulty=difficulty,
-            )
+        report, err = _path_text_only(
+            payloads,
+            topic_title=topic_title,
+            topic_category=topic_category,
+            meaningful=meaningful,
+            api_key=api_key,
+        )
+        raw_parsed = None
     finally:
         _GEMINI_LOCK.release()
 

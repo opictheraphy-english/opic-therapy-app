@@ -18,8 +18,21 @@ def _ss():
     return st.session_state
 
 
-def topic_audio_key(topic_id: str, question_id: str) -> str:
-    return f"tp_{topic_id}_{question_id}"
+def topic_audio_key(
+    topic_id: str,
+    question_id: str,
+    question_index: int | None = None,
+) -> str:
+    """Stable scoped key — includes q_idx and retry nonce (not global mx audio)."""
+    tid = str(topic_id or "").strip()
+    qid = str(question_id or "").strip()
+    if question_index is None:
+        return f"topic_practice_{tid}_{qid}_0_0"
+    idx = int(question_index)
+    from components.answer_recording import get_recording_retry_nonce
+
+    nonce = get_recording_retry_nonce(f"topic_{tid}", qid, idx)
+    return f"topic_practice_{tid}_{qid}_{idx}_{nonce}"
 
 
 def get_topic_results() -> List[Dict[str, Any]]:
@@ -133,6 +146,71 @@ def save_topic_unanalyzed_answer(
     return placeholder
 
 
+def apply_stt_to_topic_saved_row(
+    *,
+    topic_id: str,
+    topic_title: str,
+    question_index: int,
+    question: Dict[str, Any],
+    audio_key: str,
+    audio_bytes: bytes,
+    mime_type: str = "",
+) -> Dict[str, Any] | None:
+    """Run STT after audio save and persist transcript fields on the topic row."""
+    import logging
+
+    from services.stt_service import merge_stt_into_answer_result, transcribe_answer_audio
+
+    question_id = str(question.get("question_id") or "")
+    row = find_topic_result(topic_id, question_id)
+    if not isinstance(row, dict):
+        return None
+    res = row.get("analysis_result")
+    base = dict(res) if isinstance(res, dict) else {}
+    nbytes = recording_byte_length(audio_bytes)
+    question_text = str(question.get("question_en") or question.get("question") or "")
+    stt = transcribe_answer_audio(
+        audio_bytes,
+        mime_type=mime_type or "audio/webm",
+        language_hint="en",
+        question_text=question_text,
+        mode="topic_practice",
+        question_id=question_id,
+    )
+    merged = merge_stt_into_answer_result(
+        base,
+        stt,
+        question_text=question_text,
+        question_index=question_index,
+        question_id=question_id,
+        audio_key=audio_key,
+        audio_len=nbytes,
+    )
+    updated = build_topic_row(
+        topic_id=topic_id,
+        topic_title=topic_title,
+        question_index=question_index,
+        question=question,
+        audio_key=audio_key,
+        result=merged,
+    )
+    updated["mime_type"] = mime_type
+    updated["audio_len"] = nbytes
+    upsert_topic_result(updated)
+    try:
+        logging.getLogger(__name__).debug(
+            "[TOPIC_STT] topic_id=%s q_idx=%s stt_status=%s word_count=%s ok=%s",
+            topic_id,
+            question_index,
+            merged.get("stt_status"),
+            merged.get("stt_word_count"),
+            stt.get("ok"),
+        )
+    except Exception:
+        pass
+    return merged
+
+
 def clear_topic_answer_for_question(topic_id: str, question_id: str) -> None:
     row = find_topic_result(topic_id, question_id)
     if not isinstance(row, dict):
@@ -209,6 +287,8 @@ def build_topic_row(
         "question_ko": str(question.get("question_ko") or ""),
         "audio_key": audio_key,
         "transcript": (result.get("transcript") or "").strip(),
+        "stt_status": str(result.get("stt_status") or ""),
+        "stt_word_count": int(result.get("stt_word_count") or 0),
         "analysis_status": _analysis_status_from_result(result),
         "analysis_result": result,
     }
@@ -539,6 +619,42 @@ def apply_topic_no_speech_result(
         )
     )
     return res
+
+
+def clear_topic_practice_session() -> None:
+    """Clear topic-practice session keys only — never touches mock exam ``mx['results']``."""
+    import logging
+
+    ss = _ss()
+    cleared: list[str] = []
+    for key in (
+        "topic_practice_step",
+        "topic_practice_question_index",
+        "topic_practice_results",
+        "topic_report_status",
+        "topic_report_result",
+        "topic_mini_report",
+        "topic_mini_report_pending",
+        "topic_report_last_error",
+        "topic_pending_reason",
+        "topic_practice_last_saved_q_idx",
+        "topic_report_analysis_batch_finished",
+        "topic_report_analysis_attempt_id",
+        "selected_topic_id",
+    ):
+        if key in ss:
+            cleared.append(key)
+        ss.pop(key, None)
+    clear_topic_recordings()
+    for k in list(ss.keys()):
+        if isinstance(k, str) and k.startswith("tp_saved_confirm_"):
+            ss.pop(k, None)
+    try:
+        logging.getLogger(__name__).debug(
+            "[STATE_RESET] mode=topic_practice cleared_keys=%s", cleared
+        )
+    except Exception:
+        pass
 
 
 def summarize_topic_session(topic_id: str) -> Dict[str, int]:

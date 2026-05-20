@@ -177,6 +177,7 @@ def evaluate_grading_logic(
     question_text: str = "",
     *,
     semantic: Optional[Dict[str, Any]] = None,
+    q_label: str = "",
 ) -> Dict[str, Any]:
     """
     Full hybrid pipeline. `semantic` should be Gemini JSON (0–100 scales).
@@ -271,6 +272,41 @@ def evaluate_grading_logic(
     pronunciation_scores = {k: round(sem[k], 1) for k in _PRONUNCIATION_KEYS}
 
     final_grade_score = round(composite, 1)
+
+    try:
+        from utils.grade_debug import grade_debug
+
+        ql = q_label or _detect_question_type(question_text)
+        grade_debug(
+            f"q={ql} level_decision "
+            f"words={words} "
+            f"duration_sec={duration_sec:.1f} "
+            f"spoken_units={spoken_units} "
+            f"quantity_level={quantity_level} "
+            f"score_level_raw={score_level} "
+            f"composite={composite:.1f} "
+            f"merged={merged} "
+            f"estimated_level={estimated_level} "
+            f"novice_band={novice!r} "
+            f"final_grade_score={final_grade_score}"
+        )
+        if merged == "NH" or estimated_level == "NH":
+            nh_reasons: list[str] = []
+            if not (transcript or "").strip():
+                nh_reasons.append("no_transcript")
+            if words < 22:
+                nh_reasons.append("words_too_low")
+            if duration_sec < 11 and words < 35:
+                nh_reasons.append("duration_too_low")
+            if score_level == "NH":
+                nh_reasons.append("semantic_score_low")
+            if quantity_level == "NH":
+                nh_reasons.append("quantity_level_nh")
+            if not nh_reasons:
+                nh_reasons.append("merged_nh")
+            grade_debug(f"q={ql} NH_REASON={','.join(nh_reasons)}")
+    except Exception:
+        pass
 
     return {
         "quantity_level": quantity_level,

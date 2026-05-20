@@ -5,15 +5,46 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import logging
+import re
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from services.api_retry_policy import (
+    REPORT_MAX_ATTEMPTS,
+    REPORT_RETRY_DELAYS_SEC,
+    is_retryable_error,
+    log_api_call_result,
+    should_try_next_model,
+    sleep_before_retry,
+)
+from services.evaluation.eval_config import (
+    MINI_REPORT_MODEL_NAME,
+    build_mini_mock_v2_report_model_candidates,
+)
+from services.evaluation.eval_text import (
+    count_sentences_punctuation_only,
+    count_spoken_units,
+    filler_hits,
+)
+from services.mini_mock_v2_level_rules import (
+    LEVEL_RULE_VERSION,
+    MINI_MOCK_V2_CONNECTOR_MARKERS,
+)
+from services.mini_mock_v2_rubric import (
+    RUBRIC_VERSION,
+    build_mini_mock_v2_light_rubric_prompt,
+)
 from services.stt_service import count_english_words
-from utils.text_utils import is_real_speech_transcript
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_TIMEOUT_SEC = 60
+# HTTP deadline for a single generate_content call (google.genai HttpOptions.timeout = ms).
+GEMINI_REQUEST_TIMEOUT_SEC = 45
+GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
+# Outer thread-pool deadline (prompt build + JSON parse margin over HTTP timeout).
+ANALYSIS_WRAPPER_TIMEOUT_SEC = 50
 MIN_USABLE_WORDS = 5
+REPORT_MAX_ANSWER_WORDS = 180
 
 _SCORE_KEYS = (
     "response_amount",
@@ -30,10 +61,13 @@ def _empty_score_breakdown() -> Dict[str, int]:
 
 
 def _student_answer_text(row: Dict[str, Any]) -> str:
-    val = str(row.get("student_answer") or "").strip()
-    if val:
-        return val
-    for key in ("transcript", "placeholder_text", "stt_transcript"):
+    for key in (
+        "student_answer",
+        "transcript",
+        "raw_transcript",
+        "placeholder_text",
+        "stt_transcript",
+    ):
         val = str(row.get(key) or "").strip()
         if val:
             return val
@@ -59,50 +93,20 @@ def _question_type_kind(question_type: str, question_text: str) -> str:
     return "general"
 
 
-def _evaluation_focus(type_kind: str, question_text: str) -> str:
-    if type_kind == "roleplay":
-        return (
-            "ROLEPLAY: Judge ONLY against question_text. Check whether the student speaks "
-            "to the imagined person directly, fulfills the prompt (e.g. asks 2–3 natural "
-            "questions if required), and uses polite conversational English. "
-            "Do NOT require an unrelated past experience, schedule change, or narration "
-            "unless question_text explicitly asks for it."
-        )
-    if type_kind == "experience":
-        return (
-            "EXPERIENCE: Judge whether the student describes a clear past event, sequence, "
-            "feelings or why it was memorable, and enough detail. Do not apply roleplay rules."
-        )
-    if type_kind == "description":
-        return (
-            "DESCRIPTION: Judge specific details, clear description, personal preference, "
-            "and sufficient length. Do not apply roleplay or past-event rules."
-        )
-    return (
-        "GENERAL: Judge relevance strictly against question_text only; do not assume a "
-        "different task type than the prompt states."
-    )
-
-
 def _row_analysis_status(row: Dict[str, Any], text: str) -> str:
-    """Whether a saved row is sent to Gemini as analyzable."""
-    word_count = count_english_words(text)
-    if word_count < MIN_USABLE_WORDS:
+    """Whether a saved row is sent to Gemini — usable text only, not STT/recording failure."""
+    row_status = str(row.get("status") or "").strip()
+    if row_status in ("stt_failed", "recording_failed"):
         return "insufficient_response"
-    stt_status = str(row.get("stt_status") or "").strip()
-    if stt_status in ("manual_text", "transcript_ready"):
-        return "saved" if word_count >= MIN_USABLE_WORDS else "insufficient_response"
-    raw_status = str(row.get("status") or "saved").strip().lower()
-    if not text or raw_status == "insufficient_response":
-        return "insufficient_response"
-    if not is_real_speech_transcript(text):
-        return "insufficient_response"
-    return "saved"
+    if count_english_words(text) >= MIN_USABLE_WORDS:
+        return "saved"
+    return "insufficient_response"
 
 
 def _log_v2_analysis_input(
     answers: List[Dict[str, Any]],
     inputs: List[Dict[str, Any]],
+    payload: Optional[List[Dict[str, Any]]] = None,
 ) -> None:
     """Per-answer lengths before Gemini; full text only when show_dev_debug."""
     show_full = False
@@ -135,12 +139,24 @@ def _log_v2_analysis_input(
                 except Exception:
                     audio_len = 0
             resolved = _student_answer_text(row)
+            resolved_wc = count_english_words(resolved)
+            input_status = (
+                "saved" if resolved_wc >= MIN_USABLE_WORDS else "insufficient_response"
+            )
+            wpm_available = bool(row.get("wpm_available"))
+            try:
+                wpm = float(row.get("wpm") or 0.0)
+            except (TypeError, ValueError):
+                wpm = 0.0
+            if not wpm_available:
+                wpm = 0.0
             logger.info(
-                "[MINI_V2_ANALYSIS_INPUT] q=%s status=%s student_answer_len=%s "
+                "[MINI_V2_ANALYSIS_INPUT] q=%s input_status=%s student_answer_len=%s "
                 "transcript_len=%s raw_transcript_len=%s answer_text_len=%s "
-                "audio_len=%s audio_saved=%s resolved_text_len=%s",
+                "audio_len=%s audio_saved=%s resolved_text_len=%s word_count=%s "
+                "wpm=%s wpm_available=%s row_status=%s",
                 q_display,
-                row.get("status"),
+                input_status,
                 len(student_answer),
                 len(transcript),
                 len(raw_transcript),
@@ -148,6 +164,10 @@ def _log_v2_analysis_input(
                 audio_len,
                 row.get("audio_saved"),
                 len(resolved),
+                resolved_wc,
+                wpm,
+                wpm_available,
+                row.get("status"),
             )
             if show_full and resolved:
                 logger.debug(
@@ -155,48 +175,252 @@ def _log_v2_analysis_input(
                     q_display,
                     resolved[:500],
                 )
-        for item in inputs:
+        for item in payload or []:
             logger.info(
                 "[MINI_V2_ANALYSIS_INPUT] gemini_payload q=%s question_type=%s "
-                "question_text_len=%s type_kind=%s status=%s student_answer_len=%s",
+                "question_text_len=%s student_answer_len=%s word_count=%s wpm=%s "
+                "wpm_available=%s",
                 item.get("question_index"),
                 item.get("question_type"),
                 len(str(item.get("question_text") or "")),
-                item.get("type_kind"),
-                item.get("status"),
                 len(str(item.get("student_answer") or "")),
+                item.get("word_count"),
+                item.get("wpm"),
+                item.get("wpm_available"),
             )
     except Exception:
         logger.debug("[MINI_V2_ANALYSIS_INPUT] log_failed", exc_info=True)
 
 
+def _sentence_count_for_report(text: str) -> int:
+    if not (text or "").strip():
+        return 0
+    punct = count_sentences_punctuation_only(text)
+    units = count_spoken_units(text)
+    return max(punct, units)
+
+
+def _connector_count(lower: str) -> int:
+    return sum(1 for marker in MINI_MOCK_V2_CONNECTOR_MARKERS if marker in lower)
+
+
+def _repetition_hint(text: str) -> str:
+    words = re.findall(r"[a-zA-Z']+", (text or "").lower())
+    if len(words) < 8:
+        return "low"
+    unique = len(set(words))
+    ratio = unique / len(words)
+    if ratio < 0.45:
+        return "high_repetition"
+    if ratio < 0.6:
+        return "moderate_repetition"
+    return "low"
+
+
+def _per_answer_fluency_metrics(text: str) -> Dict[str, Any]:
+    lower = (text or "").lower()
+    return {
+        "sentence_count": _sentence_count_for_report(text),
+        "filler_hits": filler_hits(lower),
+        "connector_count": _connector_count(lower),
+        "repetition_hint": _repetition_hint(text),
+    }
+
+
+def _roleplay_answer_status(
+    answers: List[Dict[str, Any]],
+    *,
+    saved_count: int,
+) -> str:
+    """Q3 roleplay row status for aggregate metrics (input only)."""
+    rows = sorted(
+        [a for a in answers if isinstance(a, dict)],
+        key=lambda x: int(x.get("question_index") or 0),
+    )
+    q3_row: Optional[Dict[str, Any]] = None
+    for row in rows:
+        q_idx = int(row.get("question_index") or 0)
+        if q_idx == 2:
+            q3_row = row
+            break
+    if q3_row is None and len(rows) >= 3:
+        q3_row = rows[2]
+    if q3_row is None:
+        return "missing"
+    q_type = str(q3_row.get("question_type") or "")
+    q_text = str(q3_row.get("question_text") or "")
+    kind = _question_type_kind(q_type, q_text)
+    if kind != "roleplay":
+        return "not_roleplay"
+    text = _student_answer_text(q3_row)
+    status = _row_analysis_status(q3_row, text)
+    if status == "saved":
+        return "saved"
+    if saved_count == 0:
+        return "insufficient_response"
+    return "insufficient_response"
+
+
+def build_mini_mock_v2_aggregate_metrics(
+    answers: List[Dict[str, Any]],
+    payload: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Cross-question metrics for Gemini input only."""
+    total_word_count = 0
+    total_sentence_count = 0
+    total_duration_seconds = 0.0
+    wpm_values: List[float] = []
+    wpm_available_any = False
+    saved_answer_count = 0
+
+    for item in payload:
+        wc = int(item.get("word_count") or 0)
+        sc = int(item.get("sentence_count") or 0)
+        total_word_count += wc
+        total_sentence_count += sc
+        if item.get("student_answer"):
+            saved_answer_count += 1
+        try:
+            total_duration_seconds += float(item.get("duration_seconds") or 0.0)
+        except (TypeError, ValueError):
+            pass
+        if item.get("wpm_available"):
+            wpm_available_any = True
+            try:
+                wpm_values.append(float(item.get("wpm") or 0.0))
+            except (TypeError, ValueError):
+                pass
+
+    average_wpm = 0.0
+    if wpm_available_any and wpm_values:
+        average_wpm = round(sum(wpm_values) / len(wpm_values), 1)
+
+    roleplay_status = _roleplay_answer_status(answers, saved_count=saved_answer_count)
+
+    return {
+        "level_rule_version": LEVEL_RULE_VERSION,
+        "total_word_count": total_word_count,
+        "total_sentence_count": total_sentence_count,
+        "total_duration_seconds": round(total_duration_seconds, 1),
+        "average_wpm": average_wpm,
+        "wpm_available": wpm_available_any,
+        "question_count": len(payload),
+        "saved_answer_count": saved_answer_count,
+        "roleplay_answer_status": roleplay_status,
+    }
+
+
+def _log_aggregate_metrics(metrics: Dict[str, Any]) -> None:
+    try:
+        logger.info(
+            "[MINI_V2_AGG_METRICS] total_word_count=%s total_sentence_count=%s "
+            "total_duration_seconds=%s average_wpm=%s roleplay_status=%s",
+            metrics.get("total_word_count"),
+            metrics.get("total_sentence_count"),
+            metrics.get("total_duration_seconds"),
+            metrics.get("average_wpm"),
+            metrics.get("roleplay_answer_status"),
+        )
+    except Exception:
+        pass
+
+
+def build_mini_mock_v2_gemini_report_input(
+    answers: List[Dict[str, Any]],
+    payload: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Gemini request body: aggregate metrics + per-answer payload."""
+    answer_payload = payload if payload is not None else build_mini_mock_v2_report_payload(answers)
+    aggregate = build_mini_mock_v2_aggregate_metrics(answers, answer_payload)
+    _log_aggregate_metrics(aggregate)
+    return {"aggregate_metrics": aggregate, "answers": answer_payload}
+
+
+def _truncate_answer_for_report(text: str, max_words: int = REPORT_MAX_ANSWER_WORDS) -> str:
+    """Truncate copy sent to Gemini only — does not mutate stored answers."""
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    words = re.findall(r"[a-zA-Z']+", raw)
+    if len(words) <= max_words:
+        return raw
+    return " ".join(words[:max_words])
+
+
 def build_mini_mock_v2_analysis_inputs(answers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Shape answers for Gemini — no audio blobs."""
+    """Internal status + metrics per answer (logging / usable filter)."""
     items: List[Dict[str, Any]] = []
     for row in sorted(
         [a for a in answers if isinstance(a, dict)],
         key=lambda x: int(x.get("question_index") or 0),
     ):
-        text = _student_answer_text(row)
-        status = _row_analysis_status(row, text)
-        if status == "insufficient_response":
-            text = ""
+        resolved_text = _student_answer_text(row)
+        word_count = count_english_words(resolved_text)
+        status = _row_analysis_status(row, resolved_text)
+        q_idx = int(row.get("question_index") or 0)
+        items.append(
+            {
+                "question_index": q_idx + 1,
+                "status": status,
+                "word_count": word_count,
+                "student_answer_len": len(resolved_text),
+            }
+        )
+    return items
+
+
+def build_mini_mock_v2_report_payload(answers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Minimal fields for Gemini report request — no debug or audio metadata."""
+    payload: List[Dict[str, Any]] = []
+    for row in sorted(
+        [a for a in answers if isinstance(a, dict)],
+        key=lambda x: int(x.get("question_index") or 0),
+    ):
+        resolved_text = _student_answer_text(row)
+        word_count = count_english_words(resolved_text)
+        status = _row_analysis_status(row, resolved_text)
+        text = resolved_text if status == "saved" else ""
+        if text:
+            text = _truncate_answer_for_report(text)
         q_idx = int(row.get("question_index") or 0)
         question_type = str(row.get("question_type") or "").strip()
         question_text = str(row.get("question_text") or "").strip()
-        type_kind = _question_type_kind(question_type, question_text)
-        items.append(
+        try:
+            duration_seconds = float(row.get("duration_seconds") or 0.0)
+        except (TypeError, ValueError):
+            duration_seconds = 0.0
+        wpm_available = bool(row.get("wpm_available"))
+        if wpm_available and duration_seconds > 0 and word_count > 0:
+            try:
+                wpm = float(row.get("wpm") or 0.0)
+            except (TypeError, ValueError):
+                wpm = 0.0
+        else:
+            wpm_available = False
+            wpm = 0.0
+        fluency = _per_answer_fluency_metrics(text) if text else {
+            "sentence_count": 0,
+            "filler_hits": 0,
+            "connector_count": 0,
+            "repetition_hint": "low",
+        }
+        payload.append(
             {
                 "question_index": q_idx + 1,
                 "question_type": question_type,
                 "question_text": question_text,
-                "type_kind": type_kind,
-                "evaluation_focus": _evaluation_focus(type_kind, question_text),
                 "student_answer": text,
-                "status": status,
+                "word_count": word_count,
+                "sentence_count": fluency["sentence_count"],
+                "duration_seconds": duration_seconds,
+                "wpm": wpm,
+                "wpm_available": wpm_available,
+                "filler_hits": fluency["filler_hits"],
+                "connector_count": fluency["connector_count"],
+                "repetition_hint": fluency["repetition_hint"],
             }
         )
-    return items
+    return payload
 
 
 def _all_insufficient_report(inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -228,75 +452,38 @@ def _all_insufficient_report(inputs: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def _build_gemini_prompt(inputs: List[Dict[str, Any]]) -> str:
-    lines = [
-        "You are an expert OPIc (Oral Proficiency Interview - computer) speaking coach for Korean learners.",
-        "Evaluate EACH mini mock answer separately using that item's question_text, "
-        "question_type, type_kind, and evaluation_focus.",
-        "Use ONLY the student_answer text provided. Do NOT invent transcripts.",
-        "Write ALL feedback in Korean. Be student-friendly: specific, useful, OPIc-focused, "
-        "and encouraging—not harsh. estimated levels use OPIc bands: NH, IL, IM1, IM2, IM3, IH, AL.",
-        "",
-        "CRITICAL — per-question alignment:",
-        "- Never judge an answer against a different question than its question_text.",
-        "- Never assume Q3 is a schedule-change roleplay; read question_text for every item.",
-        "- Use evaluation_focus for that item; do not apply description/experience rules to roleplay.",
-        "",
-        "ROLEPLAY (type_kind=roleplay):",
-        "- Evaluate whether the student speaks to the imagined person directly.",
-        "- Check they do what the prompt requires (e.g. 2–3 natural questions if asked).",
-        "- Reward polite, natural conversational English.",
-        "- Do NOT penalize for omitting an unrelated past experience or narrative monologue.",
-        "",
-        "DESCRIPTION (type_kind=description):",
-        "- Evaluate specific details, clear description, personal preference, enough length.",
-        "",
-        "EXPERIENCE (type_kind=experience):",
-        "- Evaluate a clear past event, sequence, feelings / why memorable, enough detail.",
-        "",
-        "SCORING (0–100 integers in score_breakdown):",
-        "- Base scores on the actual student_answer text.",
-        "- If status is saved and the answer has enough text and generally addresses question_text, "
-        "relevance should not be extremely low unless the answer clearly misses the prompt.",
-        "- Penalize repetition only when excessive.",
-        "",
-        "FEEDBACK STYLE:",
-        "- Avoid vague lines like '질문의 핵심을 다루지 못했습니다' without saying what was missing.",
-        "- Say what the student did well and one concrete next step per question.",
-        "",
-        "For items with status insufficient_response: do NOT fabricate grammar fixes; "
-        "set feedback to note insufficient response only.",
-        "",
-        "Return ONLY one JSON object (no markdown fences):",
-        "{",
-        '  "overall_level": "<NH|IL|IM1|IM2|IM3|IH|AL or Korean label>",',
-        '  "summary": "<2-4 Korean sentences>",',
-        '  "score_breakdown": {',
-        '    "response_amount": <0-100 integer>,',
-        '    "relevance": <0-100 integer>,',
-        '    "structure": <0-100 integer>,',
-        '    "grammar": <0-100 integer>,',
-        '    "vocabulary": <0-100 integer>,',
-        '    "naturalness": <0-100 integer>',
-        "  },",
-        '  "question_feedback": [',
-        "    {",
-        '      "question_index": 1,',
-        '      "status": "saved|insufficient_response",',
-        '      "feedback": "<Korean>",',
-        '      "better_direction": "<Korean upgrade hint>"',
-        "    }",
-        "  ],",
-        '  "strengths": ["...", "..."],',
-        '  "weaknesses": ["...", "..."],',
-        '  "practice_mission": "<one concrete Korean mission>",',
-        '  "sample_upgrade_direction": "<short Korean direction>"',
-        "}",
-        "",
-        "Student answers JSON:",
-        json.dumps(inputs, ensure_ascii=False, indent=2),
-    ]
-    return "\n".join(lines)
+def _log_eval_config() -> None:
+    try:
+        logger.info(
+            "[MINI_V2_EVAL_CONFIG] rubric_version=%s level_rule_version=%s",
+            RUBRIC_VERSION,
+            LEVEL_RULE_VERSION,
+        )
+    except Exception:
+        pass
+
+
+def _build_gemini_prompt(report_input: Dict[str, Any]) -> str:
+    _log_eval_config()
+    try:
+        logger.info("[MINI_V2_REPORT_PROMPT_MODE] mode=light")
+    except Exception:
+        pass
+    rubric = build_mini_mock_v2_light_rubric_prompt()
+    answers = report_input.get("answers") or []
+    payload_json = json.dumps(report_input, ensure_ascii=False, separators=(",", ":"))
+    try:
+        logger.info(
+            "[MINI_V2_REPORT_REQUEST_SIZE] prompt_chars=%s payload_chars=%s "
+            "answers_count=%s model=%s",
+            len(rubric),
+            len(payload_json),
+            len(answers),
+            MINI_REPORT_MODEL_NAME,
+        )
+    except Exception:
+        pass
+    return rubric + "\n\nStudent data JSON:\n" + payload_json
 
 
 def _normalize_parsed(
@@ -392,49 +579,233 @@ def _failure(
     }
 
 
-def _call_gemini(api_key: str, prompt: str) -> Tuple[Optional[Dict[str, Any]], str, str]:
-    from services.transcript_analysis_service import _gemini_text_json
+def _classify_gemini_error(err: str) -> str:
+    err_l = (err or "").lower()
+    if any(
+        token in err_l
+        for token in ("timeout", "timed out", "deadline exceeded", "readtimeout")
+    ):
+        return "timeout"
+    if "429" in err_l or "resource_exhausted" in err_l or "quota" in err_l:
+        return "quota_or_rate_limit"
+    if "rate limit" in err_l or "rate_limit" in err_l or "too many requests" in err_l:
+        return "rate_limit"
+    if any(
+        token in err_l
+        for token in (
+            "api key",
+            "api_key",
+            "invalid key",
+            "unauthenticated",
+            "permission denied",
+            "401",
+        )
+    ):
+        return "api_key"
+    if "503" in err_l or "overloaded" in err_l:
+        return "temporary_overload"
+    if "unavailable" in err_l:
+        return "unavailable"
+    if any(
+        token in err_l
+        for token in ("500", "502", "504", "internal error")
+    ):
+        return "api_error"
+    if "404" in err_l or "not_found" in err_l:
+        return "model_not_found"
+    return "unknown" if err else "api_error"
 
-    return _gemini_text_json(api_key, prompt, path="mini_mock_v2_report")
+
+def _parse_report_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
+    from services.evaluation.gemini_multimodal_pipeline import strip_json_fence
+    from services.transcript_analysis_service import _extract_json_object
+
+    parsed = _extract_json_object(raw_text)
+    if parsed:
+        return parsed, ""
+    fence_text = strip_json_fence(raw_text)
+    if fence_text != raw_text:
+        parsed = _extract_json_object(fence_text)
+        if parsed:
+            return parsed, ""
+    return None, "json_parse_failed"
+
+
+def _invoke_report_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    """Single report Gemini call. Returns (parsed_json, error_message, model_name)."""
+    from google import genai
+    from google.genai import types as genai_types
+
+    client = genai.Client(
+        api_key=api_key,
+        http_options=genai_types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
+    )
+    parts = [genai_types.Part.from_text(text=prompt)]
+    contents = [genai_types.Content(role="user", parts=parts)]
+    config = genai_types.GenerateContentConfig(temperature=0.25, max_output_tokens=4096)
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=config,
+        )
+    except Exception as exc:
+        err_msg = f"{type(exc).__name__}: {exc}"
+        return None, err_msg, model_name
+
+    raw_text = (getattr(response, "text", "") or "").strip()
+    if not raw_text:
+        for cand in getattr(response, "candidates", None) or []:
+            content = getattr(cand, "content", None)
+            for part in getattr(content, "parts", None) or []:
+                t = getattr(part, "text", None)
+                if t:
+                    raw_text = (raw_text + "\n" + t).strip()
+    if not raw_text:
+        return None, "empty_response", model_name
+    parsed, parse_err = _parse_report_response(raw_text)
+    if parsed:
+        return parsed, "", model_name
+    return None, parse_err or "json_parse_failed", model_name
+
+
+def _call_gemini(api_key: str, prompt: str) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    """Mini Mock V2 report — retry + model fallback (max 2 attempts)."""
+    models = build_mini_mock_v2_report_model_candidates()
+    if not models:
+        return None, "no_report_models_configured", ""
+
+    t0 = time.perf_counter()
+    last_error = ""
+    last_category = ""
+    model_idx = 0
+    attempt_num = 0
+
+    while attempt_num < REPORT_MAX_ATTEMPTS and model_idx < len(models):
+        attempt_num += 1
+        sleep_before_retry(attempt_num, REPORT_RETRY_DELAYS_SEC)
+        model_name = models[model_idx]
+
+        try:
+            logger.info(
+                "[MINI_V2_REPORT_API_START] model=%s attempt=%s",
+                model_name,
+                attempt_num,
+            )
+        except Exception:
+            pass
+
+        parsed, err_msg, _ = _invoke_report_model(api_key, prompt, model_name)
+        if parsed:
+            elapsed = time.perf_counter() - t0
+            log_api_call_result(
+                service="report",
+                model_used=model_name,
+                attempts=attempt_num,
+                success=True,
+                error_category="",
+                elapsed=elapsed,
+            )
+            return parsed, "", model_name
+
+        last_error = err_msg or "gemini_failed"
+        last_category = _classify_gemini_error(last_error)
+
+        try:
+            logger.warning(
+                "[MINI_V2_REPORT_RETRY] attempt=%s model=%s error_category=%s",
+                attempt_num,
+                model_name,
+                last_category,
+            )
+        except Exception:
+            pass
+
+        if last_category == "model_not_found" and model_idx + 1 < len(models):
+            model_idx += 1
+            continue
+
+        if not is_retryable_error(last_category):
+            break
+
+        if should_try_next_model(last_category) and model_idx + 1 < len(models):
+            model_idx += 1
+            continue
+
+        if attempt_num >= REPORT_MAX_ATTEMPTS:
+            break
+
+    elapsed = time.perf_counter() - t0
+    log_api_call_result(
+        service="report",
+        model_used=models[min(model_idx, len(models) - 1)] if models else "",
+        attempts=attempt_num,
+        success=False,
+        error_category=last_category,
+        elapsed=elapsed,
+    )
+    return None, last_error or last_category, models[min(model_idx, len(models) - 1)] if models else ""
 
 
 def _analyze_core(answers: List[Dict[str, Any]], *, api_key: str) -> Dict[str, Any]:
+    _log_eval_config()
     inputs = build_mini_mock_v2_analysis_inputs(answers)
-    _log_v2_analysis_input(answers, inputs)
-    usable = [i for i in inputs if i.get("status") == "saved"]
+    payload = build_mini_mock_v2_report_payload(answers)
+    report_input = build_mini_mock_v2_gemini_report_input(answers, payload)
+    _log_v2_analysis_input(answers, inputs, payload)
+    usable = [
+        a
+        for a in answers
+        if isinstance(a, dict)
+        and _row_analysis_status(a, _student_answer_text(a)) == "saved"
+    ]
     if not usable:
         try:
             logger.info("[MINI_MOCK_V2_ANALYSIS] all_insufficient count=%s", len(inputs))
         except Exception:
             pass
-        return _all_insufficient_report(inputs)
+        return _all_insufficient_report(
+            [
+                {
+                    "question_index": int(r.get("question_index") or 0) + 1,
+                    "status": "insufficient_response",
+                }
+                for r in sorted(
+                    [a for a in answers if isinstance(a, dict)],
+                    key=lambda x: int(x.get("question_index") or 0),
+                )
+            ]
+        )
 
-    prompt = _build_gemini_prompt(inputs)
+    prompt = _build_gemini_prompt(report_input)
     parsed, err, model = _call_gemini(api_key, prompt)
     if not parsed:
-        err_l = (err or "").lower()
-        quota = "429" in err_l or "resource_exhausted" in err_l or "quota" in err_l
+        category = _classify_gemini_error(err or "")
+        if category == "quota_or_rate_limit":
+            category = "quota"
+        quota = category in ("quota", "quota_or_rate_limit", "rate_limit")
         try:
             logger.warning(
-                "[MINI_MOCK_V2_ANALYSIS] gemini_failed quota=%s err=%s model=%s",
-                quota,
+                "[MINI_MOCK_V2_ANALYSIS] gemini_failed category=%s err=%s model=%s",
+                category,
                 (err or "")[:200],
                 model,
             )
         except Exception:
             pass
-        category = "quota" if quota else "gemini_failed"
         try:
             logger.warning(
                 "[MINI_V2_ANALYSIS_ERROR] category=%s message=%s",
                 category,
-                (err or "gemini_failed")[:240],
+                (err or category)[:240],
             )
         except Exception:
             pass
+        message = "analysis_timeout" if category == "timeout" else (err or category)
         return _failure(
             category=category,
-            message=err or "gemini_failed",
+            message=message,
+            timed_out=(category == "timeout"),
             quota=quota,
         )
 
@@ -454,7 +825,7 @@ def _analyze_core(answers: List[Dict[str, Any]], *, api_key: str) -> Dict[str, A
 def analyze_mini_mock_v2_answers(answers: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Run one Gemini diagnostic report from V2 saved answers (text only).
-    Hard deadline 60s. Does not read audio blobs.
+    HTTP timeout 45s (google.genai) + outer wrapper 50s. Does not read audio blobs.
     """
     from utils.secrets import get_gemini_api_key
 
@@ -462,19 +833,24 @@ def analyze_mini_mock_v2_answers(answers: List[Dict[str, Any]]) -> Dict[str, Any
     if not api_key:
         try:
             logger.warning(
-                "[MINI_V2_ANALYSIS_ERROR] category=missing_api_key message=missing_api_key"
+                "[MINI_V2_ANALYSIS_ERROR] category=api_key message=missing_api_key"
             )
         except Exception:
             pass
-        return _failure(category="missing_api_key", message="missing_api_key")
+        return _failure(category="api_key", message="missing_api_key")
 
+    started = time.time()
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(_analyze_core, answers, api_key=api_key)
         try:
-            return future.result(timeout=ANALYSIS_TIMEOUT_SEC)
+            return future.result(timeout=ANALYSIS_WRAPPER_TIMEOUT_SEC)
         except concurrent.futures.TimeoutError:
+            elapsed = time.time() - started
             try:
-                logger.warning("[MINI_MOCK_V2_ANALYSIS] timeout sec=%s", ANALYSIS_TIMEOUT_SEC)
+                logger.warning(
+                    "[MINI_V2_ANALYSIS_TIMEOUT] elapsed=%.1f category=timeout",
+                    elapsed,
+                )
             except Exception:
                 pass
             try:
@@ -485,18 +861,18 @@ def analyze_mini_mock_v2_answers(answers: List[Dict[str, Any]]) -> Dict[str, Any
                 pass
             return _failure(
                 category="timeout",
-                message=f"analysis_timeout_over_{int(ANALYSIS_TIMEOUT_SEC)}s",
+                message="analysis_timeout",
                 timed_out=True,
             )
         except Exception as exc:
             try:
                 logger.exception(
-                    "[MINI_V2_ANALYSIS_ERROR] category=unexpected_error message=%s",
+                    "[MINI_V2_ANALYSIS_ERROR] category=unknown message=%s",
                     f"{type(exc).__name__}: {exc}"[:240],
                 )
             except Exception:
                 pass
             return _failure(
-                category="unexpected_error",
+                category="unknown",
                 message=f"{type(exc).__name__}: {exc}",
             )

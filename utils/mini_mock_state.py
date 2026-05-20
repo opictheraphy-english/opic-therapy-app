@@ -46,18 +46,35 @@ def clear_mini_mock_recordings() -> None:
 
 
 def clear_mini_mock_session() -> None:
+    import logging
+
     ss = _ss()
+    cleared: list[str] = []
     for key in (
         "mini_mock_question_index",
         "mini_mock_results",
         "mini_mock_completed",
         "mini_mock_page",
+        "mini_mock_last_saved_q_idx",
+        "mini_mock_report_status",
+        "mini_mock_analysis_batch_finished",
+        "mini_mock_pending_reason",
+        "latest_mini_mock_api_debug",
     ):
+        if key in ss:
+            cleared.append(key)
         ss.pop(key, None)
     clear_mini_mock_recordings()
     for k in list(ss.keys()):
         if isinstance(k, str) and k.startswith("mm_saved_confirm_"):
+            cleared.append(k)
             ss.pop(k, None)
+    try:
+        logging.getLogger(__name__).debug(
+            "[STATE_RESET] mode=mini_mock cleared_keys=%s", cleared
+        )
+    except Exception:
+        pass
 
 
 def mini_mock_rows_sorted() -> List[Dict[str, Any]]:
@@ -88,6 +105,15 @@ def get_mini_mock_answer_blob(row: Dict[str, Any]) -> bytes | None:
         if blob:
             return blob
     return None
+
+
+def find_mini_mock_row_by_index(question_index: int) -> Optional[Dict[str, Any]]:
+    from data.mini_mock_questions import get_mini_mock_question
+
+    question = get_mini_mock_question(int(question_index))
+    if not question:
+        return None
+    return find_mini_mock_result(str(question.get("question_id") or ""))
 
 
 def find_mini_mock_result(question_id: str) -> Optional[Dict[str, Any]]:
@@ -158,6 +184,8 @@ def build_mini_mock_row(
         "audio_len": nbytes,
         "recorded_at": recorded_at,
         "transcript": (result.get("transcript") or "").strip(),
+        "stt_status": str(result.get("stt_status") or ""),
+        "stt_word_count": int(result.get("stt_word_count") or 0),
         "analysis_status": _analysis_status_from_result(result),
         "result": result,
         "analysis_result": result,
@@ -175,6 +203,27 @@ def question_as_mock_q(question: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def count_mini_mock_analysis_completed() -> int:
+    from services.exam_analytics import result_display_status
+
+    n = 0
+    for row in mini_mock_rows_sorted():
+        if result_display_status(row_result(row)) == "분석 완료":
+            n += 1
+    return n
+
+
+def count_mini_mock_analysis_pending() -> int:
+    from services.exam_analytics import result_display_status
+
+    n = 0
+    for row in mini_mock_rows_sorted():
+        status = result_display_status(row_result(row))
+        if status in ("분석 대기", "AI 분석 대기 중"):
+            n += 1
+    return n
+
+
 def mini_mock_needs_analysis(row: Optional[Dict[str, Any]]) -> bool:
     if not isinstance(row, dict):
         return False
@@ -184,7 +233,8 @@ def mini_mock_needs_analysis(row: Optional[Dict[str, Any]]) -> bool:
         return True
     from services.exam_analytics import result_display_status
 
-    return result_display_status(res) == "AI 분석 대기 중"
+    status = result_display_status(res)
+    return status in ("분석 대기", "AI 분석 대기 중")
 
 
 def save_mini_mock_unanalyzed_answer(
@@ -219,6 +269,64 @@ def save_mini_mock_unanalyzed_answer(
     row["recorded_at"] = placeholder["recorded_at"]
     upsert_mini_mock_result(row)
     return row
+
+
+def apply_stt_to_mini_mock_saved_row(
+    *,
+    question_index: int,
+    question: Dict[str, Any],
+    audio_key: str,
+    audio_bytes: bytes,
+    mime_type: str = "",
+) -> Dict[str, Any] | None:
+    """Run STT after audio save and persist transcript fields on the answer row."""
+    import logging
+
+    from services.stt_service import merge_stt_into_answer_result, transcribe_answer_audio
+
+    question_id = str(question.get("question_id") or "")
+    row = find_mini_mock_result(question_id)
+    if not isinstance(row, dict):
+        return None
+    nbytes = recording_byte_length(audio_bytes)
+    question_text = str(question.get("question_en") or question.get("question") or "")
+    stt = transcribe_answer_audio(
+        audio_bytes,
+        mime_type=mime_type or "audio/webm",
+        language_hint="en",
+        question_text=question_text,
+        mode="mini_mock",
+        question_id=question_id,
+    )
+    merged = merge_stt_into_answer_result(
+        row_result(row),
+        stt,
+        question_text=question_text,
+        question_index=question_index,
+        question_id=question_id,
+        audio_key=audio_key,
+        audio_len=nbytes,
+    )
+    updated = build_mini_mock_row(
+        question_index=question_index,
+        question=question,
+        audio_key=audio_key,
+        result=merged,
+        mime_type=mime_type,
+    )
+    updated["audio_len"] = nbytes
+    upsert_mini_mock_result(updated)
+    try:
+        logging.getLogger(__name__).debug(
+            "[MINI_MOCK_STT] q_idx=%s stt_status=%s word_count=%s ok=%s",
+            question_index,
+            merged.get("stt_status"),
+            merged.get("stt_word_count"),
+            stt.get("ok"),
+        )
+    except Exception:
+        pass
+    return updated
 
 
 def save_mini_mock_placeholder_before_ai(

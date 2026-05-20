@@ -5,9 +5,90 @@ from __future__ import annotations
 import os
 from typing import Dict, FrozenSet, List, Tuple
 
-# Multimodal semantic call (mock exam feedback). Optional override: GEMINI_MODEL.
-_DEFAULT_MODEL = "gemini-2.5-flash"
-MODEL_NAME = (os.getenv("GEMINI_MODEL") or "").strip() or _DEFAULT_MODEL
+# Gemini models — STT vs report (optional legacy GEMINI_MODEL applies to both if set).
+_DEFAULT_STT_MODEL = "gemini-2.5-flash-lite"
+_DEFAULT_REPORT_MODEL = "gemini-2.5-flash"
+_LEGACY_GEMINI_MODEL = (os.getenv("GEMINI_MODEL") or "").strip()
+
+STT_MODEL_NAME = (os.getenv("GEMINI_STT_MODEL") or _LEGACY_GEMINI_MODEL or "").strip() or _DEFAULT_STT_MODEL
+REPORT_MODEL_NAME = (
+    (os.getenv("GEMINI_REPORT_MODEL") or _LEGACY_GEMINI_MODEL or "").strip()
+    or _DEFAULT_REPORT_MODEL
+)
+
+# Backward compatibility for existing imports.
+MODEL_NAME = REPORT_MODEL_NAME
+_DEFAULT_MODEL = _DEFAULT_REPORT_MODEL
+
+
+def _dedupe_models(candidates: List[str]) -> List[str]:
+    out: List[str] = []
+    for raw in candidates:
+        name = (raw or "").strip()
+        if not name:
+            continue
+        for prefix in ("models/", "publishers/google/models/"):
+            if name.startswith(prefix):
+                name = name[len(prefix) :]
+        if name and name not in out:
+            out.append(name)
+    return out
+
+
+def build_stt_model_candidates() -> List[str]:
+    """Flash / Flash-Lite only — no Pro models."""
+    return _dedupe_models(
+        [
+            STT_MODEL_NAME,
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+        ]
+    )
+
+
+def build_report_model_candidates() -> List[str]:
+    """Legacy mock exam report stack."""
+    return _dedupe_models(
+        [
+            REPORT_MODEL_NAME,
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+        ]
+    )
+
+
+# Mini Mock V2 report — fast diagnosis (Flash-Lite default).
+# Resolution: GEMINI_MINI_REPORT_MODEL → GEMINI_REPORT_MODEL → GEMINI_MODEL → default.
+_DEFAULT_MINI_REPORT_MODEL = "gemini-2.5-flash-lite"
+MINI_REPORT_MODEL_NAME = (
+    (os.getenv("GEMINI_MINI_REPORT_MODEL") or "").strip()
+    or (os.getenv("GEMINI_REPORT_MODEL") or _LEGACY_GEMINI_MODEL or "").strip()
+    or _DEFAULT_MINI_REPORT_MODEL
+)
+MINI_V2_REPORT_MODEL_NAME = MINI_REPORT_MODEL_NAME  # backward-compatible alias
+
+# Future Real Mock V2 report — precision exam (not wired to flows yet).
+# Resolution: GEMINI_REAL_REPORT_MODEL → GEMINI_REPORT_MODEL → GEMINI_MODEL → default.
+_DEFAULT_REAL_REPORT_MODEL = "gemini-2.5-flash"
+REAL_REPORT_MODEL_NAME = (
+    (os.getenv("GEMINI_REAL_REPORT_MODEL") or "").strip()
+    or (os.getenv("GEMINI_REPORT_MODEL") or _LEGACY_GEMINI_MODEL or "").strip()
+    or _DEFAULT_REAL_REPORT_MODEL
+)
+
+
+def build_mini_mock_v2_report_model_candidates() -> List[str]:
+    """Mini Mock V2 final report only — no Pro models."""
+    return _dedupe_models(
+        [
+            MINI_REPORT_MODEL_NAME,
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+        ]
+    )
 
 # --- Levels (ordinal scale for calibration; NH band subdivided via novice_band) ---
 LEVEL_ORDER: List[str] = ["NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"]

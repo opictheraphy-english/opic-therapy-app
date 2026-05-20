@@ -10,6 +10,7 @@ import streamlit as st
 
 RECORDING_TIMER_DURATION_SEC = 120
 RECORDING_TIMER_WARN_SEC = 15
+RECORDING_TIMER_UI_WARN_SEC = 30
 
 
 def reset_recording_timer() -> None:
@@ -119,9 +120,17 @@ def _timer_state(rem: int, *, active: bool) -> str:
         return "idle"
     if rem <= 0:
         return "up"
-    if rem <= RECORDING_TIMER_WARN_SEC:
+    if rem <= RECORDING_TIMER_UI_WARN_SEC:
         return "warn"
     return "normal"
+
+
+def _timer_status_label(active: bool, state: str) -> str:
+    if not active:
+        return "대기 중"
+    if state == "up":
+        return "시간 종료"
+    return "녹음 중"
 
 
 def _timer_html(rem: int, *, active: bool, state: str) -> str:
@@ -129,30 +138,18 @@ def _timer_html(rem: int, *, active: bool, state: str) -> str:
     time_display = _format_mm_ss(rem)
     progress_pct = int(round((rem / total) * 100)) if total > 0 else 0
     progress_pct = max(0, min(100, progress_pct))
-
-    if active:
-        if state == "warn":
-            label = "남은 답변 시간"
-            helper = "곧 2분이 끝나요. 마무리 문장으로 정리해 주세요."
-        elif state == "up":
-            label = "남은 답변 시간"
-            helper = "2분이 지났어요. 핵심만 정리해서 마무리해 주세요."
-        else:
-            label = "남은 답변 시간"
-            helper = "2분 안에 핵심을 정리해 보세요."
-    else:
-        label = "답변 시간"
-        helper = "답변 시작을 누르면 타이머가 시작돼요."
-
+    status = _timer_status_label(active, state)
     state_esc = html.escape(state)
     return f"""
-        <div class="mx-rec-timer mx-rec-timer--{state_esc}" role="timer" aria-live="polite" aria-atomic="true">
-          <p class="mx-rec-timer-label">{html.escape(label)}</p>
-          <p class="mx-rec-timer-value">{html.escape(time_display)}</p>
-          <div class="mx-rec-timer-progress" aria-hidden="true">
-            <span class="mx-rec-timer-progress-fill" style="width:{progress_pct}%;"></span>
+        <div class="mx-rec-timer mx-answer-timer mx-rec-timer--{state_esc}" role="timer" aria-live="polite" aria-atomic="true">
+          <div class="mx-answer-timer-head">
+            <p class="mx-rec-timer-label mx-answer-timer-label">답변 시간</p>
+            <span class="mx-answer-timer-status mx-answer-timer-status--{state_esc}">{html.escape(status)}</span>
           </div>
-          <p class="mx-rec-timer-helper mx-rec-timer-helper--{state_esc}">{html.escape(helper)}</p>
+          <p class="mx-rec-timer-value mx-answer-timer-value">{html.escape(time_display)}</p>
+          <div class="mx-rec-timer-progress mx-answer-timer-bar" aria-hidden="true">
+            <span class="mx-rec-timer-progress-fill mx-answer-timer-bar-fill" style="width:{progress_pct}%;"></span>
+          </div>
         </div>
         """
 
