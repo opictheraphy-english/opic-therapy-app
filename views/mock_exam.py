@@ -718,6 +718,8 @@ def _mock_mode(mx: dict) -> str | None:
         return "topic_practice_v2"
     if mode in ("mini_mock", "mini"):
         return "mini_mock"
+    if mode == "mock_v2":
+        return "mock_v2"
     return None
 
 
@@ -732,6 +734,8 @@ def _mock_mode_label(mode: str | None) -> str:
         return "주제별 답변 연습"
     if mode == "mini_mock":
         return "5분 진단 미니 모의고사"
+    if mode == "mock_v2":
+        return "실전 모의고사"
     return "모의고사"
 
 
@@ -1922,7 +1926,14 @@ def _has_mock_mode(mx: dict) -> bool:
 
 
 def _set_mock_mode(mx: dict, mode: str) -> None:
-    if mode not in ("real_mock", "coaching", "topic_practice", "topic_practice_v2", "mini_mock"):
+    if mode not in (
+        "real_mock",
+        "coaching",
+        "topic_practice",
+        "topic_practice_v2",
+        "mini_mock",
+        "mock_v2",
+    ):
         mode = "real_mock"
     st.session_state["mock_mode"] = mode
     mx["mock_mode"] = mode
@@ -2132,6 +2143,8 @@ def _session_mock_mode() -> str | None:
         return "topic_practice_v2"
     if mode in ("mini_mock", "mini"):
         return "mini_mock"
+    if mode == "mock_v2":
+        return "mock_v2"
     return None
 
 
@@ -2146,6 +2159,19 @@ def _render_dev_portal_debug(mx: dict) -> None:
         st.session_state["show_dev_debug"] = False
     if not st.session_state.get("show_dev_debug"):
         return
+
+    if st.button(
+        "기존 실전 모의고사 열기",
+        use_container_width=True,
+        key="portal_start_legacy_real_mock",
+    ):
+        st.session_state["mock_mode"] = "real_mock"
+        st.session_state["practice_portal_selected"] = True
+        st.session_state["mock_page"] = "SURVEY"
+        _sync_portal_mode_to_mx(mx, "real_mock")
+        _set_mock_page(mx, "SURVEY")
+        _clear_reset_practice_query_param()
+        st.rerun()
 
     def _dev_state_body() -> None:
         st.json(
@@ -2434,7 +2460,7 @@ def render_learning_portal(mx: dict) -> None:
             <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
                      aria-label="실전 모의고사">
               <div class="cc-title">실전 모의고사</div>
-              <div class="cc-meta">실제 오픽처럼 연속으로 답변하고 마지막에 전체 리포트를 확인해요.</div>
+              <div class="cc-meta">OPIc 실전 흐름에 맞춰 15문항을 연습하고 AI 최종 리포트를 확인해요.</div>
             </section>
             """,
             unsafe_allow_html=True,
@@ -2445,12 +2471,19 @@ def render_learning_portal(mx: dict) -> None:
             use_container_width=True,
             key="portal_start_real_mock",
         ):
-            st.session_state["mock_mode"] = "real_mock"
+            from views.mock_v2 import begin_mock_v2_session
+
+            begin_mock_v2_session()
+            st.session_state["mock_mode"] = "mock_v2"
             st.session_state["practice_portal_selected"] = True
-            st.session_state["mock_page"] = "SURVEY"
-            _sync_portal_mode_to_mx(mx, "real_mock")
-            _set_mock_page(mx, "SURVEY")
+            _sync_portal_mode_to_mx(mx, "mock_v2")
             _clear_reset_practice_query_param()
+            try:
+                logger.info(
+                    "[MOCK_V2_SET_AS_MAIN] source=learning_portal mock_mode=mock_v2"
+                )
+            except Exception:
+                pass
             st.rerun()
     with c2:
         st.markdown(
@@ -5659,6 +5692,12 @@ def render_mock_flow() -> None:
         if mode == "mini_mock" and not _is_mini_mock_v2_active():
             begin_mini_mock_v2_session(mx)
         render_mini_mock_v2()
+        return
+
+    if mode == "mock_v2":
+        from views.mock_v2 import render_mock_v2
+
+        render_mock_v2()
         return
 
     if mode == "real_mock":
