@@ -36,13 +36,12 @@ def _dedupe_models(candidates: List[str]) -> List[str]:
 
 
 def build_stt_model_candidates() -> List[str]:
-    """Flash / Flash-Lite only — no Pro models."""
+    """Flash / Flash-Lite only — no Pro models, no discontinued 2.0 Flash."""
     return _dedupe_models(
         [
             STT_MODEL_NAME,
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
-            "gemini-2.0-flash",
         ]
     )
 
@@ -53,7 +52,7 @@ def build_report_model_candidates() -> List[str]:
         [
             REPORT_MODEL_NAME,
             "gemini-2.5-flash",
-            "gemini-2.0-flash",
+            "gemini-2.5-flash-lite",
             "gemini-1.5-flash",
         ]
     )
@@ -80,15 +79,34 @@ REAL_REPORT_MODEL_NAME = (
 
 
 def build_mini_mock_v2_report_model_candidates() -> List[str]:
-    """Mini Mock V2 final report only — no Pro models."""
+    """Mini Mock V2 final report only — no Pro models, no discontinued 2.0 Flash."""
     return _dedupe_models(
         [
             MINI_REPORT_MODEL_NAME,
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
-            "gemini-2.0-flash",
         ]
     )
+
+
+# Topic Practice V2 — short feedback (text-only), 2.5 Flash family only.
+_DEFAULT_TOPIC_FEEDBACK_MODEL = "gemini-2.5-flash-lite"
+TOPIC_FEEDBACK_MODEL_NAME = (
+    (os.getenv("GEMINI_TOPIC_FEEDBACK_MODEL") or "").strip()
+    or _DEFAULT_TOPIC_FEEDBACK_MODEL
+)
+
+
+def build_topic_feedback_model_candidates() -> List[str]:
+    """Topic Practice V2 AI feedback — env override, then 2.5 Flash-Lite / Flash only."""
+    return _dedupe_models(
+        [
+            TOPIC_FEEDBACK_MODEL_NAME,
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+        ]
+    )
+
 
 # --- Levels (ordinal scale for calibration; NH band subdivided via novice_band) ---
 LEVEL_ORDER: List[str] = ["NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"]

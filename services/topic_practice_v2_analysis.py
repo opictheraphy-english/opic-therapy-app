@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any, Dict, List, Optional, Tuple
 
-from services.evaluation.eval_config import _dedupe_models
+from services.evaluation.eval_config import build_topic_feedback_model_candidates
 from services.stt_service import count_english_words
 from services.topic_practice_v2_rubric import (
     RUBRIC_VERSION,
@@ -19,20 +18,11 @@ logger = logging.getLogger(__name__)
 GEMINI_REQUEST_TIMEOUT_SEC = 35
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 
-_DEFAULT_TOPIC_FEEDBACK = "gemini-2.5-flash-lite"
-TOPIC_FEEDBACK_MODEL_ENV = (os.getenv("GEMINI_TOPIC_FEEDBACK_MODEL") or "").strip()
-
-
-def build_topic_v2_feedback_model_candidates() -> List[str]:
-    """Flash / Flash-Lite only — env first, then fixed fallbacks. No Pro."""
-    return _dedupe_models(
-        [
-            TOPIC_FEEDBACK_MODEL_ENV or _DEFAULT_TOPIC_FEEDBACK,
-            "gemini-2.5-flash-lite",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-        ]
-    )
+_STUDENT_FEEDBACK_UNAVAILABLE = (
+    "AI 피드백이 잠시 지연되고 있어요.\n\n"
+    "답변은 안전하게 저장되어 있습니다.\n\n"
+    "잠시 후 다시 시도해 주세요."
+)
 
 
 def _failure(
@@ -46,6 +36,8 @@ def _failure(
         "strength": "",
         "correction_focus": "",
         "better_expression": "",
+        "upgrade_sample": "",
+        "keyword_drill": [],
         "practice_mission": "",
         "error_category": category,
         "error_message": message,
@@ -57,6 +49,8 @@ def _ok_payload(
     strength: str,
     correction_focus: str,
     better_expression: str,
+    upgrade_sample: str,
+    keyword_drill: List[str],
     practice_mission: str,
 ) -> Dict[str, Any]:
     return {
@@ -65,6 +59,8 @@ def _ok_payload(
         "strength": strength,
         "correction_focus": correction_focus,
         "better_expression": better_expression,
+        "upgrade_sample": upgrade_sample,
+        "keyword_drill": list(keyword_drill),
         "practice_mission": practice_mission,
         "error_category": "",
         "error_message": "",
@@ -75,12 +71,47 @@ def _coerce_str(val: Any) -> str:
     return str(val or "").strip()
 
 
+def _coerce_keyword_drill(val: Any) -> List[str]:
+    if val is None:
+        return []
+    if isinstance(val, str):
+        chunks = [x.strip() for x in val.replace(";", ",").split(",") if x.strip()]
+        if len(chunks) <= 1 and val.strip():
+            chunks = [x.strip() for x in val.split() if x.strip()]
+        return chunks[:6]
+    if isinstance(val, list):
+        out: List[str] = []
+        for x in val:
+            s = _coerce_str(x)
+            if s:
+                out.append(s)
+        return out[:6]
+    return []
+
+
 def _answer_transcript(answer: Dict[str, Any]) -> str:
     for key in ("transcript", "student_answer", "stt_transcript", "raw_transcript"):
         t = _coerce_str(answer.get(key))
         if t:
             return t
     return ""
+
+
+def _is_model_not_found_error(exc: BaseException) -> bool:
+    msg = f"{type(exc).__name__}: {exc}"
+    low = msg.lower()
+    if "404" in msg:
+        return True
+    if "not_found" in low or "not found" in low:
+        return True
+    if "model_not_found" in low:
+        return True
+    if "no longer available" in low or "not available" in low:
+        return True
+    status = getattr(exc, "status_code", None)
+    if status == 404:
+        return True
+    return False
 
 
 def _parse_json_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
@@ -99,6 +130,7 @@ def _parse_json_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
 
 
 def _invoke_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Returns (parsed_json, error_token). error_token is '' on success."""
     from google import genai
     from google.genai import types as genai_types
 
@@ -116,7 +148,24 @@ def _invoke_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[
             config=config,
         )
     except Exception as exc:
-        return None, f"{type(exc).__name__}: {exc}"
+        if _is_model_not_found_error(exc):
+            try:
+                logger.warning(
+                    "[TOPIC_V2_FEEDBACK] model=%s error_category=model_not_found",
+                    model_name,
+                )
+            except Exception:
+                pass
+            return None, "model_not_found"
+        try:
+            logger.warning(
+                "[TOPIC_V2_FEEDBACK] model=%s error_category=api_error exc_type=%s",
+                model_name,
+                type(exc).__name__,
+            )
+        except Exception:
+            pass
+        return None, "api_error"
 
     raw_text = (getattr(response, "text", "") or "").strip()
     if not raw_text:
@@ -139,9 +188,11 @@ def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
     q_en = _coerce_str(answer.get("en"))
     q_ko = _coerce_str(answer.get("ko"))
     topic = _coerce_str(answer.get("topic"))
+    opic_type = _coerce_str(answer.get("opic_type"))
     payload = {
         "rubric_version": RUBRIC_VERSION,
         "topic": topic,
+        "opic_type": opic_type,
         "question_en": q_en,
         "question_ko": q_ko,
         "transcript": transcript,
@@ -151,18 +202,22 @@ def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
 
 
 def _normalize_success(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    """Map model JSON to payload; missing new fields get safe defaults (backward compatible)."""
+    drills = _coerce_keyword_drill(parsed.get("keyword_drill"))
     return _ok_payload(
         summary=_coerce_str(parsed.get("summary")),
         strength=_coerce_str(parsed.get("strength")),
         correction_focus=_coerce_str(parsed.get("correction_focus")),
         better_expression=_coerce_str(parsed.get("better_expression")),
+        upgrade_sample=_coerce_str(parsed.get("upgrade_sample")),
+        keyword_drill=drills,
         practice_mission=_coerce_str(parsed.get("practice_mission")),
     )
 
 
 def analyze_topic_practice_v2_answer(answer: dict) -> dict:
     """
-    One short feedback call chain (try model list once each, stop on first success).
+    Try each feedback model once; skip unavailable (404) models immediately.
 
     Returns dict matching the Topic V2 feedback schema; ``ok`` is a bool.
     """
@@ -191,9 +246,10 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
         )
 
     prompt = _build_prompt(answer, transcript)
-    models = build_topic_v2_feedback_model_candidates()
-    last_err = "no_models"
-    for model_name in models[:4]:
+    models = build_topic_feedback_model_candidates()
+    saw_model_not_found = False
+    saw_other_failure = False
+    for model_name in models:
         try:
             logger.info("[TOPIC_V2_FEEDBACK] model=%s transcript_words=%s", model_name, wc)
         except Exception:
@@ -202,47 +258,63 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
         if parsed:
             norm = _normalize_success(parsed)
             if not norm["summary"]:
-                norm["summary"] = "Brief feedback generated; see other fields."
+                norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
             if not norm["strength"]:
-                norm["strength"] = "(See summary.)"
+                norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
             if not norm["correction_focus"]:
-                norm["correction_focus"] = "Keep answering in full sentences next time."
+                norm["correction_focus"] = "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
             if not norm["better_expression"]:
-                norm["better_expression"] = "(Review correction_focus.)"
+                norm["better_expression"] = "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
+            if not norm.get("upgrade_sample"):
+                norm["upgrade_sample"] = ""
             if not norm["practice_mission"]:
-                norm["practice_mission"] = "Record the same question again with a clearer opening sentence."
+                norm["practice_mission"] = "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
             try:
                 logger.info("[TOPIC_V2_FEEDBACK] success model=%s", model_name)
             except Exception:
                 pass
             return _stringify_result(norm)
-        last_err = err or "unknown"
-        try:
-            logger.warning("[TOPIC_V2_FEEDBACK] model_failed model=%s err=%s", model_name, last_err)
-        except Exception:
-            pass
+        if err == "model_not_found":
+            saw_model_not_found = True
+        else:
+            saw_other_failure = True
+            try:
+                logger.warning(
+                    "[TOPIC_V2_FEEDBACK] model_failed model=%s err=%s",
+                    model_name,
+                    err,
+                )
+            except Exception:
+                pass
 
+    final_cat = "model_not_found" if saw_model_not_found and not saw_other_failure else "api_error"
     return _stringify_result(
         _failure(
-            category="api_error",
-            message=f"피드백을 가져오지 못했어요. 잠시 후 다시 시도해 주세요. ({last_err})",
+            category=final_cat,
+            message=_STUDENT_FEEDBACK_UNAVAILABLE,
         )
     )
 
 
 def _stringify_result(d: Dict[str, Any]) -> dict:
-    """Normalize to required schema."""
+    """Normalize to required schema (expanded + backward compatible keys)."""
     ok_raw = d.get("ok")
     if isinstance(ok_raw, bool):
         ok = ok_raw
     else:
         ok = str(ok_raw).lower() in ("true", "1", "yes")
+
+    raw_drill = d.get("keyword_drill")
+    drill_list = _coerce_keyword_drill(raw_drill)
+
     return {
         "ok": ok,
         "summary": _coerce_str(d.get("summary")),
         "strength": _coerce_str(d.get("strength")),
         "correction_focus": _coerce_str(d.get("correction_focus")),
         "better_expression": _coerce_str(d.get("better_expression")),
+        "upgrade_sample": _coerce_str(d.get("upgrade_sample")),
+        "keyword_drill": drill_list,
         "practice_mission": _coerce_str(d.get("practice_mission")),
         "error_category": _coerce_str(d.get("error_category")),
         "error_message": _coerce_str(d.get("error_message")),

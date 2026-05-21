@@ -105,6 +105,7 @@ _ALLOWED_MOCK_SUBPAGES = {
     "PICK",
     "TOPIC",
     "TOPIC_V2",
+    "TOPIC_V2_HISTORY",
     "MINI_MOCK",
     "SURVEY",
     "TEST",
@@ -141,6 +142,10 @@ if st.session_state.page == "MOCK" and mock_param in _ALLOWED_MOCK_SUBPAGES:
         if not st.session_state.get("practice_portal_selected"):
             mx["mock_page"] = "PICK"
             st.session_state["mock_page"] = "PICK"
+    elif mock_param == "TOPIC_V2_HISTORY":
+        from views.topic_practice_v2 import apply_topic_v2_history_route
+
+        apply_topic_v2_history_route(mx, source="url")
     elif mx.get("mock_page") != mock_param:
         prev_m = mx.get("mock_page")
         mx["mock_page"] = mock_param

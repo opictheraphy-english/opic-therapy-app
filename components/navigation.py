@@ -108,7 +108,21 @@ def navigate_to(
 
         mx = ensure_mock(st.session_state)
         prev_m = mx.get("mock_page")
-        if mock:
+        if mock == "TOPIC_V2_HISTORY":
+            # App-level route; may not see in-session TPV2 history after full page reload.
+            from views.topic_practice_v2 import (
+                MOCK_MODE_TOPIC_V2,
+                enter_topic_v2_history_nav,
+            )
+
+            enter_topic_v2_history_nav(source="navigate_to")
+            mx["mock_page"] = "TOPIC_V2"
+            st.session_state["mock_page"] = "TOPIC_V2"
+            mx["mock_mode"] = MOCK_MODE_TOPIC_V2
+            st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
+            st.session_state["practice_portal_selected"] = True
+            mx["mock_mode_label"] = "주제별 답변 연습"
+        elif mock:
             mx["mock_page"] = mock
             st.session_state["mock_page"] = mock
             st.session_state["practice_portal_selected"] = True

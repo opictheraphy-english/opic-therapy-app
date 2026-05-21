@@ -1949,6 +1949,24 @@ def _practice_portal_selected() -> bool:
     return bool(st.session_state.get("practice_portal_selected"))
 
 
+def _is_topic_v2_history_route(mx: dict) -> bool:
+    """True when user should see Topic V2 history only (not learning portal)."""
+    try:
+        from views.topic_practice_v2 import _KEY_PAGE
+
+        if str(st.session_state.get(_KEY_PAGE) or "").strip() == "history":
+            return True
+    except Exception:
+        pass
+    mp = str(st.session_state.get("mock_page") or mx.get("mock_page") or "").strip()
+    if mp == "TOPIC_V2_HISTORY":
+        return True
+    mode = _session_mock_mode() or _mock_mode(mx)
+    if mode == "topic_practice_v2" and str(st.session_state.get("topic_v2_page") or "").strip() == "history":
+        return True
+    return False
+
+
 def _sync_mock_routing_state(mx: dict) -> None:
     """Align top-level routing keys with the mock namespace (portal buttons write both)."""
     page = st.session_state.get("mock_page")
@@ -2028,9 +2046,11 @@ def reset_to_learning_portal() -> None:
     mx.pop("_resume_confirmed", None)
     st.session_state.pop("mock_mode", None)
     try:
-        from views.topic_practice_v2 import clear_topic_v2_session
+        from views.topic_practice_v2 import clear_topic_v2_session, _log_tpv2_state_clear
 
+        _log_tpv2_state_clear("ENTER", "reset_to_learning_portal:before_clear")
         clear_topic_v2_session()
+        _log_tpv2_state_clear("EXIT", "reset_to_learning_portal:after_clear")
     except Exception:
         pass
     try:
@@ -5557,7 +5577,17 @@ def render_mock_exam_shell() -> None:
     _sync_mock_routing_state(mx)
 
     page = _get_mock_page(mx)
-    if page not in {"PICK", "TOPIC", "MINI_MOCK", "SURVEY", "TEST", "REPORT", "FINAL"}:
+    if page not in {
+        "PICK",
+        "TOPIC",
+        "TOPIC_V2",
+        "TOPIC_V2_HISTORY",
+        "MINI_MOCK",
+        "SURVEY",
+        "TEST",
+        "REPORT",
+        "FINAL",
+    }:
         _set_mock_page(mx, "PICK")
         page = "PICK"
 
@@ -5625,6 +5655,19 @@ def render_mock_flow() -> None:
         return
 
     if _redirect_hidden_coaching_mode():
+        return
+
+    if _is_topic_v2_history_route(mx):
+        from views.topic_practice_v2 import (
+            _KEY_PAGE,
+            apply_topic_v2_history_route,
+            render_topic_practice_v2,
+        )
+
+        # In-app history sets topic_v2_page=history without navigate_to; do not reset.
+        if str(st.session_state.get(_KEY_PAGE) or "").strip() != "history":
+            apply_topic_v2_history_route(mx, source="mock_flow")
+        render_topic_practice_v2()
         return
 
     mode = _session_mock_mode() or _mock_mode(mx)

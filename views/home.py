@@ -312,7 +312,12 @@ def _render_quick_actions() -> None:
                 unsafe_allow_html=True,
             )
             if st.button(f"{title} 열기", key=f"qa_nav_{page}", use_container_width=True):
-                navigate_to(page)
+                if page == "MOCK" and title == "학습 기록":
+                    # Persistent history requires DB storage; session_state may reset
+                    # after full page navigation (bottom nav, browser refresh).
+                    navigate_to("MOCK", mock="TOPIC_V2_HISTORY")
+                else:
+                    navigate_to(page)
                 st.rerun()
 
 
