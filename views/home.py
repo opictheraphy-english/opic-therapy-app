@@ -7,7 +7,7 @@ admin-y:
   1) Greeting           — warm hello, no marketing copy.
   2) Continue Study     — the screen's visual focus. Two states:
                             • resume an in-progress mock exam, or
-                            • start fresh / pick up the last finished one.
+                            • start a new mock exam from the hero card.
   3) Quick Actions      — 4 compact cards that fan out to the main tabs.
   4) Simple Stats       — 3 honest, derived numbers (no new tracking).
 
@@ -188,10 +188,8 @@ def _render_start_card(
 ) -> None:
     """Card shown when nothing is mid-exam.
 
-    Two flavors:
-      • returning user (we have a finished/last-activity snapshot) — invite
-        them to keep going and offer the last report as a secondary jump.
-      • brand-new user — invite to take the first diagnostic.
+    Returning users: one CTA to start mock practice (no past-report shortcut).
+    New users: diagnostic start + pattern browse.
     """
     card = prog_disk.get("last_activity_card") if isinstance(prog_disk, dict) else None
     has_history = isinstance(card, dict) and bool(card.get("estimated_level"))
@@ -207,12 +205,8 @@ def _render_start_card(
         sub_html = " · ".join(sub_bits)
         primary_label = "모의고사 시작"
         primary_nav = ("MOCK", None, False)
-        secondary_label = "최근 리포트"
-        secondary_nav = (
-            ("MOCK", "FINAL", False)
-            if card.get("exam_finished")
-            else ("MOCK", "REPORT", False)
-        )
+        secondary_label = None
+        secondary_nav = None
     else:
         eyebrow = "환영합니다"
         title = "5분이면 첫 진단을 끝낼 수 있어요"
@@ -238,17 +232,36 @@ def _render_start_card(
         """,
         unsafe_allow_html=True,
     )
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button(primary_label, type="primary", use_container_width=True, key="home_start_primary"):
-            page, mock, reset = primary_nav
-            navigate_to(page, mock=mock, reset=reset)
-            st.rerun()
-    with c2:
-        if st.button(secondary_label, use_container_width=True, key="home_start_secondary"):
-            page, mock, reset = secondary_nav
-            navigate_to(page, mock=mock, reset=reset)
-            st.rerun()
+    if secondary_nav:
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button(
+                primary_label,
+                type="primary",
+                use_container_width=True,
+                key="home_start_primary",
+            ):
+                page, mock, reset = primary_nav
+                navigate_to(page, mock=mock, reset=reset)
+                st.rerun()
+        with c2:
+            if st.button(
+                secondary_label or "",
+                use_container_width=True,
+                key="home_start_secondary",
+            ):
+                page, mock, reset = secondary_nav
+                navigate_to(page, mock=mock, reset=reset)
+                st.rerun()
+    elif st.button(
+        primary_label,
+        type="primary",
+        use_container_width=True,
+        key="home_start_primary",
+    ):
+        page, mock, reset = primary_nav
+        navigate_to(page, mock=mock, reset=reset)
+        st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +309,6 @@ def _render_quick_actions() -> None:
         ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기"),
         ("SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기"),
         ("LECTURES", "play", "강의 보기", "출제 유형 강의"),
-        ("MOCK", "chart", "학습 기록", "최근 리포트 다시 보기"),
     )
     st.markdown('<div class="home-section-h">빠른 학습</div>', unsafe_allow_html=True)
     row_a = st.columns(2, gap="small")
@@ -312,12 +324,7 @@ def _render_quick_actions() -> None:
                 unsafe_allow_html=True,
             )
             if st.button(f"{title} 열기", key=f"qa_nav_{page}", use_container_width=True):
-                if page == "MOCK" and title == "학습 기록":
-                    # Persistent history requires DB storage; session_state may reset
-                    # after full page navigation (bottom nav, browser refresh).
-                    navigate_to("MOCK", mock="TOPIC_V2_HISTORY")
-                else:
-                    navigate_to(page)
+                navigate_to(page)
                 st.rerun()
 
 
