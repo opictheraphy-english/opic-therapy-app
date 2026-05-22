@@ -74,6 +74,66 @@ _VALID_STEPS = frozenset(
     {"select_topic", "question", "saved", "feedback", "pending", "insufficient"}
 )
 
+_KEY_TOPIC_SEARCH = "topic_v2_topic_search"
+_KEY_TOPIC_CATEGORY = "topic_v2_topic_category"
+_KEY_ROLEPLAY_EXPAND = "topic_v2_roleplay_expand"
+
+_RECOMMENDED_TOPIC_IDS: Tuple[str, ...] = (
+    "home",
+    "cafe",
+    "movies_tv",
+    "music",
+    "travel",
+    "restaurant",
+)
+
+_TOPIC_V2_CATEGORY_LABELS: Tuple[str, ...] = ("일상", "취미", "운동", "여행", "사회", "전체")
+
+_TOPIC_V2_CATEGORY_TOPIC_IDS: Dict[str, Tuple[str, ...]] = {
+    "일상": (
+        "home",
+        "family_home",
+        "neighborhood",
+        "cafe",
+        "restaurant",
+        "food",
+        "shopping",
+        "holidays",
+        "gatherings",
+    ),
+    "취미": (
+        "movies_tv",
+        "performances",
+        "music",
+        "singing",
+        "instruments",
+        "cooking",
+        "books",
+        "free_time",
+    ),
+    "운동": ("walking", "jogging", "gym", "sports", "health"),
+    "여행": (
+        "travel",
+        "vacation",
+        "beach",
+        "hotels",
+        "transportation",
+        "country_places",
+    ),
+    "사회": (
+        "technology",
+        "phone",
+        "internet",
+        "industry",
+        "bank",
+        "appointments",
+        "recycling",
+        "weather",
+        "fashion",
+    ),
+    "전체": (),
+}
+
 
 def _feedback_answer_id(
     row: Optional[Dict[str, Any]], *, topic: str, q_idx: int
@@ -1467,6 +1527,123 @@ def _goto_topic_select() -> None:
     _log_tpv2_state_clear("EXIT", "_goto_topic_select")
 
 
+def _all_topic_catalog_rows() -> List[Dict[str, Any]]:
+    return [
+        dict(row)
+        for row in TOPIC_PRACTICE_TOPICS
+        if isinstance(row, dict) and str(row.get("topic_id") or "").strip()
+    ]
+
+
+def _topic_rows_by_ids(topic_ids: Tuple[str, ...]) -> List[Dict[str, Any]]:
+    by_id = {
+        str(row.get("topic_id") or "").strip(): dict(row)
+        for row in TOPIC_PRACTICE_TOPICS
+        if isinstance(row, dict) and str(row.get("topic_id") or "").strip()
+    }
+    out: List[Dict[str, Any]] = []
+    for tid in topic_ids:
+        row = by_id.get(str(tid or "").strip())
+        if row:
+            out.append(row)
+    return out
+
+
+def _filter_topics_by_search(
+    rows: List[Dict[str, Any]], query: str
+) -> List[Dict[str, Any]]:
+    q = str(query or "").strip().lower()
+    if not q:
+        return list(rows)
+    matched: List[Dict[str, Any]] = []
+    for row in rows:
+        tid = str(row.get("topic_id") or "").strip().lower()
+        title_ko = str(row.get("title_ko") or "").strip().lower()
+        title_en = str(row.get("title_en") or "").strip().lower()
+        if q in tid or q in title_ko or q in title_en:
+            matched.append(row)
+    return matched
+
+
+def _topics_for_category_label(category: str) -> List[Dict[str, Any]]:
+    label = str(category or "").strip()
+    if label not in _TOPIC_V2_CATEGORY_TOPIC_IDS:
+        label = "일상"
+    if label == "전체":
+        return _all_topic_catalog_rows()
+    return _topic_rows_by_ids(_TOPIC_V2_CATEGORY_TOPIC_IDS[label])
+
+
+def _render_topic_v2_empty_state() -> None:
+    st.info("해당 주제를 찾을 수 없어요.\n다른 검색어를 입력해 주세요.")
+
+
+def _render_topic_practice_card(row: Dict[str, Any], *, key_prefix: str) -> None:
+    topic_id = str(row.get("topic_id") or "").strip()
+    if not topic_id:
+        return
+    title_ko = str(row.get("title_ko") or topic_id).strip()
+    title_en = str(row.get("title_en") or "").strip()
+    with st.container(border=True):
+        st.markdown(f"**{title_ko}**")
+        if title_en:
+            st.caption(title_en)
+        if st.button(
+            "연습 시작",
+            use_container_width=True,
+            key=f"{key_prefix}_{topic_id}",
+        ):
+            _start_topic_practice(topic_id)
+            st.rerun()
+
+
+def _render_topic_card_grid(
+    rows: List[Dict[str, Any]], *, key_prefix: str
+) -> None:
+    if not rows:
+        _render_topic_v2_empty_state()
+        return
+    for i in range(0, len(rows), 2):
+        col_left, col_right = st.columns(2)
+        pair = rows[i : i + 2]
+        for col, row in zip((col_left, col_right), pair):
+            with col:
+                _render_topic_practice_card(row, key_prefix=key_prefix)
+
+
+def _render_roleplay_practice_card(ent: Dict[str, Any]) -> None:
+    set_id = str(ent.get("set_id") or "").strip()
+    if not set_id:
+        return
+    title_ko = str(ent.get("title_ko") or set_id).strip()
+    topic_id = str(ent.get("topic_id") or "").strip()
+    topic_label = get_topic_title(topic_id) if topic_id else ""
+    with st.container(border=True):
+        st.markdown(f"**{title_ko}**")
+        if topic_label and topic_label not in title_ko:
+            st.caption(topic_label)
+        if st.button(
+            "연습 시작",
+            use_container_width=True,
+            key=f"topic_v2_roleplay_card_{set_id}",
+        ):
+            _start_roleplay_practice(set_id)
+            st.rerun()
+
+
+def _render_roleplay_card_grid() -> None:
+    sets = [dict(ent) for ent in ROLEPLAY_PRACTICE_SETS if isinstance(ent, dict)]
+    if not sets:
+        _render_topic_v2_empty_state()
+        return
+    for i in range(0, len(sets), 2):
+        col_left, col_right = st.columns(2)
+        pair = sets[i : i + 2]
+        for col, ent in zip((col_left, col_right), pair):
+            with col:
+                _render_roleplay_practice_card(ent)
+
+
 def _render_insufficient_questions() -> None:
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     title = _topic_display_title(topic_id)
@@ -1482,41 +1659,59 @@ def _render_select_topic() -> None:
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow="주제 선택")
     st.markdown("### 주제별 연습")
 
-    st.markdown("#### 주제별 연습")
-    st.caption("Q1 → Q2 → Q3 또는 Q4 순서로 연습합니다.")
+    if _KEY_TOPIC_CATEGORY not in st.session_state:
+        st.session_state[_KEY_TOPIC_CATEGORY] = "일상"
+    if st.session_state.get(_KEY_TOPIC_CATEGORY) not in _TOPIC_V2_CATEGORY_LABELS:
+        st.session_state[_KEY_TOPIC_CATEGORY] = "일상"
 
-    for row in TOPIC_PRACTICE_TOPICS:
-        if not isinstance(row, dict):
-            continue
-        topic_id = str(row.get("topic_id") or "").strip()
-        if not topic_id:
-            continue
-        title_ko = str(row.get("title_ko") or topic_id).strip()
-        title_en = str(row.get("title_en") or "").strip()
-        label = f"{title_ko} ({title_en})" if title_en else title_ko
-        if st.button(label, use_container_width=True, key=f"topic_v2_pick_{topic_id}"):
-            _start_topic_practice(topic_id)
-            st.rerun()
+    search_query = st.text_input(
+        "주제 검색",
+        placeholder="주제를 검색해 보세요. 예: 카페, 영화, 여행",
+        key=_KEY_TOPIC_SEARCH,
+        label_visibility="collapsed",
+    )
+    search_active = bool(str(search_query or "").strip())
+
+    if search_active:
+        results = _filter_topics_by_search(_all_topic_catalog_rows(), search_query)
+        st.markdown("#### 검색 결과")
+        _render_topic_card_grid(results, key_prefix="topic_v2_search")
+    else:
+        st.markdown("#### 추천 주제")
+        recommended = _topic_rows_by_ids(_RECOMMENDED_TOPIC_IDS)
+        _render_topic_card_grid(recommended, key_prefix="topic_v2_rec")
+
+        st.markdown("#### 카테고리")
+        category = st.radio(
+            "카테고리",
+            list(_TOPIC_V2_CATEGORY_LABELS),
+            horizontal=True,
+            key=_KEY_TOPIC_CATEGORY,
+            label_visibility="collapsed",
+        )
+        st.markdown("#### 선택한 카테고리 주제")
+        category_topics = _topics_for_category_label(str(category or "일상"))
+        _render_topic_card_grid(category_topics, key_prefix="topic_v2_cat")
 
     st.divider()
     st.markdown("#### 롤플레이 연습")
-    st.caption("Q6 → Q7 → Q8 순서로 연습합니다.")
-
-    for ent in ROLEPLAY_PRACTICE_SETS:
-        if not isinstance(ent, dict):
-            continue
-        set_id = str(ent.get("set_id") or "").strip()
-        if not set_id:
-            continue
-        title_ko = str(ent.get("title_ko") or set_id).strip()
-        topic_id = str(ent.get("topic_id") or "").strip()
-        topic_label = get_topic_title(topic_id) if topic_id else ""
-        label = f"{title_ko}"
-        if topic_label and topic_label not in title_ko:
-            label = f"{title_ko} · {topic_label}"
-        if st.button(label, use_container_width=True, key=f"topic_v2_roleplay_{set_id}"):
-            _start_roleplay_practice(set_id)
+    if not st.session_state.get(_KEY_ROLEPLAY_EXPAND):
+        if st.button(
+            "롤플레이 세트 보기",
+            use_container_width=True,
+            key="topic_v2_show_roleplay",
+        ):
+            st.session_state[_KEY_ROLEPLAY_EXPAND] = True
             st.rerun()
+    else:
+        if st.button(
+            "롤플레이 세트 접기",
+            use_container_width=True,
+            key="topic_v2_hide_roleplay",
+        ):
+            st.session_state[_KEY_ROLEPLAY_EXPAND] = False
+            st.rerun()
+        _render_roleplay_card_grid()
 
 
 

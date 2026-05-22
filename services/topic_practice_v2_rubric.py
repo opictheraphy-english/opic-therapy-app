@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v4_unified"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v5_detailed_correction"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -41,6 +41,19 @@ decision_guidance, roleplay_gate, structure_gate의 단일 기준이다. 밴드 
 - score_axis_philosophy와 structure_gate를 적용한다: 문법·어휘가 좋아도 구조가 단편적이면
   높은 레벨로 보지 않는다.
 
+relevance(관련성) 판단 — 느슨하게 적용할 것:
+- OPIc에서는 주제와 연결된 살붙이기(TMI)가 오히려 권장된다. 답변이 질문 주제에서
+  자연스럽게 가지를 뻗는 것은 감점 요소가 아니라 강점으로 본다.
+  예: "부르는 노래" 질문에 노래를 들으며 점프한다거나, 좋아하는 가수를 곁들이는 정도는
+  완전히 정상이며 relevance를 깎지 않는다.
+- relevance를 의미 있게 깎는 경우는 오직 '완전한 오프토픽' 뿐이다. 즉 문장 사이의
+  결속력이 끊기고 주제 자체가 통째로 갈아엎어지는 경우다.
+  예(감점 대상): 공원 → 식당 → 식중독 처럼 앞 문장과 논리적 연결 없이 주제가 계속 바뀜.
+- 문장끼리 결속력(연결어·지시어·일관된 화제)이 유지되면, 세부 화제가 다소 흘러도
+  relevance를 높게 유지한다. 애매하면 깎지 말고 살려준다.
+- correction_focus·summary에서 relevance를 지적할 때도, 완전 오프토픽이 아니면
+  "주제를 벗어났다"는 식의 지적을 하지 말 것.
+
 질문 유형 판정:
 - question_en/question_ko를 보고 위 JSON의 question_type_guidance 중 하나를 고른다:
   description(묘사·소개, Q1), routine(루틴, Q2), experience(경험, Q3/Q4),
@@ -49,15 +62,27 @@ decision_guidance, roleplay_gate, structure_gate의 단일 기준이다. 밴드 
 - 답변을 그 질문의 유형이 아닌 다른 유형 기준으로 평가하지 말 것.
 
 출력 언어:
-- summary, strength, correction_focus, practice_mission: **한국어**, 각 **1~2문장** (긴 단락 금지).
-- better_expression: 한국어 설명 + 필요 시 **짧은 영어 한 구절** 따옴표.
+- summary, strength, practice_mission: **한국어**, 각 **1~2문장** (긴 단락 금지).
+- correction_focus: **한국어**, **2~3문장**. 문법 교정 중심으로 구체적으로 쓴다.
+  반드시 학생 transcript에서 **틀리거나 어색한 부분을 따옴표로 그대로 인용**하고,
+  **고친 형태**를 함께 보여준다. 예: "what kind of songs you are interested" →
+  전치사가 빠졌으니 "interested in"으로. 추상적인 총평("문법을 다듬으세요")만
+  쓰지 말 것. 고칠 문법 포인트가 둘 이상이면 가장 중요한 1~2개를 인용과 함께 짚는다.
+  발화량 안내가 필요하면 여기에 한 문장 덧붙일 수 있다.
+- better_expression: **한국어** 설명 + **원문 영어 구절 인용**. 어휘·표현 교정 중심.
+  학생이 쓴 모호하거나 반복되는 표현을 **따옴표로 인용**하고, 더 구체적이거나
+  자연스러운 대안을 **따옴표 영어로** 제시한다. 예: 반복되는 "song" 대신 "track",
+  뭉뚱그린 "catchy and trendy" 대신 더 구체적인 형용사. 최소 1개, 가능하면
+  2개의 교정을 "원문 표현 → 대안" 형태로 보여줄 것.
 - upgrade_sample: **영어만**, 학생 답을 살짝 다듬은 버전 **2~4문장**.
   업그레이드 제약(반드시 지킬 것): 원문의 문장 수를 유지하고, 새 어휘는 **2개 이하**만 추가하며,
   원문에 없던 새 문법 구조는 도입하지 않는다. (학생이 따라 말할 수 있는 수준으로만 다듬는다.)
 - keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 금지.
 
 길이 규칙:
-- 한국어 필드마다 1~2문장.
+- summary, strength, practice_mission: 한국어 1~2문장.
+- correction_focus: 한국어 2~3문장 (원문 인용 포함).
+- better_expression: 한국어 설명 + 인용 구절. 너무 길지 않게.
 - upgrade_sample은 2~4 English sentences만.
 - keyword_drill은 3~6개 짧은 항목.
 
