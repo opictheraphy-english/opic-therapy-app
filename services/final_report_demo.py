@@ -29,6 +29,21 @@ _DEMO_STASH_KEYS = (
     "analysis_done",
 )
 
+_MOCK_V2_STASH_KEYS = (
+    "mock_v2_step",
+    "mock_v2_survey_results",
+    "mock_v2_questions",
+    "mock_v2_index",
+    "mock_v2_answers",
+    "mock_v2_audio_blobs",
+    "mock_v2_report",
+    "mock_v2_started_at",
+    "mock_v2_finished_at",
+    "mock_v2_new_final_bundle",
+    "mock_v2_new_final_sig",
+    "mock_v2_new_final_pdf_bytes",
+)
+
 _TOPICS = (
     ("Movies", "Past Experience"),
     ("Travel", "Description"),
@@ -116,102 +131,194 @@ def build_demo_results() -> List[Dict[str, Any]]:
     return [_one_item(i) for i in range(1, 16)]
 
 
-def seed_demo_final_report(mx: Dict[str, Any]) -> None:
-    """Replace mock session with demo data and jump to FINAL report (preview only)."""
-    mx["results"] = build_demo_results()
-    mx["exam_finished"] = True
-    mx["mock_page"] = "FINAL"
-    mx["_show_exam_celebration"] = False
-    mx["_final_report_demo"] = True
-    mx["_view_completed_report"] = True
-    mx.setdefault("attempt_no", 1)
-    mx["survey_completed"] = True
-    # Minimal valid survey so "새 모의고사 시작하기" can regenerate a set in demo mode.
-    mx.setdefault(
-        "survey_results",
-        {
-            "work": "사업·회사원",
-            "housing": "홀로 거주",
-            "leisure": [
-                "영화 보기",
-                "공원 가기",
-                "캠핑 하기",
-                "게임 하기",
-                "박물관 가기",
-                "공연 보기",
-                "콘서트 보기",
-            ],
-            "interests": ["음악 감상하기", "요리하기"],
-            "sports": ["조깅", "걷기"],
-            "travel": ["국내 여행"],
-            "difficulty": 5,
+def build_demo_mock_v2_report() -> Dict[str, Any]:
+    """Gemini-shaped report dict for new_final_report (no API calls)."""
+    rows = build_demo_results()
+    q_feedback: List[Dict[str, Any]] = []
+    for row in rows:
+        qid = int(row.get("q_id") or 0)
+        res = row.get("result") or {}
+        q_feedback.append(
+            {
+                "question_index": qid - 1,
+                "question_number": qid,
+                "opic_type": str(row.get("type") or ""),
+                "status": "saved",
+                "feedback": str(res.get("semantic_feedback") or "").strip(),
+                "better_direction": str(res.get("prescription") or "").strip(),
+            }
+        )
+    return {
+        "ok": True,
+        "overall_level": "IH",
+        "summary": (
+            "데모 리포트입니다. 15문항 전반에서 주제에 맞는 답을 이어가며, "
+            "구체적 예시와 연결어를 보강하면 IH~AL 구간 신호가 더 또렷해집니다."
+        ),
+        "score_breakdown": {
+            "response_amount": 74,
+            "relevance": 76,
+            "structure": 73,
+            "grammar": 71,
+            "vocabulary": 75,
+            "naturalness": 77,
         },
-    )
-    for k in (
-        "final_report_generated",
-        "overall_estimated_level",
-        "analytics_cache",
-        "downloadable_report_bytes",
-        "_analytics_sig",
-    ):
-        mx.pop(k, None)
+        "question_feedback": q_feedback,
+        "strengths": [
+            "주제별로 답을 끊기지 않고 이어가는 흐름이 안정적입니다.",
+            "경험·묘사 문항에서 구체적 장면을 붙이려는 시도가 보입니다.",
+        ],
+        "weaknesses": [
+            "비교·이슈 문항에서 찬반/대조 구조를 더 분명히 할 필요가 있습니다.",
+            "답변 마무리에서 한 줄 요약(Overall, I'd say…)을 넣으면 전달력이 좋아집니다.",
+        ],
+        "practice_mission": (
+            "다음 연습에서는 Q14 비교 문항에서 'On one hand / On the other hand' "
+            "구조로 30초 안에 두 관점을 대비해 보세요."
+        ),
+        "error_category": "",
+        "error_message": "",
+    }
 
 
-def _maybe_stash_mx_before_demo(mx: Dict[str, Any]) -> None:
-    """Preserve in-progress or completed real attempt before opening sample report."""
+def build_demo_mock_v2_answers() -> List[Dict[str, Any]]:
+    answers: List[Dict[str, Any]] = []
+    for row in build_demo_results():
+        qid = int(row.get("q_id") or 0)
+        res = row.get("result") or {}
+        tx = str(res.get("transcript") or "").strip()
+        answers.append(
+            {
+                "answer_id": f"demo_a{qid}",
+                "question_index": qid - 1,
+                "question_number": qid,
+                "question_id": f"demo_q{qid}",
+                "opic_type": str(row.get("type") or ""),
+                "combo": "",
+                "topic": str(row.get("topic") or ""),
+                "question_text": str(row.get("question") or ""),
+                "student_answer": tx,
+                "transcript": tx,
+                "word_count": int((res.get("metrics") or {}).get("word_count") or 120),
+                "duration_seconds": 45.0,
+                "wpm": float(res.get("wpm") or 110.0),
+                "stt_status": "transcript_ready",
+                "status": "saved",
+                "audio_saved": True,
+            }
+        )
+    return answers
+
+
+def build_demo_mock_v2_questions() -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": f"demo_q{row['q_id']}",
+            "question_index": int(row["q_id"]) - 1,
+            "question_number": int(row["q_id"]),
+            "question_text": row["question"],
+            "topic": row["topic"],
+            "opic_type": row["type"],
+            "combo": "",
+        }
+        for row in build_demo_results()
+    ]
+
+
+def seed_demo_mock_v2_session() -> None:
+    """Seed Mock V2 session keys and open the new final report screen (demo only)."""
+    import streamlit as st
+
+    from views.mock_v2 import clear_mock_v2_session
+
+    clear_mock_v2_session()
+    st.session_state["_final_report_demo"] = True
+    st.session_state["mock_v2_step"] = "report"
+    st.session_state["mock_v2_report"] = build_demo_mock_v2_report()
+    st.session_state["mock_v2_answers"] = build_demo_mock_v2_answers()
+    st.session_state["mock_v2_questions"] = build_demo_mock_v2_questions()
+    st.session_state["mock_v2_index"] = 0
+    st.session_state["mock_v2_finished_at"] = "demo"
+    st.session_state["mock_v2_started_at"] = "demo"
+
+
+def _maybe_stash_before_demo(mx: Dict[str, Any]) -> None:
+    """Preserve in-progress Mock V2 or legacy mock session before opening sample report."""
     import streamlit as st
 
     from utils.exam_state import has_resumable_exam
 
-    if mx.get("_final_report_demo"):
+    if mx.get("_final_report_demo") or st.session_state.get("_final_report_demo"):
         return
-    has_progress = has_resumable_exam(mx) or bool(mx.get("results"))
-    if not has_progress:
+    has_mx = has_resumable_exam(mx) or bool(mx.get("results"))
+    has_v2 = str(st.session_state.get("mock_v2_step") or "") not in ("", "survey")
+    if not has_mx and not has_v2:
         return
-    st.session_state[_DEMO_RESTORE_KEY] = copy.deepcopy(
-        {k: mx.get(k) for k in _DEMO_STASH_KEYS}
-    )
+    st.session_state[_DEMO_RESTORE_KEY] = {
+        "mx": copy.deepcopy({k: mx.get(k) for k in _DEMO_STASH_KEYS}),
+        "mock_v2": copy.deepcopy(
+            {k: st.session_state.get(k) for k in _MOCK_V2_STASH_KEYS}
+        ),
+        "mock_mode": st.session_state.get("mock_mode"),
+        "practice_portal_selected": st.session_state.get("practice_portal_selected"),
+    }
 
 
 def open_demo_final_report(mx: Dict[str, Any]) -> None:
-    """Seed synthetic 15-question results and route to the full final report UI."""
+    """Seed demo Mock V2 data and route to new_final_report (no Gemini, no legacy UI)."""
     import streamlit as st
 
-    _maybe_stash_mx_before_demo(mx)
-    seed_demo_final_report(mx)
-    st.session_state["_final_report_demo"] = True
+    _maybe_stash_before_demo(mx)
+    seed_demo_mock_v2_session()
     st.session_state["practice_portal_selected"] = True
-    st.session_state["mock_mode"] = "real_mock"
-    st.session_state["mock_page"] = "FINAL"
-    mx["mock_mode"] = "real_mock"
-    mx["mock_mode_label"] = "실전 모의고사"
+    st.session_state["mock_mode"] = "mock_v2"
+    mx["mock_mode"] = "mock_v2"
+    mx.pop("_view_completed_report", None)
+    st.session_state.pop("_view_completed_report", None)
     try:
         st.query_params.clear()
         st.query_params["nav"] = "MOCK"
-        st.query_params["mock"] = "FINAL"
     except Exception:
         pass
 
 
 def exit_demo_final_report(mx: Dict[str, Any]) -> None:
-    """Leave sample report and restore a stashed real session when present."""
+    """Leave sample report and restore a stashed session when present."""
     import streamlit as st
 
+    from views.mock_v2 import clear_mock_v2_session
+
     snap = st.session_state.pop(_DEMO_RESTORE_KEY, None)
+    clear_mock_v2_session()
     for key in ("_final_report_demo", "_demo_preview_loaded", "_view_completed_report"):
         mx.pop(key, None)
         st.session_state.pop(key, None)
     if isinstance(snap, dict):
-        mx.update(snap)
+        mx_part = snap.get("mx")
+        if isinstance(mx_part, dict):
+            mx.update(mx_part)
+        v2_part = snap.get("mock_v2")
+        if isinstance(v2_part, dict):
+            for k, v in v2_part.items():
+                if v is not None:
+                    st.session_state[k] = v
+        if snap.get("mock_mode") is not None:
+            st.session_state["mock_mode"] = snap["mock_mode"]
+            mx["mock_mode"] = snap["mock_mode"]
+        if snap.get("practice_portal_selected") is not None:
+            st.session_state["practice_portal_selected"] = snap["practice_portal_selected"]
     else:
         mx["results"] = []
         mx["exam_finished"] = False
         mx.pop("analytics_cache", None)
         mx.pop("_analytics_sig", None)
         mx.pop("downloadable_report_bytes", None)
-    st.session_state["practice_portal_selected"] = False
-    st.session_state["mock_page"] = "PICK"
-    mx["mock_page"] = "PICK"
+        st.session_state.pop("mock_mode", None)
+        st.session_state["practice_portal_selected"] = False
+        mx["mock_page"] = "PICK"
+    if not st.session_state.get("mock_mode"):
+        st.session_state["mock_page"] = "PICK"
+        mx.setdefault("mock_page", "PICK")
     try:
         st.query_params.clear()
         st.query_params["nav"] = "MOCK"

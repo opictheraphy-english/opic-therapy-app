@@ -100,6 +100,14 @@ _TRAVEL_OPTS = ["국내 여행", "해외 여행", "집에서 보내는 휴가(�
 def clear_mock_v2_session() -> None:
     for key in _MOCK_V2_SESSION_KEYS:
         st.session_state.pop(key, None)
+    for key in (
+        "mock_v2_new_final_bundle",
+        "mock_v2_new_final_sig",
+        "mock_v2_new_final_pdf_bytes",
+        "_final_report_demo",
+        "_demo_preview_loaded",
+    ):
+        st.session_state.pop(key, None)
     for key in list(st.session_state.keys()):
         if not isinstance(key, str):
             continue
@@ -974,6 +982,13 @@ def _run_mock_v2_report_generation() -> None:
     """Single button-triggered report attempt — not called on passive rerun."""
     from services.mock_v2_analysis import analyze_mock_v2_answers
 
+    for key in (
+        "mock_v2_new_final_bundle",
+        "mock_v2_new_final_sig",
+        "mock_v2_new_final_pdf_bytes",
+    ):
+        st.session_state.pop(key, None)
+
     with st.spinner("AI 리포트를 생성하고 있어요…"):
         result = analyze_mock_v2_answers(_answers_list(), _questions_list())
     st.session_state[_KEY_REPORT] = result
@@ -1034,77 +1049,47 @@ def _render_mock_v2_report() -> None:
         st.rerun()
         return
 
-    render_top_bar("리포트", back_href="?nav=MOCK", eyebrow="실전 모의고사")
-    st.title("실전 모의고사 리포트")
+    from views.new_final_report import render_new_final_report
 
-    st.markdown("### 예상 등급")
-    st.markdown(f"**{report.get('overall_level', '—')}**")
+    is_demo = bool(st.session_state.get("_final_report_demo"))
 
-    summary = str(report.get("summary") or "").strip()
-    if summary:
-        st.markdown("### 요약")
-        st.write(summary)
+    def _portal() -> None:
+        if is_demo:
+            from services.final_report_demo import exit_demo_final_report
+            from views.mock_exam import mock_session
 
-    breakdown = report.get("score_breakdown")
-    if isinstance(breakdown, dict):
-        st.markdown("### 점수 요약")
-        for key, label in _SCORE_LABELS.items():
-            try:
-                val = int(breakdown.get(key) or 0)
-            except (TypeError, ValueError):
-                val = 0
-            st.markdown(f"- **{label}:** {val}")
-
-    q_fb = report.get("question_feedback")
-    if isinstance(q_fb, list) and q_fb:
-        st.markdown("### 문항별 피드백")
-        for item in sorted(
-            [x for x in q_fb if isinstance(x, dict)],
-            key=lambda x: int(x.get("question_number") or 0),
-        ):
-            qnum = int(item.get("question_number") or 0)
-            status = str(item.get("status") or "")
-            opic = str(item.get("opic_type") or "")
-            st.markdown(f"**Q{qnum}** · {opic} · _{status}_")
-            fb = str(item.get("feedback") or "").strip()
-            if fb:
-                st.write(fb)
-            direction = str(item.get("better_direction") or "").strip()
-            if direction:
-                st.caption(direction)
-
-    strengths = report.get("strengths")
-    if isinstance(strengths, list) and strengths:
-        st.markdown("### 강점")
-        for s in strengths:
-            text = str(s).strip()
-            if text:
-                st.markdown(f"- {text}")
-
-    weaknesses = report.get("weaknesses")
-    if isinstance(weaknesses, list) and weaknesses:
-        st.markdown("### 보완점")
-        for w in weaknesses:
-            text = str(w).strip()
-            if text:
-                st.markdown(f"- {text}")
-
-    mission = str(report.get("practice_mission") or "").strip()
-    if mission:
-        st.markdown("### 다음 연습 미션")
-        st.info(mission)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("다시 시작", type="primary", key="mock_v2_restart_from_report"):
-            begin_mock_v2_session()
-            st.rerun()
-    with c2:
-        if st.button("학습하기로 돌아가기", key="mock_v2_back_portal_from_report"):
+            exit_demo_final_report(mock_session())
+        else:
             clear_mock_v2_session()
             st.session_state.pop("mock_mode", None)
             st.session_state["practice_portal_selected"] = False
-            st.rerun()
+        st.rerun()
+
+    def _restart() -> None:
+        if is_demo:
+            from services.final_report_demo import (
+                exit_demo_final_report,
+                open_demo_final_report,
+            )
+            from views.mock_exam import mock_session
+
+            mx = mock_session()
+            exit_demo_final_report(mx)
+            open_demo_final_report(mx)
+        else:
+            begin_mock_v2_session()
+        st.rerun()
+
+    render_new_final_report(
+        report,
+        _answers_list(),
+        _questions_list(),
+        attempt_no=1,
+        is_demo=is_demo,
+        on_restart=_restart,
+        on_portal=_portal,
+        on_retry_stt=_retry_mock_v2_stt if not is_demo else None,
+    )
 
 
 def render_mock_v2() -> None:

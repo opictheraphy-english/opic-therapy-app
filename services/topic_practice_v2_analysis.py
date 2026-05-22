@@ -6,6 +6,11 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+from services.api_retry_policy import (
+    STT_RETRY_DELAYS_SEC,
+    is_retryable_error,
+    sleep_before_retry,
+)
 from services.evaluation.eval_config import build_topic_feedback_model_candidates
 from services.stt_service import count_english_words
 from services.topic_practice_v2_rubric import (
@@ -19,10 +24,13 @@ GEMINI_REQUEST_TIMEOUT_SEC = 35
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 
 _STUDENT_FEEDBACK_UNAVAILABLE = (
-    "AI 피드백이 잠시 지연되고 있어요.\n\n"
-    "답변은 안전하게 저장되어 있습니다.\n\n"
-    "잠시 후 다시 시도해 주세요."
+    "AI 피드백 서버가 잠시 바빠요.\n\n"
+    "답변은 이미 저장되어 있습니다.\n\n"
+    "45초 정도 지난 뒤 「피드백 다시 받기」를 한 번만 눌러 주세요. "
+    "연속으로 누르면 같은 오류가 반복되고 API 사용량만 늘어납니다."
 )
+
+_FEEDBACK_MODEL_ATTEMPTS = 2  # one automatic retry per model on transient errors
 
 
 def _failure(
@@ -129,6 +137,16 @@ def _parse_json_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
     return None, "json_parse_failed"
 
 
+def _err_to_category(err: str) -> str:
+    if err == "model_not_found":
+        return "model_not_found"
+    if err in ("json_parse_failed", "empty_response"):
+        return err
+    if is_retryable_error(err) or err == "api_error":
+        return "api_error"
+    return "api_error"
+
+
 def _invoke_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[Dict[str, Any]], str]:
     """Returns (parsed_json, error_token). error_token is '' on success."""
     from google import genai
@@ -184,11 +202,19 @@ def _invoke_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[
 
 
 def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
+    from services.speech_rate_scoring import build_per_answer_speech_metrics
+
     rubric = build_topic_practice_v2_feedback_rubric()
     q_en = _coerce_str(answer.get("en"))
     q_ko = _coerce_str(answer.get("ko"))
     topic = _coerce_str(answer.get("topic"))
     opic_type = _coerce_str(answer.get("opic_type"))
+    wc = int(answer.get("word_count") or 0) or count_english_words(transcript)
+    try:
+        dur = float(answer.get("duration_seconds") or 0.0)
+    except (TypeError, ValueError):
+        dur = 0.0
+    speech = build_per_answer_speech_metrics(wc, dur)
     payload = {
         "rubric_version": RUBRIC_VERSION,
         "topic": topic,
@@ -196,16 +222,41 @@ def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
         "question_en": q_en,
         "question_ko": q_ko,
         "transcript": transcript,
+        "speech_rate_metrics": speech,
     }
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     return rubric + "\n\nAnswer data JSON:\n" + body
 
 
-def _normalize_success(parsed: Dict[str, Any]) -> Dict[str, Any]:
+def _append_speech_rate_note(summary: str, speech: Dict[str, Any]) -> str:
+    if not speech.get("wpm_available") and not int(speech.get("word_count") or 0):
+        return summary
+    w90 = speech.get("words_normalized_90s")
+    lv = speech.get("speech_rate_level")
+    wpm = speech.get("wpm")
+    note = (
+        f"발화량(90초 환산 약 {w90}어, 추정 {lv} 밴드"
+        + (f", WPM {wpm})" if wpm else ")")
+        + "."
+    )
+    base = _coerce_str(summary)
+    if note[:12] in base:
+        return base
+    return f"{base} {note}".strip() if base else note
+
+
+def _normalize_success(
+    parsed: Dict[str, Any],
+    *,
+    speech: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Map model JSON to payload; missing new fields get safe defaults (backward compatible)."""
     drills = _coerce_keyword_drill(parsed.get("keyword_drill"))
+    summary = _coerce_str(parsed.get("summary"))
+    if isinstance(speech, dict):
+        summary = _append_speech_rate_note(summary, speech)
     return _ok_payload(
-        summary=_coerce_str(parsed.get("summary")),
+        summary=summary,
         strength=_coerce_str(parsed.get("strength")),
         correction_focus=_coerce_str(parsed.get("correction_focus")),
         better_expression=_coerce_str(parsed.get("better_expression")),
@@ -245,47 +296,72 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
             )
         )
 
+    from services.speech_rate_scoring import build_per_answer_speech_metrics
+
+    try:
+        dur = float(answer.get("duration_seconds") or 0.0)
+    except (TypeError, ValueError):
+        dur = 0.0
+    speech = build_per_answer_speech_metrics(wc, dur)
+
     prompt = _build_prompt(answer, transcript)
     models = build_topic_feedback_model_candidates()
     saw_model_not_found = False
     saw_other_failure = False
     for model_name in models:
-        try:
-            logger.info("[TOPIC_V2_FEEDBACK] model=%s transcript_words=%s", model_name, wc)
-        except Exception:
-            pass
-        parsed, err = _invoke_model(api_key, prompt, model_name)
-        if parsed:
-            norm = _normalize_success(parsed)
-            if not norm["summary"]:
-                norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
-            if not norm["strength"]:
-                norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
-            if not norm["correction_focus"]:
-                norm["correction_focus"] = "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
-            if not norm["better_expression"]:
-                norm["better_expression"] = "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
-            if not norm.get("upgrade_sample"):
-                norm["upgrade_sample"] = ""
-            if not norm["practice_mission"]:
-                norm["practice_mission"] = "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
+        for attempt_idx in range(1, _FEEDBACK_MODEL_ATTEMPTS + 1):
+            if attempt_idx > 1:
+                sleep_before_retry(attempt_idx, STT_RETRY_DELAYS_SEC)
             try:
-                logger.info("[TOPIC_V2_FEEDBACK] success model=%s", model_name)
+                logger.info(
+                    "[TOPIC_V2_FEEDBACK] model=%s attempt=%s transcript_words=%s",
+                    model_name,
+                    attempt_idx,
+                    wc,
+                )
             except Exception:
                 pass
-            return _stringify_result(norm)
-        if err == "model_not_found":
-            saw_model_not_found = True
-        else:
+            parsed, err = _invoke_model(api_key, prompt, model_name)
+            if parsed:
+                norm = _normalize_success(parsed, speech=speech)
+                if not norm["summary"]:
+                    norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
+                if not norm["strength"]:
+                    norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
+                if not norm["correction_focus"]:
+                    norm["correction_focus"] = "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
+                if not norm["better_expression"]:
+                    norm["better_expression"] = "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
+                if not norm.get("upgrade_sample"):
+                    norm["upgrade_sample"] = ""
+                if not norm["practice_mission"]:
+                    norm["practice_mission"] = "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
+                try:
+                    logger.info(
+                        "[TOPIC_V2_FEEDBACK] success model=%s attempt=%s",
+                        model_name,
+                        attempt_idx,
+                    )
+                except Exception:
+                    pass
+                return _stringify_result(norm)
+            cat = _err_to_category(err or "")
+            if err == "model_not_found":
+                saw_model_not_found = True
+                break
             saw_other_failure = True
             try:
                 logger.warning(
-                    "[TOPIC_V2_FEEDBACK] model_failed model=%s err=%s",
+                    "[TOPIC_V2_FEEDBACK] model_failed model=%s attempt=%s err=%s",
                     model_name,
+                    attempt_idx,
                     err,
                 )
             except Exception:
                 pass
+            if attempt_idx < _FEEDBACK_MODEL_ATTEMPTS and is_retryable_error(cat):
+                continue
+            break
 
     final_cat = "model_not_found" if saw_model_not_found and not saw_other_failure else "api_error"
     return _stringify_result(

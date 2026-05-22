@@ -30,6 +30,10 @@ from services.mini_mock_v2_level_rules import (
     LEVEL_RULE_VERSION,
     MINI_MOCK_V2_CONNECTOR_MARKERS,
 )
+from services.speech_rate_scoring import (
+    apply_speech_rate_to_report,
+    build_per_answer_speech_metrics,
+)
 from services.mini_mock_v2_rubric import (
     RUBRIC_VERSION,
     build_mini_mock_v2_light_rubric_prompt,
@@ -297,17 +301,18 @@ def build_mini_mock_v2_aggregate_metrics(
 
     roleplay_status = _roleplay_answer_status(answers, saved_count=saved_answer_count)
 
-    return {
-        "level_rule_version": LEVEL_RULE_VERSION,
-        "total_word_count": total_word_count,
-        "total_sentence_count": total_sentence_count,
-        "total_duration_seconds": round(total_duration_seconds, 1),
-        "average_wpm": average_wpm,
-        "wpm_available": wpm_available_any,
-        "question_count": len(payload),
-        "saved_answer_count": saved_answer_count,
-        "roleplay_answer_status": roleplay_status,
-    }
+    from services.speech_rate_scoring import build_exam_aggregate_speech_metrics
+
+    speech = build_exam_aggregate_speech_metrics(payload)
+    speech["level_rule_version"] = LEVEL_RULE_VERSION
+    speech["total_sentence_count"] = total_sentence_count
+    speech["question_count"] = len(payload)
+    speech["saved_answer_count"] = saved_answer_count
+    speech["roleplay_answer_status"] = roleplay_status
+    if average_wpm > 0:
+        speech["average_wpm"] = average_wpm
+    speech["wpm_available"] = bool(speech.get("wpm_available") or wpm_available_any)
+    return speech
 
 
 def _log_aggregate_metrics(metrics: Dict[str, Any]) -> None:
@@ -404,6 +409,7 @@ def build_mini_mock_v2_report_payload(answers: List[Dict[str, Any]]) -> List[Dic
             "connector_count": 0,
             "repetition_hint": "low",
         }
+        speech_row = build_per_answer_speech_metrics(word_count, duration_seconds)
         payload.append(
             {
                 "question_index": q_idx + 1,
@@ -415,6 +421,9 @@ def build_mini_mock_v2_report_payload(answers: List[Dict[str, Any]]) -> List[Dic
                 "duration_seconds": duration_seconds,
                 "wpm": wpm,
                 "wpm_available": wpm_available,
+                "words_normalized_90s": speech_row.get("words_normalized_90s"),
+                "speech_rate_level": speech_row.get("speech_rate_level"),
+                "response_amount_score_rule": speech_row.get("response_amount_score_rule"),
                 "filler_hits": fluency["filler_hits"],
                 "connector_count": fluency["connector_count"],
                 "repetition_hint": fluency["repetition_hint"],
@@ -810,6 +819,7 @@ def _analyze_core(answers: List[Dict[str, Any]], *, api_key: str) -> Dict[str, A
         )
 
     out = _normalize_parsed(parsed, inputs=inputs)
+    apply_speech_rate_to_report(out, report_input.get("aggregate_metrics") or {})
     out["model_used"] = model
     try:
         logger.info(

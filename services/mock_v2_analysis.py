@@ -19,6 +19,11 @@ from services.api_retry_policy import (
 )
 from services.evaluation.eval_config import REAL_REPORT_MODEL_NAME, _dedupe_models
 from services.mock_v2_rubric import RUBRIC_VERSION, build_mock_v2_rubric_prompt
+from services.speech_rate_scoring import (
+    apply_speech_rate_to_report,
+    build_exam_aggregate_speech_metrics,
+    build_per_answer_speech_metrics,
+)
 from services.stt_service import count_english_words
 
 logger = logging.getLogger(__name__)
@@ -141,6 +146,12 @@ def build_mock_v2_report_payload(
             wpm_vals.append(wpm)
 
         fb_status = _row_feedback_status(row, text) if row else "응답 부족"
+        try:
+            dur_sec = float(row.get("duration_seconds") or 0.0) if row else 0.0
+        except (TypeError, ValueError):
+            dur_sec = 0.0
+        wpm_avail = wpm > 0 and dur_sec > 0
+        speech_row = build_per_answer_speech_metrics(wc, dur_sec)
         payload_answers.append(
             {
                 "question_index": idx,
@@ -157,11 +168,12 @@ def build_mock_v2_report_payload(
                 "student_answer": text,
                 "transcript": str(row.get("transcript") or text),
                 "word_count": wc,
-                "duration_seconds": float(row.get("duration_seconds") or 0.0)
-                if row
-                else 0.0,
+                "duration_seconds": dur_sec,
                 "wpm": wpm,
-                "wpm_available": wpm > 0,
+                "wpm_available": wpm_avail,
+                "words_normalized_90s": speech_row.get("words_normalized_90s"),
+                "speech_rate_level": speech_row.get("speech_rate_level"),
+                "response_amount_score_rule": speech_row.get("response_amount_score_rule"),
                 "stt_status": str(row.get("stt_status") or "") if row else "",
                 "status": fb_status,
             }
@@ -169,7 +181,12 @@ def build_mock_v2_report_payload(
 
     saved_count = len([a for a in answers if isinstance(a, dict)])
     valid_count = len([a for a in answers if isinstance(a, dict) and _is_usable_answer(a)])
-    avg_wpm = round(sum(wpm_vals) / len(wpm_vals), 1) if wpm_vals else 0.0
+    speech_agg = build_exam_aggregate_speech_metrics(payload_answers)
+    avg_wpm = round(sum(wpm_vals) / len(wpm_vals), 1) if wpm_vals else float(
+        speech_agg.get("average_wpm") or 0
+    )
+    if avg_wpm > 0:
+        speech_agg["average_wpm"] = avg_wpm
 
     return {
         "exam_type": "mock_v2",
@@ -179,6 +196,7 @@ def build_mock_v2_report_payload(
         "transcript_ready_count": transcript_ready_count,
         "total_word_count": total_word_count,
         "average_wpm": avg_wpm,
+        "aggregate_metrics": speech_agg,
         "answers": payload_answers,
     }
 
@@ -523,6 +541,7 @@ def _analyze_core(
         return _failure(category=category, message=message, timed_out=(category == "timeout"))
 
     out = _normalize_parsed(parsed, payload=payload)
+    apply_speech_rate_to_report(out, payload.get("aggregate_metrics") or {})
     out["model_used"] = model
     try:
         logger.info(

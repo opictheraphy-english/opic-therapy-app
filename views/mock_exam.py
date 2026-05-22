@@ -2343,14 +2343,64 @@ def _render_real_mock_flow(mx: dict) -> None:
             logger.debug("[REAL_MOCK_COMPLETE] rendering_final_report")
         except Exception:
             pass
-        render_top_bar(
-            "종합 리포트",
-            back_href="?nav=MOCK",
-            eyebrow=format_mock_attempt_label(mx),
-        )
-        from views.final_report import render_final_report
+        from views.new_final_report import render_new_final_report
 
-        render_final_report(mx)
+        legacy_results = [r for r in (mx.get("results") or []) if isinstance(r, dict)]
+        agg_cache = (
+            mx.get("analytics_cache") if isinstance(mx.get("analytics_cache"), dict) else {}
+        )
+        report_overlay: Dict[str, Any] = {
+            "ok": True,
+            "overall_level": str(
+                mx.get("overall_estimated_level")
+                or agg_cache.get("overall_display")
+                or ""
+            ),
+            "summary": "",
+            "score_breakdown": {},
+            "strengths": [],
+            "weaknesses": [],
+            "practice_mission": "",
+        }
+
+        def _legacy_portal() -> None:
+            _return_to_learning_portal_from_complete(mx)
+
+        def _legacy_restart() -> None:
+            if _is_real_mock(mx):
+                reset_real_mock_attempt(mx, st.session_state)
+                clear_mock_question_tts_keys()
+                sync_user_progress(st.session_state)
+                try:
+                    st.query_params.clear()
+                    st.query_params["nav"] = "MOCK"
+                    st.query_params["mock"] = "SURVEY"
+                except Exception:
+                    pass
+                st.rerun()
+            elif start_new_mock_attempt(mx, st.session_state):
+                clear_mock_question_tts_keys()
+                sync_user_progress(st.session_state)
+                try:
+                    st.query_params.clear()
+                    st.query_params["nav"] = "MOCK"
+                    st.query_params["mock"] = "TEST"
+                except Exception:
+                    pass
+                st.rerun()
+            else:
+                st.error("설문 데이터가 없거나 종료된 시험이 아니면 새 시험을 시작할 수 없습니다.")
+
+        render_new_final_report(
+            report_overlay,
+            [],
+            [],
+            legacy_results=legacy_results,
+            attempt_no=int(mx.get("attempt_no") or 1),
+            is_demo=bool(mx.get("_final_report_demo")),
+            on_restart=_legacy_restart,
+            on_portal=_legacy_portal,
+        )
         return
     if is_completed_mock(mx) or _get_mock_page(mx) == "FINAL":
         render_mock_exam_completion_screen(mx)
@@ -5747,9 +5797,9 @@ def _render_survey(mx: dict) -> None:
                 help="녹음·시험 없이 최종 진단 리포트 화면만 확인합니다.",
                 key="btn_preview_final_demo",
             ):
-                from services.final_report_demo import seed_demo_final_report
+                from services.final_report_demo import open_demo_final_report
 
-                seed_demo_final_report(mx)
+                open_demo_final_report(mx)
                 st.rerun()
         with d2:
             st.caption("모의고사 탭에서 주소 끝에 `?preview_final=1` 을 붙여도 같은 미리보기로 이동합니다.")

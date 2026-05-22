@@ -1,39 +1,60 @@
-"""Light rubric for Topic Practice V2 — short Korean OPIc feedback (not Mini Mock report)."""
+"""Light rubric for Topic Practice V2 — short Korean OPIc feedback (not Mini Mock report).
+
+# ALL calibration (levels, speech bands, score axes, gates, question types)
+# now comes from mini_mock_v2_level_rules.format_level_rules_for_prompt()
+# — the SAME shared block used by Mini Mock V2 and Mock V2.
+# This file must NOT restate any calibration numbers or question-type guidance.
+# Only the OUTPUT schema (upgrade_sample / keyword_drill) and the coach tone
+# are intentionally specific to topic practice.
+"""
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v3"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v4_unified"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
     """Coach-style OPIc feedback — expanded schema with upgrade_sample + keyword_drill."""
+    from services.mini_mock_v2_level_rules import (
+        LEVEL_RULE_VERSION,
+        format_level_rules_for_prompt,
+    )
+
+    level_rules_block = format_level_rules_for_prompt()
     return f"""역할: OPIc 구술 코치. 루브릭 버전: {RUBRIC_VERSION}
 
-입력: question_en, question_ko, topic, transcript(학생 영어 답변 텍스트).
+공용 평가 기준(단일 소스, 버전 {LEVEL_RULE_VERSION}) — 미니 모의고사·전체 모의고사와 완전히 동일:
+{level_rules_block}
 
-먼저 question_en/question_ko를 보고 질문 유형을 하나 골라라:
-- Description(묘사/소개, Q1): 장소·대상·습관 소개, What/Which/How… like 등
-- Experience(경험, Q3/Q4): 과거 경험, memorable, tell me about a time, happened 등
-- Routine(루틴, Q2): 평소 자주 하는 일, usually, often, what do you do when 등
-- Roleplay(역할·대화): 상대에게 직접 말하기, ask/suggest/request, 상황극 등
-- Q6(롤플레이·질문하기): 상황 소개 + 상대에게 2~3개 자연스러운 질문
-- Q7(롤플레이·문제 해결): 문제 설명 + 해결책/대안 제안 + 정중한 대화체
-- Q8(롤플레이·관련 경험): 비슷한 과거 경험 + 무슨 일이 있었는지 + 어떻게 대처했는지
+위 JSON이 레벨 앵커, 6개 score_axes, speech_rate_90s 밴드, question_type_guidance,
+decision_guidance, roleplay_gate, structure_gate의 단일 기준이다. 밴드 숫자나
+평가 축 의미, 게이트를 여기서 다시 적거나 임의로 바꾸지 말 것.
 
-질문 유형별 피드백 방향:
-- Description: 구체적 디테일(위치·특징·이유·느낌). good/nice/many/thing 같은 뭉뚱그린 단어만 있는지 짚기.
-- Experience: 과거 사건·순서·느낌·무슨 일이 있었는지가 분명한지.
-- Routine: 빈도·순서·이유·작은 예시 한 가지.
-- Roleplay(일반): 상대에게 직접 말하는 말투(you)인지, 필요하면 자연스러운 질문·이유/제안·대화체인지.
-- Q6: 상황을 분명히 소개했는지, 질문이 2~3개 있고 주제와 맞는지, 질문이 자연스러운지.
-- Q7: 문제를 분명히 설명했는지, 해결책이나 대안을 제안했는지, 말투가 정중하고 대화체인지.
-- Q8: 관련된 과거 경험을 말했는지, 무슨 일이 있었고 어떻게 대처했는지가 분명한지.
+입력: question_en, question_ko, topic, transcript(학생 영어 답변 텍스트), speech_rate_metrics(선택).
+
+평가 원칙:
+- transcript(텍스트)만 평가. 발음·억양·강세·연음은 평가하지 않는다.
+- speech_rate_metrics.words_normalized_90s / speech_rate_level / wpm 이 있으면, 위 JSON의
+  speech_rate_90s 밴드와 비교해 summary·correction_focus에서 안내한다. 발화량이 목표 레벨보다
+  적으면 더 길게 말하라고, 많으면 구조·디테일을 보강하라고 안내한다. 발화 속도는 하향 전용
+  신호다 — 빠르다고 레벨을 올리지 않는다.
+- score_axis_philosophy와 structure_gate를 적용한다: 문법·어휘가 좋아도 구조가 단편적이면
+  높은 레벨로 보지 않는다.
+
+질문 유형 판정:
+- question_en/question_ko를 보고 위 JSON의 question_type_guidance 중 하나를 고른다:
+  description(묘사·소개, Q1), routine(루틴, Q2), experience(경험, Q3/Q4),
+  roleplay(역할·대화: 질문하기·문제 해결·관련 경험 등 프롬프트가 요구하는 과제 수행).
+- 선택한 유형의 question_type_guidance 설명에 따라 피드백 방향을 잡는다.
+- 답변을 그 질문의 유형이 아닌 다른 유형 기준으로 평가하지 말 것.
 
 출력 언어:
 - summary, strength, correction_focus, practice_mission: **한국어**, 각 **1~2문장** (긴 단락 금지).
 - better_expression: 한국어 설명 + 필요 시 **짧은 영어 한 구절** 따옴표.
-- upgrade_sample: **영어만**, 학생 답을 살짝 다듬은 버전 **2~4문장**. 난이도는 원문보다 **10~20%만** 나아지게 (너무 어렵거나 화려하게 쓰지 말 것).
-- keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 작성 금지.
+- upgrade_sample: **영어만**, 학생 답을 살짝 다듬은 버전 **2~4문장**.
+  업그레이드 제약(반드시 지킬 것): 원문의 문장 수를 유지하고, 새 어휘는 **2개 이하**만 추가하며,
+  원문에 없던 새 문법 구조는 도입하지 않는다. (학생이 따라 말할 수 있는 수준으로만 다듬는다.)
+- keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 금지.
 
 길이 규칙:
 - 한국어 필드마다 1~2문장.

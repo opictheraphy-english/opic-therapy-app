@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import time
 import uuid
 import zlib
 from datetime import datetime, timezone
@@ -42,11 +43,21 @@ _KEY_ANSWERS = "topic_v2_answers"
 _KEY_FEEDBACK = "topic_v2_feedback"
 _KEY_DRAFT_TRANSCRIPT = "topic_v2_practice_transcript"
 _KEY_SINGLE_RETRY = "topic_v2_single_question_retry"
+_KEY_FB_IN_FLIGHT = "topic_v2_feedback_in_flight"
+_KEY_FB_COOLDOWN_UNTIL = "topic_v2_feedback_cooldown_until"
+_KEY_FB_ATTEMPTS = "topic_v2_feedback_attempts"
+_KEY_FB_NOTICE = "topic_v2_feedback_user_notice"
+
+_FEEDBACK_COOLDOWN_BASE_SEC = 45
+_FEEDBACK_COOLDOWN_STEP_SEC = 15
+_FEEDBACK_COOLDOWN_MAX_SEC = 90
+_FEEDBACK_MAX_ATTEMPTS_PER_ANSWER = 4
 
 _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE = (
-    "AI 피드백이 잠시 지연되고 있어요.\n\n"
-    "답변은 안전하게 저장되어 있습니다.\n\n"
-    "잠시 후 다시 시도해 주세요."
+    "AI 피드백 서버가 잠시 바빠요.\n\n"
+    "답변은 이미 저장되어 있습니다.\n\n"
+    "45초 정도 지난 뒤 「피드백 다시 받기」를 한 번만 눌러 주세요. "
+    "연속으로 누르면 같은 오류가 반복되고 API 사용량만 늘어납니다."
 )
 
 _FB_FALLBACK_SUMMARY = "답변을 분석했어요."
@@ -62,6 +73,113 @@ _EMPTY_FIELD_PLACEHOLDER = "—"
 _VALID_STEPS = frozenset(
     {"select_topic", "question", "saved", "feedback", "pending", "insufficient"}
 )
+
+
+def _feedback_answer_id(
+    row: Optional[Dict[str, Any]], *, topic: str, q_idx: int
+) -> str:
+    if isinstance(row, dict):
+        aid = str(row.get("answer_id") or "").strip()
+        if aid:
+            return aid
+    return f"{topic}_{q_idx}"
+
+
+def _feedback_attempt_counts() -> Dict[str, int]:
+    raw = st.session_state.get(_KEY_FB_ATTEMPTS)
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, int] = {}
+    for k, v in raw.items():
+        try:
+            out[str(k)] = max(0, int(v))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _cooldown_seconds_remaining() -> int:
+    try:
+        until = float(st.session_state.get(_KEY_FB_COOLDOWN_UNTIL) or 0.0)
+    except (TypeError, ValueError):
+        until = 0.0
+    return max(0, int(until - time.time()))
+
+
+def _feedback_fail_sets_cooldown(category: str) -> bool:
+    return str(category or "").strip() not in (
+        "api_key",
+        "insufficient_text",
+        "cooldown",
+        "blocked",
+    )
+
+
+def _register_feedback_failure(category: str, answer_id: str) -> None:
+    counts = _feedback_attempt_counts()
+    n = counts.get(answer_id, 0) + 1
+    counts[answer_id] = n
+    st.session_state[_KEY_FB_ATTEMPTS] = counts
+    if not _feedback_fail_sets_cooldown(category):
+        return
+    cd = min(
+        _FEEDBACK_COOLDOWN_MAX_SEC,
+        _FEEDBACK_COOLDOWN_BASE_SEC + _FEEDBACK_COOLDOWN_STEP_SEC * max(0, n - 1),
+    )
+    st.session_state[_KEY_FB_COOLDOWN_UNTIL] = time.time() + cd
+
+
+def _clear_feedback_guard(answer_id: str) -> None:
+    st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
+    st.session_state.pop(_KEY_FB_NOTICE, None)
+    counts = _feedback_attempt_counts()
+    counts.pop(answer_id, None)
+    st.session_state[_KEY_FB_ATTEMPTS] = counts
+
+
+def _can_request_topic_v2_feedback(answer_id: str) -> Tuple[bool, str]:
+    if st.session_state.get(_KEY_FB_IN_FLIGHT):
+        return False, "피드백을 생성 중입니다. 완료될 때까지 잠시만 기다려 주세요."
+    rem = _cooldown_seconds_remaining()
+    if rem > 0:
+        return (
+            False,
+            f"서버가 잠시 바빠요. {rem}초 후에 「피드백 다시 받기」를 눌러 주세요. "
+            "연속으로 누르면 API 호출만 늘고 같은 오류가 반복될 수 있어요.",
+        )
+    n = _feedback_attempt_counts().get(answer_id, 0)
+    if n >= _FEEDBACK_MAX_ATTEMPTS_PER_ANSWER:
+        return (
+            False,
+            "이 답변에 대한 자동 피드백 시도 횟수에 도달했어요. "
+            "같은 질문을 다시 말한 뒤 새 답변으로 피드백을 받아 보세요.",
+        )
+    return True, ""
+
+
+def _feedback_request_button_state(answer_id: str) -> Tuple[bool, str]:
+    """(disabled, label) for AI feedback buttons."""
+    if st.session_state.get(_KEY_FB_IN_FLIGHT):
+        return True, "피드백 생성 중…"
+    rem = _cooldown_seconds_remaining()
+    if rem > 0:
+        return True, f"피드백 다시 받기 ({rem}초 후)"
+    n = _feedback_attempt_counts().get(answer_id, 0)
+    if n >= _FEEDBACK_MAX_ATTEMPTS_PER_ANSWER:
+        return True, "피드백 시도 한도 도달"
+    return False, "AI 짧은 피드백 받기"
+
+
+def _render_feedback_guard_notice() -> None:
+    notice = str(st.session_state.get(_KEY_FB_NOTICE) or "").strip()
+    if notice:
+        st.warning(notice)
+    rem = _cooldown_seconds_remaining()
+    if rem > 0 and not notice:
+        st.info(
+            f"AI 서버가 잠시 바빠요. {rem}초 후에 「피드백 다시 받기」를 한 번만 눌러 주세요."
+        )
+
 
 _OPIC_TYPE_LABELS: Dict[str, str] = {
     "Q1": "Q1 유형 · 묘사",
@@ -905,6 +1023,7 @@ def _build_topic_v2_row_from_mic(
     stt_result: Dict[str, Any],
     *,
     opic_type: str = "",
+    duration_seconds: float = 0.0,
 ) -> Dict[str, Any]:
     blob = bytes(audio_bytes) if audio_bytes else b""
     audio_len = len(blob)
@@ -920,6 +1039,14 @@ def _build_topic_v2_row_from_mic(
         transcript=transcript,
         raw_transcript=raw_transcript,
     )
+    wc = int(statuses.get("word_count") or 0)
+    try:
+        dur = float(duration_seconds or 0.0)
+    except (TypeError, ValueError):
+        dur = 0.0
+    from services.speech_rate_scoring import build_per_answer_speech_metrics
+
+    speech = build_per_answer_speech_metrics(wc, dur)
     return {
         "answer_id": str(uuid.uuid4()),
         "topic": topic,
@@ -939,7 +1066,12 @@ def _build_topic_v2_row_from_mic(
         "stt_error_message": stt_err_msg,
         "recording_status": str(statuses.get("recording_status") or ""),
         "status": str(statuses.get("status") or ""),
-        "word_count": int(statuses.get("word_count") or 0),
+        "word_count": wc,
+        "duration_seconds": dur,
+        "wpm": speech.get("wpm"),
+        "wpm_available": speech.get("wpm_available"),
+        "words_normalized_90s": speech.get("words_normalized_90s"),
+        "speech_rate_level": speech.get("speech_rate_level"),
         "placeholder": False,
     }
 
@@ -1013,6 +1145,21 @@ def _run_topic_v2_stt(topic: str, q_idx: int, question_text: str, audio_bytes: b
     )
 
 
+def _duration_from_mic_result(mic_result: Any) -> float:
+    if not isinstance(mic_result, dict):
+        return 0.0
+    for key in ("duration_seconds", "duration", "seconds"):
+        if key not in mic_result:
+            continue
+        try:
+            val = float(mic_result[key])
+        except (TypeError, ValueError):
+            continue
+        if val > 0:
+            return val
+    return 0.0
+
+
 def _commit_topic_v2_recording(
     topic: str,
     q_idx: int,
@@ -1020,6 +1167,8 @@ def _commit_topic_v2_recording(
     q_ko: str,
     audio_bytes: bytes,
     mime_type: str,
+    *,
+    mic_result: Any = None,
 ) -> None:
     blob = bytes(audio_bytes) if audio_bytes else b""
     audio_len = len(blob)
@@ -1042,6 +1191,7 @@ def _commit_topic_v2_recording(
         resolved_mime,
         stt_result,
         opic_type=opic,
+        duration_seconds=_duration_from_mic_result(mic_result),
     )
     aid = str(row.get("answer_id") or "").strip()
     student_answer, transcript = _answer_text_fields_from_row(row)
@@ -1446,6 +1596,7 @@ def _render_question() -> None:
                     str(q.get("ko") or ""),
                     audio_bytes,
                     mime_type or "audio/webm",
+                    mic_result=mic_result,
                 )
             st.rerun()
 
@@ -1503,16 +1654,20 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
             st.rerun()
 
     can_ai = bool(tr and count_english_words(tr) >= _MIN_SAVED_WORDS)
+    aid = _feedback_answer_id(last_row, topic=topic, q_idx=q_idx)
+    fb_disabled, fb_label = _feedback_request_button_state(aid)
+    _render_feedback_guard_notice()
 
     if _is_single_question_retry():
         c1, c2 = st.columns(2)
         with c1:
             if can_ai:
                 if st.button(
-                    "AI 짧은 피드백 받기",
+                    fb_label,
                     type="primary",
                     use_container_width=True,
                     key="topic_v2_request_ai_feedback",
+                    disabled=fb_disabled,
                 ):
                     _run_topic_v2_feedback_request(topic, q_idx, last_row)
         with c2:
@@ -1534,10 +1689,11 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
     with c1:
         if can_ai:
             if st.button(
-                "AI 짧은 피드백 받기",
+                fb_label,
                 type="primary",
                 use_container_width=True,
                 key="topic_v2_request_ai_feedback",
+                disabled=fb_disabled,
             ):
                 _run_topic_v2_feedback_request(topic, q_idx, last_row)
     with c2:
@@ -1570,8 +1726,26 @@ def _run_topic_v2_feedback_request(
     from services.topic_practice_v2_analysis import analyze_topic_practice_v2_answer
 
     row_in = last_row if isinstance(last_row, dict) else {}
+    aid = _feedback_answer_id(row_in, topic=topic, q_idx=q_idx)
+    allowed, block_msg = _can_request_topic_v2_feedback(aid)
+    if not allowed:
+        st.session_state[_KEY_FB_NOTICE] = block_msg
+        try:
+            logger.info(
+                "[TOPIC_V2_FEEDBACK] blocked answer_id=%s reason=cooldown_or_limit",
+                aid,
+            )
+        except Exception:
+            pass
+        st.rerun()
+        return
+
+    st.session_state[_KEY_FB_IN_FLIGHT] = True
+    st.session_state.pop(_KEY_FB_NOTICE, None)
+    result: Dict[str, Any]
     try:
-        result = analyze_topic_practice_v2_answer(dict(row_in))
+        with st.spinner("AI 짧은 피드백을 만들고 있어요…"):
+            result = analyze_topic_practice_v2_answer(dict(row_in))
     except Exception as exc:
         try:
             logger.exception("[TOPIC_V2_FEEDBACK] analyze_failed: %s", exc)
@@ -1589,12 +1763,17 @@ def _run_topic_v2_feedback_request(
             "error_category": "exception",
             "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
         }
+    finally:
+        st.session_state[_KEY_FB_IN_FLIGHT] = False
+
     st.session_state[_KEY_FEEDBACK] = result
-    aid = str((row_in or {}).get("answer_id") or "").strip()
     if result.get("ok"):
+        _clear_feedback_guard(aid)
         _log_topic_v2_feedback_ready(topic=topic, q_idx=q_idx, answer_id=aid)
         st.session_state[_KEY_STEP] = "feedback"
     else:
+        cat = str(result.get("error_category") or "api_error")
+        _register_feedback_failure(cat, aid)
         st.session_state[_KEY_STEP] = "pending"
     st.rerun()
 
@@ -1778,6 +1957,8 @@ def _render_pending_ui() -> None:
         st.rerun()
         return
     fb = st.session_state.get(_KEY_FEEDBACK)
+    last_row = _last_answer_row_for_q(q_idx)
+    aid = _feedback_answer_id(last_row, topic=topic, q_idx=q_idx)
     msg = _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE
     if isinstance(fb, dict):
         cat = str(fb.get("error_category") or "")
@@ -1790,6 +1971,11 @@ def _render_pending_ui() -> None:
     _render_topic_v2_attempt_caption(topic=topic, q_idx=q_idx)
     st.markdown("### AI 피드백")
     st.info(msg)
+    _render_feedback_guard_notice()
+    retry_disabled, retry_label = _feedback_request_button_state(aid)
+    if not retry_disabled:
+        retry_label = "피드백 다시 받기"
+
     if isinstance(fb, dict) and st.session_state.get("show_dev_debug"):
         st.caption(f"(debug) error_category={fb.get('error_category')!r}")
 
@@ -1798,14 +1984,13 @@ def _render_pending_ui() -> None:
         c1, c2 = st.columns(2)
         with c1:
             if st.button(
-                "피드백 다시 받기",
+                retry_label,
                 type="primary",
                 use_container_width=True,
                 key="topic_v2_pending_retry_feedback",
+                disabled=retry_disabled,
             ):
-                st.session_state[_KEY_FEEDBACK] = None
-                st.session_state[_KEY_STEP] = "saved"
-                st.rerun()
+                _run_topic_v2_feedback_request(topic, q_idx, last_row)
         with c2:
             if st.button(
                 "같은 질문 다시 말하기",
@@ -1814,6 +1999,8 @@ def _render_pending_ui() -> None:
             ):
                 _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
                 st.session_state[_KEY_FEEDBACK] = None
+                st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
+                st.session_state.pop(_KEY_FB_NOTICE, None)
                 st.session_state[_KEY_STEP] = "question"
                 st.rerun()
         if st.button("주제 선택으로 돌아가기", use_container_width=True, key="topic_v2_pending_back_select"):
@@ -1825,14 +2012,13 @@ def _render_pending_ui() -> None:
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button(
-            "피드백 다시 받기",
+            retry_label,
             type="primary",
             use_container_width=True,
             key="topic_v2_pending_retry_feedback",
+            disabled=retry_disabled,
         ):
-            st.session_state[_KEY_FEEDBACK] = None
-            st.session_state[_KEY_STEP] = "saved"
-            st.rerun()
+            _run_topic_v2_feedback_request(topic, q_idx, last_row)
     with c2:
         if st.button(
             "같은 질문 다시 말하기",
@@ -1841,6 +2027,8 @@ def _render_pending_ui() -> None:
         ):
             _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
             st.session_state[_KEY_FEEDBACK] = None
+            st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
+            st.session_state.pop(_KEY_FB_NOTICE, None)
             st.session_state[_KEY_STEP] = "question"
             st.rerun()
     with c3:
