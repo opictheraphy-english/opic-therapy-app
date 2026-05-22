@@ -720,6 +720,8 @@ def _mock_mode(mx: dict) -> str | None:
         return "mini_mock"
     if mode == "mock_v2":
         return "mock_v2"
+    if mode == "script_coaching":
+        return "script_coaching"
     return None
 
 
@@ -736,6 +738,8 @@ def _mock_mode_label(mode: str | None) -> str:
         return "5분 진단 미니 모의고사"
     if mode == "mock_v2":
         return "실전 모의고사"
+    if mode == "script_coaching":
+        return "스크립트 첨삭"
     return "모의고사"
 
 
@@ -1933,6 +1937,7 @@ def _set_mock_mode(mx: dict, mode: str) -> None:
         "topic_practice_v2",
         "mini_mock",
         "mock_v2",
+        "script_coaching",
     ):
         mode = "real_mock"
     st.session_state["mock_mode"] = mode
@@ -2047,6 +2052,12 @@ def reset_to_learning_portal() -> None:
     except Exception:
         pass
     try:
+        from views.script_coaching import clear_script_coaching_session
+
+        clear_script_coaching_session()
+    except Exception:
+        pass
+    try:
         logger.debug(
             "[STATE_RESET] mode=portal cleared_keys=%s (mini/topic via helpers; mx.results preserved)",
             cleared,
@@ -2145,6 +2156,8 @@ def _session_mock_mode() -> str | None:
         return "mini_mock"
     if mode == "mock_v2":
         return "mock_v2"
+    if mode == "script_coaching":
+        return "script_coaching"
     return None
 
 
@@ -2605,9 +2618,33 @@ def render_learning_portal(mx: dict) -> None:
             st.rerun()
     with c4:
         st.markdown(
-            '<div class="mx-portal-mode-spacer" aria-hidden="true"></div>',
+            """
+            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
+                     aria-label="스크립트 첨삭">
+              <div class="cc-title">스크립트 첨삭</div>
+              <div class="cc-meta">내가 쓴 답변을 등급별로 진단받아요.</div>
+            </section>
+            """,
             unsafe_allow_html=True,
         )
+        if st.button(
+            "스크립트 첨삭 시작",
+            type="primary",
+            use_container_width=True,
+            key="portal_start_script_coaching",
+        ):
+            from views.script_coaching import clear_script_coaching_session
+
+            clear_script_coaching_session()
+            st.session_state["mock_mode"] = "script_coaching"
+            st.session_state["practice_portal_selected"] = True
+            _sync_portal_mode_to_mx(mx, "script_coaching")
+            _clear_reset_practice_query_param()
+            try:
+                logger.info("[SCRIPT_COACHING] portal_start mode=script_coaching")
+            except Exception:
+                pass
+            st.rerun()
 
     _render_dev_portal_debug(mx)
 
@@ -5722,6 +5759,12 @@ def render_mock_flow() -> None:
         return
 
     mode = _session_mock_mode() or _mock_mode(mx)
+
+    if mode == "script_coaching":
+        from views.script_coaching import render_script_coaching
+
+        render_script_coaching()
+        return
 
     if mode == "topic_practice_v2":
         from views.topic_practice_v2 import render_topic_practice_v2

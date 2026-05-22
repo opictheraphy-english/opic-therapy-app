@@ -304,16 +304,32 @@ _QA_ICONS: Dict[str, str] = {
 }
 
 
+def _start_script_coaching_from_home() -> None:
+    """Home quick action → MOCK tab, script_coaching mode (skip learning portal)."""
+    from views.mock_exam import _clear_reset_practice_query_param, _sync_portal_mode_to_mx
+    from views.script_coaching import clear_script_coaching_session
+
+    clear_script_coaching_session()
+    mx = ensure_mock(st.session_state)
+    st.session_state["mock_mode"] = "script_coaching"
+    st.session_state["practice_portal_selected"] = True
+    st.session_state["page"] = "MOCK"
+    _sync_portal_mode_to_mx(mx, "script_coaching")
+    _clear_reset_practice_query_param()
+    st.rerun()
+
+
 def _render_quick_actions() -> None:
     items = (
         ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기"),
         ("SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기"),
         ("LECTURES", "play", "강의 보기", "출제 유형 강의"),
+        ("SCRIPT_COACHING", "chart", "스크립트 첨삭", "내 답변 등급 진단받기"),
     )
     st.markdown('<div class="home-section-h">빠른 학습</div>', unsafe_allow_html=True)
     row_a = st.columns(2, gap="small")
     row_b = st.columns(2, gap="small")
-    for col, (page, ico, title, sub) in zip(row_a + row_b, items):
+    for col, (action, ico, title, sub) in zip(row_a + row_b, items):
         with col:
             st.markdown(
                 f'<div class="qa-card" aria-label="{html.escape(title)}">'
@@ -323,8 +339,19 @@ def _render_quick_actions() -> None:
                 "</div>",
                 unsafe_allow_html=True,
             )
-            if st.button(f"{title} 열기", key=f"qa_nav_{page}", use_container_width=True):
-                navigate_to(page)
+            if action == "SCRIPT_COACHING":
+                if st.button(
+                    f"{title} 열기",
+                    key="qa_nav_script_coaching",
+                    use_container_width=True,
+                ):
+                    _start_script_coaching_from_home()
+            elif st.button(
+                f"{title} 열기",
+                key=f"qa_nav_{action}",
+                use_container_width=True,
+            ):
+                navigate_to(action)
                 st.rerun()
 
 
