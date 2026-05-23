@@ -27,9 +27,21 @@ MODEL_FALLBACK_ERRORS: FrozenSet[str] = frozenset(
     }
 )
 
-STT_MAX_ATTEMPTS = 3
-STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (2, 5, 10)
+# --- STT retry policy --------------------------------------------------------
+# STT runs on the Streamlit main thread (single-threaded). Long retry loops
+# block the event loop, which kills the browser websocket via keepalive ping
+# timeout (observed: "sent 1011 ... keepalive ping timeout" on Render).
+#
+# So STT must fail FAST. One attempt; on a retryable error (e.g. Gemini
+# `temporary_overload`) we do NOT keep hammering — the answer is saved as
+# `stt_pending` and the student re-runs STT later from the saved-answer
+# screen ("음성 인식 다시 시도" button already exists). A short 2nd attempt is
+# kept ONLY for model fallback so a single dead model does not strand STT.
+STT_MAX_ATTEMPTS = 2
+STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (1,)
 
+# Report analysis runs inside a ThreadPoolExecutor with its own wrapper
+# timeout, so it does not block the websocket — longer backoff is safe here.
 REPORT_MAX_ATTEMPTS = 2
 REPORT_RETRY_DELAYS_SEC: Tuple[int, ...] = (3, 8)
 
