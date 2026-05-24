@@ -3510,12 +3510,19 @@ GLOBAL_CSS = """
       color: #111827 !important;
     }
 
+    /* Card surfaces — mint-tinted (was flat #ffffff). The light-mode
+       override previously forced a plain white background, which hid the
+       intended mint gradient from the base .continue-card rules. These
+       values restore a visible mint tint (design option "B"): a 15%-mint
+       diagonal wash with a slightly stronger mint border. Text-color
+       overrides above are kept as-is so readability is unaffected. */
     .continue-card--resume,
     .continue-card--start,
     .mx-mode-card,
     .mx-landing-card {
-      background: #ffffff !important;
-      border: 1px solid rgba(17, 24, 39, 0.08) !important;
+      background:
+        linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, #ffffff 100%) !important;
+      border: 1px solid rgba(13, 148, 136, 0.24) !important;
     }
 
     .mx-mode-badge {

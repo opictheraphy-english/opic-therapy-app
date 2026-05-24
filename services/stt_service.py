@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import re
 import time
@@ -19,7 +20,19 @@ from services.evaluation.eval_config import build_stt_model_candidates
 
 logger = logging.getLogger(__name__)
 
-STT_TIMEOUT_SEC = 45
+# Per-Gemini-call HTTP timeout. Kept short: STT normally finishes in a few
+# seconds, and a long hang here would block the worker thread well past the
+# wrapper timeout below. (Was 45s — reduced as part of the websocket-disconnect
+# fix; see transcribe_answer_audio for the threading rationale.)
+STT_TIMEOUT_SEC = 20
+
+# Wrapper timeout for the WHOLE STT job (all retries + model fallback combined).
+# transcribe_answer_audio runs the retry loop in a background thread and waits
+# at most this long. If exceeded, it returns an stt_pending result immediately
+# so the Streamlit main thread stays free to answer websocket keepalive pings.
+# Must stay below the browser's keepalive ping tolerance (~20-30s).
+STT_WRAPPER_TIMEOUT_SEC = 25
+
 MIN_ENGLISH_WORDS_FOR_TRANSCRIPT = 5
 
 _NO_SPEECH_EXACT = frozenset(
@@ -29,6 +42,13 @@ _NO_SPEECH_EXACT = frozenset(
         "no speech detected",
         "[no speech]",
     }
+)
+
+# Shared executor for STT jobs. Reused across calls so timed-out (abandoned)
+# jobs do not accumulate unbounded threads — a stranded worker is bounded by
+# STT_TIMEOUT_SEC and the pool caps concurrency.
+_STT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4, thread_name_prefix="stt"
 )
 
 
@@ -276,17 +296,22 @@ def merge_stt_into_answer_result(
     return out
 
 
-def transcribe_answer_audio(
+def _transcribe_answer_audio_impl(
     audio_bytes: bytes,
     *,
-    mime_type: str = "audio/webm",
-    language_hint: str = "en",
-    question_text: str = "",
-    mode: str = "",
-    question_id: str = "",
-    api_key: str | None = None,
+    mime_type: str,
+    language_hint: str,
+    question_text: str,
+    mode: str,
+    question_id: str,
+    api_key: str | None,
 ) -> Dict[str, Any]:
-    """Transcribe answer audio via Gemini with retry and model fallback."""
+    """Core STT retry loop. Runs in a background worker thread.
+
+    This is the original transcribe_answer_audio body. It is wrapped by
+    transcribe_answer_audio so the Streamlit main thread is never blocked by
+    this loop — see that function for the rationale.
+    """
     provider = "gemini"
     empty = _stt_empty_result(provider=provider)
 
@@ -457,6 +482,103 @@ def transcribe_answer_audio(
         }
     )
     return empty
+
+
+def _stt_timeout_result(*, provider: str = "gemini") -> Dict[str, Any]:
+    """Result returned when the STT job exceeds STT_WRAPPER_TIMEOUT_SEC.
+
+    error_category is 'timeout' (a retryable category), so derive_stt_status
+    maps this to 'stt_pending' — the answer is saved and the student can
+    re-run STT later via the existing "음성 인식 다시 시도" button.
+    """
+    out = _stt_empty_result(provider=provider)
+    out.update(
+        {
+            "error_category": "timeout",
+            "error_message": (
+                f"stt_wrapper_timeout_{STT_WRAPPER_TIMEOUT_SEC}s"
+            ),
+            "retry_exhausted": True,
+        }
+    )
+    return out
+
+
+def transcribe_answer_audio(
+    audio_bytes: bytes,
+    *,
+    mime_type: str = "audio/webm",
+    language_hint: str = "en",
+    question_text: str = "",
+    mode: str = "",
+    question_id: str = "",
+    api_key: str | None = None,
+) -> Dict[str, Any]:
+    """Transcribe answer audio via Gemini with retry and model fallback.
+
+    The STT retry loop runs in a background worker thread, and this function
+    waits at most STT_WRAPPER_TIMEOUT_SEC for it. This keeps the Streamlit
+    main thread free to answer websocket keepalive pings: a slow STT call
+    (e.g. Gemini `temporary_overload`) used to block the single-threaded
+    event loop long enough to trigger a keepalive ping timeout, which killed
+    the browser connection and kicked students out of the mock exam.
+
+    On wrapper timeout the answer is returned as stt_pending (retryable),
+    so the exam continues uninterrupted and STT can be retried later.
+
+    The function signature and return-dict shape are unchanged, so all
+    existing call sites (views/_run_*_stt, utils/apply_stt_to_*_saved_row)
+    work without modification.
+    """
+    provider = "gemini"
+
+    future = _STT_EXECUTOR.submit(
+        _transcribe_answer_audio_impl,
+        audio_bytes,
+        mime_type=mime_type,
+        language_hint=language_hint,
+        question_text=question_text,
+        mode=mode,
+        question_id=question_id,
+        api_key=api_key,
+    )
+    try:
+        return future.result(timeout=STT_WRAPPER_TIMEOUT_SEC)
+    except concurrent.futures.TimeoutError:
+        # The worker thread is abandoned but not cancelled — it will end on
+        # its own once the underlying Gemini call hits STT_TIMEOUT_SEC. The
+        # shared pool bounds how many such workers can pile up.
+        try:
+            logger.warning(
+                "[STT_WRAPPER_TIMEOUT] timeout=%ss mode=%s question_id=%s "
+                "-> stt_pending",
+                STT_WRAPPER_TIMEOUT_SEC,
+                mode,
+                question_id,
+            )
+        except Exception:
+            pass
+        return _stt_timeout_result(provider=provider)
+    except Exception as exc:
+        # An unexpected failure inside the worker — surface it as a normal
+        # failed STT result rather than letting it crash the caller.
+        try:
+            logger.warning(
+                "[STT_WRAPPER_ERROR] exc_type=%s mode=%s question_id=%s",
+                type(exc).__name__,
+                mode,
+                question_id,
+            )
+        except Exception:
+            pass
+        out = _stt_empty_result(provider=provider)
+        out.update(
+            {
+                "error_category": "api_error",
+                "error_message": f"stt_wrapper_error: {type(exc).__name__}",
+            }
+        )
+        return out
 
 
 def render_stt_dev_debug_capsule(result: Dict[str, Any], *, key_suffix: str = "") -> None:
