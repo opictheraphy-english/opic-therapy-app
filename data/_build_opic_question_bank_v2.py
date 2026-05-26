@@ -133,19 +133,58 @@ def _is_section_header(line: str) -> Optional[str]:
     return None
 
 
-def parse_raw_sections(path: Path) -> Dict[str, List[str]]:
+def _parse_topic_override(line: str) -> Optional[str]:
+    """Return the topic_id from a '>> topic_id' line.
+
+    - '>> gatherings'  -> 'gatherings'
+    - '>> auto' / '>>' -> ''  (empty string = explicit "return to auto")
+    - anything else    -> None  (not an override line)
+    """
+    raw = (line or "").strip()
+    if not raw.startswith(">>"):
+        return None
+    body = raw[2:].strip().lower()
+    if not body or body == "auto":
+        return ""  # explicit reset to keyword classification
+    return body
+
+
+def parse_raw_sections(path: Path) -> Dict[str, List[Tuple[str, Optional[str]]]]:
+    """Parse the raw question file into per-slot lists.
+
+    Each slot maps to a list of (question_text, topic_override) tuples.
+    topic_override is None when the question should be keyword-classified,
+    or a topic_id string when a preceding '>> topic_id' line forced it.
+
+    A '>> topic_id' line applies to all following questions until the next
+    '>>' line or the next section header. Section headers reset the
+    override to None (a fresh section starts with auto classification).
+    """
     text = path.read_text(encoding="utf-8")
-    sections: Dict[str, List[str]] = {k: [] for k in ("q1", "q2", "q3", "q4", "q6", "q7", "q8")}
+    sections: Dict[str, List[Tuple[str, Optional[str]]]] = {
+        k: [] for k in ("q1", "q2", "q3", "q4", "q6", "q7", "q8")
+    }
     current: Optional[str] = None
+    topic_override: Optional[str] = None
+
     for line in text.splitlines():
         sec = _is_section_header(line)
         if sec:
             current = sec
+            topic_override = None  # new section → back to auto
             continue
+
+        override = _parse_topic_override(line)
+        if override is not None:
+            # '>> topic_id' sets the override; '>> auto' / '>>' clears it.
+            topic_override = override or None
+            continue
+
         body = _normalize_line(line)
         if not body or current is None:
             continue
-        sections[current].append(body)
+        sections[current].append((body, topic_override))
+
     return sections
 
 
@@ -181,17 +220,42 @@ def question_kind_for(opic_type: str, text: str) -> str:
     return "description"
 
 
-def build_questions(sections: Dict[str, List[str]]) -> Tuple[Dict[str, Dict[str, List[Dict[str, Any]]]], Dict[str, int]]:
+def build_questions(
+    sections: Dict[str, List[Tuple[str, Optional[str]]]],
+) -> Tuple[
+    Dict[str, Dict[str, List[Dict[str, Any]]]],
+    Dict[str, int],
+    Dict[str, List[Dict[str, Any]]],
+]:
+    """Build the topic-practice bank and roleplay rows from parsed sections.
+
+    For each question, the topic is the explicit override when present,
+    otherwise classify_topic() — identical to the previous behaviour for
+    every question that has no '>> topic_id' marker.
+    """
     counters: Dict[str, Dict[str, int]] = {}
     bank: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
         tid: {"q1": [], "q2": [], "q3": [], "q4": []} for tid, _, _ in _TOPIC_META
     }
     type_map = {"q1": "Q1", "q2": "Q2", "q3": "Q3", "q4": "Q4"}
     counts = {k: 0 for k in ("Q1", "Q2", "Q3", "Q4", "Q6", "Q7", "Q8")}
+    def _resolve_topic(text: str, override: Optional[str]) -> str:
+        # Explicit override wins; fall back to keyword classification.
+        if override:
+            if override not in {tid for tid, _, _ in _TOPIC_META}:
+                # Unknown topic_id in a ">>" line — warn and auto-classify
+                # so a typo never silently drops the question.
+                print(
+                    f"  [WARN] unknown topic override '>> {override}' — "
+                    f"falling back to classify_topic for: {text[:60]}"
+                )
+                return classify_topic(text)
+            return override
+        return classify_topic(text)
 
     for qkey, opic in type_map.items():
-        for text in sections.get(qkey, []):
-            topic_id = classify_topic(text)
+        for text, override in sections.get(qkey, []):
+            topic_id = _resolve_topic(text, override)
             counts[opic] += 1
             if topic_id not in bank:
                 bank[topic_id] = {"q1": [], "q2": [], "q3": [], "q4": []}
@@ -211,9 +275,9 @@ def build_questions(sections: Dict[str, List[str]]) -> Tuple[Dict[str, Dict[str,
 
     roleplay_rows: Dict[str, List[Dict[str, Any]]] = {k: [] for k in ("q6", "q7", "q8")}
     for qkey, opic in (("q6", "Q6"), ("q7", "Q7"), ("q8", "Q8")):
-        for text in sections.get(qkey, []):
+        for text, override in sections.get(qkey, []):
             counts[opic] += 1
-            topic_id = classify_topic(text)
+            topic_id = _resolve_topic(text, override)
             ctr = counters.setdefault(topic_id, {})
             n = ctr.get(qkey, 0) + 1
             ctr[qkey] = n
@@ -276,6 +340,70 @@ def _py_repr(obj: Any, indent: int = 0) -> str:
     return repr(obj)
 
 
+# Kept in sync with data/opic_question_bank_v2.py — spliced into generated module.
+_EMIT_GET_TOPIC_PRACTICE_SET = '''
+def get_topic_practice_set(topic_id: str) -> List[Dict[str, Any]]:
+    """Assemble a 3-question topic-practice set for a topic.
+
+    Strategy: prefer the canonical OPIc ordering (one from q1, q2, then q3
+    or q4). If that yields fewer than 3 — because some slots are empty —
+    backfill from ALL slots (q1..q4) with any not-yet-used question until
+    the set has 3, or the topic's question pool is exhausted.
+
+    The UI only reads each question's `opic_type` field and its list
+    index, never the slot name, so backfilled questions render correctly
+    even when their OPIc type ordering is mixed.
+
+    Returns 0-3 question dicts, each a copy of the bank's 6-key dict.
+    """
+    tid = str(topic_id or "").strip()
+    bucket = TOPIC_PRACTICE_QUESTIONS.get(tid) or {}
+
+    out: List[Dict[str, Any]] = []
+    used_ids: set = set()
+
+    def _take(row: Dict[str, Any]) -> bool:
+        """Add a question if it is a dict and not already used. True if added."""
+        if not isinstance(row, dict):
+            return False
+        rid = str(row.get("id") or "").strip()
+        # Rows without an id can't be deduped reliably; fall back to identity.
+        key = rid or id(row)
+        if key in used_ids:
+            return False
+        used_ids.add(key)
+        out.append(dict(row))
+        return True
+
+    # --- Pass 1: canonical ordering — q1, then q2, then q3 (else q4) -------
+    for slot in ("q1", "q2"):
+        rows = bucket.get(slot) or []
+        if rows:
+            _take(rows[0])
+    q3_rows = bucket.get("q3") or []
+    q4_rows = bucket.get("q4") or []
+    if q3_rows:
+        _take(q3_rows[0])
+    elif q4_rows:
+        _take(q4_rows[0])
+
+    if len(out) >= 3:
+        return out[:3]
+
+    # --- Pass 2: backfill from the whole pool until we have 3 -------------
+    # Walk every slot in order; take any question not used in pass 1.
+    for slot in ("q1", "q2", "q3", "q4"):
+        for row in bucket.get(slot) or []:
+            if len(out) >= 3:
+                return out[:3]
+            _take(row)
+
+    # Topic genuinely has fewer than 3 distinct questions — return what we
+    # have. The caller still shows the "not enough questions" notice.
+    return out[:3]
+'''.strip()
+
+
 def emit_module(
     bank: Dict[str, Dict[str, List[Dict[str, Any]]]],
     roleplay_sets: List[Dict[str, Any]],
@@ -318,21 +446,7 @@ def emit_module(
         "    empty = {\"q1\": [], \"q2\": [], \"q3\": [], \"q4\": []}",
         "    return dict(TOPIC_PRACTICE_QUESTIONS.get(tid) or empty)",
         "",
-        "def get_topic_practice_set(topic_id: str) -> List[Dict[str, Any]]:",
-        '    tid = str(topic_id or "").strip()',
-        "    bucket = TOPIC_PRACTICE_QUESTIONS.get(tid) or {}",
-        "    out: List[Dict[str, Any]] = []",
-        "    for key in (\"q1\", \"q2\"):",
-        "        rows = bucket.get(key) or []",
-        "        if rows:",
-        "            out.append(dict(rows[0]))",
-        "    q3 = bucket.get(\"q3\") or []",
-        "    q4 = bucket.get(\"q4\") or []",
-        "    if q3:",
-        "        out.append(dict(q3[0]))",
-        "    elif q4:",
-        "        out.append(dict(q4[0]))",
-        "    return out",
+        *_EMIT_GET_TOPIC_PRACTICE_SET.splitlines(),
         "",
         "def list_roleplay_set_ids() -> List[str]:",
         '    return [s["set_id"] for s in ROLEPLAY_PRACTICE_SETS]',

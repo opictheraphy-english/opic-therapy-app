@@ -17,6 +17,7 @@ _KEY_QUESTION_EN = "script_coaching_question_en"
 _KEY_SCRIPT_TEXT = "script_coaching_script_text"
 _KEY_DIAGNOSE_RESULT = "script_coaching_diagnose_result"
 _KEY_UPGRADE_RESULT = "script_coaching_upgrade_result"
+_KEY_CLEAR_INPUTS = "script_coaching_clear_inputs"
 
 _SCORE_LABELS: Dict[str, str] = {
     "response_amount": "분량",
@@ -35,11 +36,15 @@ def clear_script_coaching_session() -> None:
         _KEY_SCRIPT_TEXT,
         _KEY_DIAGNOSE_RESULT,
         _KEY_UPGRADE_RESULT,
+        _KEY_CLEAR_INPUTS,
     ):
         st.session_state.pop(k, None)
 
 
 def _ensure_defaults() -> None:
+    if st.session_state.pop(_KEY_CLEAR_INPUTS, False):
+        st.session_state[_KEY_QUESTION_EN] = ""
+        st.session_state[_KEY_SCRIPT_TEXT] = ""
     if _KEY_STEP not in st.session_state:
         st.session_state[_KEY_STEP] = "input"
     if _KEY_QUESTION_EN not in st.session_state:
@@ -271,6 +276,25 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
     _render_bullet_list("보완점", report.get("weaknesses") or [])
 
     _render_upgrade_section(report)
+
+    if st.button(
+        "답변 고쳐서 다시 진단",
+        use_container_width=True,
+        key="script_coaching_rediagnose_keep_inputs",
+    ):
+        st.session_state.pop(_KEY_DIAGNOSE_RESULT, None)
+        st.session_state[_KEY_STEP] = "input"
+        st.rerun()
+
+    if st.button(
+        "새 스크립트 진단하기",
+        use_container_width=True,
+        key="script_coaching_new_script_diagnose",
+    ):
+        st.session_state[_KEY_CLEAR_INPUTS] = True
+        st.session_state.pop(_KEY_DIAGNOSE_RESULT, None)
+        st.session_state[_KEY_STEP] = "input"
+        st.rerun()
 
     if st.button(
         "학습 방식 다시 선택",

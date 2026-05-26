@@ -1168,6 +1168,28 @@ GLOBAL_CSS = """
       line-height: 1.4;
     }
 
+    /* --- Quick Action Cards: per-card icon colour (option 1) -----------
+       The .qa-ico SVGs use stroke="currentColor", so setting `color` on
+       .qa-ico recolours the icon. `background` is the soft tinted tile.
+       Pattern keeps the app's mint; the other three use blue / purple /
+       amber so each function is identifiable at a glance. */
+    .qa-card--pattern .qa-ico {
+      background: rgba(13, 148, 136, 0.12);
+      color: #0F6E56;
+    }
+    .qa-card--scripts .qa-ico {
+      background: rgba(55, 138, 221, 0.12);
+      color: #185FA5;
+    }
+    .qa-card--lectures .qa-ico {
+      background: rgba(83, 74, 183, 0.12);
+      color: #534AB7;
+    }
+    .qa-card--coaching .qa-ico {
+      background: rgba(186, 117, 23, 0.14);
+      color: #854F0B;
+    }
+
     /* --- 4) Simple Learning Stats -------------------------------------- */
     .stats-row {
       display: grid;

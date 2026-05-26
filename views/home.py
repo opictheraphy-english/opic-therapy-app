@@ -320,19 +320,20 @@ def _start_script_coaching_from_home() -> None:
 
 
 def _render_quick_actions() -> None:
+    # 4th tuple field = per-card modifier class for icon colour (styles.py).
     items = (
-        ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기"),
-        ("SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기"),
-        ("LECTURES", "play", "강의 보기", "출제 유형 강의"),
-        ("SCRIPT_COACHING", "chart", "스크립트 첨삭", "내 답변 등급 진단받기"),
+        ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기", "qa-card--pattern"),
+        ("SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기", "qa-card--scripts"),
+        ("LECTURES", "play", "강의 보기", "출제 유형 강의", "qa-card--lectures"),
+        ("SCRIPT_COACHING", "chart", "스크립트 첨삭", "내 답변 등급 진단받기", "qa-card--coaching"),
     )
     st.markdown('<div class="home-section-h">빠른 학습</div>', unsafe_allow_html=True)
     row_a = st.columns(2, gap="small")
     row_b = st.columns(2, gap="small")
-    for col, (action, ico, title, sub) in zip(row_a + row_b, items):
+    for col, (action, ico, title, sub, variant) in zip(row_a + row_b, items):
         with col:
             st.markdown(
-                f'<div class="qa-card" aria-label="{html.escape(title)}">'
+                f'<div class="qa-card {variant}" aria-label="{html.escape(title)}">'
                 f'<span class="qa-ico">{_QA_ICONS.get(ico, "")}</span>'
                 f'<span class="qa-title">{html.escape(title)}</span>'
                 f'<span class="qa-sub">{html.escape(sub)}</span>'

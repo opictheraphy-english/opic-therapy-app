@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import html
-from typing import Optional
+from typing import Callable, Optional
 
 import streamlit as st
 
@@ -28,10 +28,15 @@ def render_top_bar(
     title: str,
     *,
     back_href: Optional[str] = None,
+    on_back: Optional[Callable[[], None]] = None,
+    back_key: Optional[str] = None,
     show_home: bool = True,
     eyebrow: Optional[str] = None,
 ) -> None:
-    """Render a compact mobile-style header with Streamlit buttons (no ``<a href>``)."""
+    """Render a compact mobile-style header with Streamlit buttons (no ``<a href>``).
+
+    Back button: ``on_back`` callback if provided, else ``back_href`` navigation.
+    """
     title_html = html.escape((title or "").strip())
     eyebrow_html = html.escape((eyebrow or "").strip()) if eyebrow else ""
     eyebrow_block = (
@@ -40,7 +45,17 @@ def render_top_bar(
 
     col_back, col_mid, col_home = st.columns([1, 6, 1], gap="small")
     with col_back:
-        if back_href:
+        if on_back is not None:
+            key_suffix = (back_key or "").strip() or _href_key(back_href or "cb")
+            if st.button(
+                "←",
+                key=f"tb_back_cb_{key_suffix}",
+                help="뒤로가기",
+                use_container_width=True,
+            ):
+                on_back()
+                st.rerun()
+        elif back_href:
             if st.button(
                 "←",
                 key=f"tb_back_{_href_key(back_href)}",

@@ -42,6 +42,20 @@ What kinds of appointments do you usually make? It can be a dentist, teacher, co
 What’s the weather like in your country throughout the year?
 What kinds of clothes do people usually wear in your country?
 
+>> gatherings
+Tell me about a gathering or celebration you enjoy. What is it like?
+>> industry
+Tell me about a well-known company in your area. What is it like?
+>> food
+Describe a dish you really like. What does it look and taste like?
+>> fashion
+Describe the kind of clothes you usually wear. What do they look like?
+>> hotels
+Think of a hotel you know. What does it look like inside and outside?
+>> bank
+Tell me about a bank near your home. What is it like?
+>> auto
+
 Q2 
 What’s your usual routine like at home during the week and on weekends?
 How do you usually handle your responsibilities at home? Tell me about chores at home.
@@ -87,6 +101,15 @@ What kinds of things do people usually do at banks?
 What do you usually do when making an appointment?
 What’s your favorite season? What do you usually do then?
 What are you wearing today? What kind of clothes do you usually like wearing?
+
+>> gatherings
+How do you usually get ready for a gathering or celebration?
+>> industry
+How do people in this kind of company usually spend their workday?
+>> food
+What do you usually do when you prepare or order food?
+>> auto
+
 Q3 
 Have you ever had a problem at home, like something breaking or needing repair? Tell me what happened.
 What kinds of responsibilities did you have at home when you were a kid?
@@ -132,6 +155,14 @@ Tell me about your last experience at a bank.
 Tell me about the last appointment you had.
 Tell me about a memorable experience related to weather.
 Tell me about a time you dressed up for a special event.
+
+>> fashion
+Tell me about a time you bought clothes you really liked. What happened?
+>> walking
+Tell me about a memorable walk you took recently. What happened that day?
+>> free_time
+Tell me about a time you really enjoyed your free time. What did you do?
+>> auto
 
 Q4 
 Tell me about a problem you had at home and how you solved it.

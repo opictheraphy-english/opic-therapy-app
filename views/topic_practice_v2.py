@@ -8,10 +8,12 @@ import time
 import uuid
 import zlib
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
+from components.audio_player import render_exam_question_audio_player
 from components.navigation import navigate_to
 from components.topbar import render_top_bar
 from data.opic_question_bank_v2 import (
@@ -25,6 +27,9 @@ from services.stt_service import count_english_words
 from utils.session_state import ensure_mock, mock_session
 
 logger = logging.getLogger(__name__)
+
+_ROOT = Path(__file__).resolve().parent.parent
+_QUESTION_AUDIO_DIR = _ROOT / "assets" / "question_audio"
 
 _KEY_AUDIO_BLOBS = "topic_v2_audio_blobs"
 _MIN_SAVED_WORDS = 5
@@ -1742,7 +1747,12 @@ def _render_question() -> None:
     opic_label = _opic_type_label(str(q.get("opic_type") or ""))
     eyebrow_tail = "롤플레이" if _is_roleplay_mode() else _topic_display_title(topic_id)
 
-    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{eyebrow_tail} · 질문")
+    render_top_bar(
+        "주제별 연습",
+        on_back=_goto_topic_select,
+        back_key="topic_v2_question",
+        eyebrow=f"{eyebrow_tail} · 질문",
+    )
     st.markdown(f"### {screen_title}")
     if _is_single_question_retry():
         st.caption("기록에서 다시 연습 · Q1/1")
@@ -1751,6 +1761,25 @@ def _render_question() -> None:
     st.caption(opic_label)
     st.markdown(f"**{q.get('en', '')}**")
     st.caption(q.get("ko") or "")
+
+    bank_row = _bank_question_at_index(q_idx)
+    question_id = str(bank_row.get("id") or "").strip()
+    if question_id:
+        mp3_path = _QUESTION_AUDIO_DIR / f"{question_id}.mp3"
+        if mp3_path.is_file():
+            try:
+                audio_bytes = mp3_path.read_bytes()
+            except OSError:
+                audio_bytes = b""
+            if len(audio_bytes) >= 64:
+                st.caption("질문을 최대 2번까지 들을 수 있어요.")
+                render_exam_question_audio_player(
+                    audio_bytes,
+                    "audio/mp3",
+                    f"topic_{question_id}",
+                    int(q_idx),
+                    max_plays=2,
+                )
 
     st.markdown("### 말로 답변하기")
     st.caption(
