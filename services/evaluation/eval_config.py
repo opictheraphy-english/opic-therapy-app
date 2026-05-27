@@ -6,7 +6,7 @@ import os
 from typing import Dict, FrozenSet, List, Tuple
 
 # Gemini models — STT vs report (optional legacy GEMINI_MODEL applies to both if set).
-_DEFAULT_STT_MODEL = "gemini-2.5-flash-lite"
+_DEFAULT_STT_MODEL = "gemini-3.5-flash"
 _DEFAULT_REPORT_MODEL = "gemini-2.5-flash"
 _LEGACY_GEMINI_MODEL = (os.getenv("GEMINI_MODEL") or "").strip()
 
@@ -36,11 +36,11 @@ def _dedupe_models(candidates: List[str]) -> List[str]:
 
 
 def build_stt_model_candidates() -> List[str]:
-    """Flash / Flash-Lite only — no Pro models, no discontinued 2.0 Flash."""
+    """STT model fallback chain — stable audio-capable models; 2.5 Flash-Lite removed (stopped responding to audio STT)."""
     return _dedupe_models(
         [
             STT_MODEL_NAME,
-            "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
             "gemini-2.5-flash",
         ]
     )

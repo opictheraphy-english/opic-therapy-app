@@ -24,6 +24,7 @@ MODEL_FALLBACK_ERRORS: FrozenSet[str] = frozenset(
     {
         "temporary_overload",
         "unavailable",
+        "timeout",
     }
 )
 
