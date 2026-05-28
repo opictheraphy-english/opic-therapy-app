@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import html
 import logging
 import time
 import uuid
@@ -12,8 +13,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
+import streamlit.components.v1 as components
 
-from components.audio_player import render_exam_question_audio_player
+from components.audio_player import (
+    render_exam_question_audio_player,
+    render_recording_playback_player,
+)
+from components.exam_saved_screen import (
+    render_saved_recording_header,
+    render_saved_status,
+    render_saved_transcript,
+)
 from components.navigation import navigate_to
 from components.topbar import render_top_bar
 from data.opic_question_bank_v2 import (
@@ -25,6 +35,7 @@ from data.opic_question_bank_v2 import (
 )
 from services.stt_service import count_english_words
 from utils.session_state import ensure_mock, mock_session
+from views.topic_icons import TOPIC_ICONS
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +266,25 @@ _OPIC_TYPE_LABELS: Dict[str, str] = {
     "Q7": "Q7 유형 · 문제 해결",
     "Q8": "Q8 유형 · 관련 경험",
 }
+
+_OPIC_TYPE_BADGE_LABELS: Dict[str, str] = {
+    "Q1": "Q1 · 묘사하기",
+    "Q2": "Q2 · 루틴하기",
+    "Q3": "Q3 · 경험하기",
+    "Q4": "Q4 · 문제/경험",
+    "Q6": "Q6 · 질문하기",
+    "Q7": "Q7 · 문제 해결",
+    "Q8": "Q8 · 관련 경험",
+}
+
+_TOPIC_ACCENT_NAMES: Tuple[str, ...] = (
+    "teal",
+    "blue",
+    "purple",
+    "pink",
+    "amber",
+    "coral",
+)
 
 _TOPIC_V2_STATUS_LABELS: Dict[str, str] = {
     "saved": "답변 저장됨",
@@ -528,6 +558,34 @@ def _topic_display_title(topic_id: str) -> str:
 def _opic_type_label(opic_type: str) -> str:
     key = str(opic_type or "").strip().upper()
     return _OPIC_TYPE_LABELS.get(key, f"{key} 유형")
+
+
+def _opic_type_badge_label(opic_type: str) -> str:
+    key = str(opic_type or "").strip().upper()
+    return _OPIC_TYPE_BADGE_LABELS.get(key, _opic_type_label(opic_type))
+
+
+def _topic_visual_for_id(topic_id: str) -> Dict[str, str]:
+    """Topic catalog row for question-screen chips (icon, accent, titles)."""
+    tid = str(topic_id or "").strip()
+    rows = _topic_rows_by_ids((tid,))
+    if rows:
+        row = rows[0]
+        accent = str(row.get("accent") or "teal").strip().lower()
+        if accent not in _TOPIC_ACCENT_NAMES:
+            accent = "teal"
+        return {
+            "title_ko": str(row.get("title_ko") or "").strip() or tid,
+            "title_en": str(row.get("title_en") or "").strip(),
+            "icon": str(row.get("icon") or "circle").strip() or "circle",
+            "accent": accent,
+        }
+    return {
+        "title_ko": get_topic_title(tid) or tid,
+        "title_en": "",
+        "icon": "circle",
+        "accent": "teal",
+    }
 
 
 def _topic_v2_mode() -> str:
@@ -1589,17 +1647,32 @@ def _render_topic_practice_card(row: Dict[str, Any], *, key_prefix: str) -> None
         return
     title_ko = str(row.get("title_ko") or topic_id).strip()
     title_en = str(row.get("title_en") or "").strip()
-    with st.container(border=True):
-        st.markdown(f"**{title_ko}**")
-        if title_en:
-            st.caption(title_en)
-        if st.button(
-            "연습 시작",
-            use_container_width=True,
-            key=f"{key_prefix}_{topic_id}",
-        ):
-            _start_topic_practice(topic_id)
-            st.rerun()
+    icon = str(row.get("icon") or "circle").strip()
+    accent = str(row.get("accent") or "teal").strip()
+    svg = TOPIC_ICONS.get(icon, TOPIC_ICONS["circle"])
+    sub_html = (
+        f'<span class="tp-card-sub">{html.escape(title_en)}</span>'
+        if title_en
+        else ""
+    )
+    st.markdown(
+        f'<div class="tp-card tp-card--{html.escape(accent)}" '
+        f'aria-label="{html.escape(title_ko)}">'
+        f'<span class="tp-card-ico">{svg}</span>'
+        f'<div class="tp-card-body">'
+        f'<span class="tp-card-title">{html.escape(title_ko)}</span>'
+        f"{sub_html}"
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        "연습 시작",
+        use_container_width=True,
+        key=f"{key_prefix}_{topic_id}",
+    ):
+        _start_topic_practice(topic_id)
+        st.rerun()
 
 
 def _render_topic_card_grid(
@@ -1608,6 +1681,10 @@ def _render_topic_card_grid(
     if not rows:
         _render_topic_v2_empty_state()
         return
+    st.markdown(
+        '<div class="tp-cards-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
     for i in range(0, len(rows), 2):
         col_left, col_right = st.columns(2)
         pair = rows[i : i + 2]
@@ -1721,6 +1798,187 @@ def _render_select_topic() -> None:
 
 
 
+def build_topic_practice_header_html(
+    topic_id: str,
+    q_idx: int,
+    *,
+    total_questions: int = 3,
+    include_screen_marker: bool = False,
+) -> str:
+    """Topic chip + Q progress row (``.tq-header``) — question and saved screens."""
+    from components.exam_question_screen import build_progress_segments_html
+
+    visual = _topic_visual_for_id(topic_id)
+    accent = html.escape(visual["accent"])
+    icon_name = visual["icon"]
+    svg = TOPIC_ICONS.get(icon_name, TOPIC_ICONS["circle"])
+    title_ko = html.escape(visual["title_ko"])
+    total = max(int(total_questions), 1)
+    current = min(int(q_idx) + 1, total)
+    progress_html = build_progress_segments_html(current, total)
+    marker = (
+        '<div class="tq-screen-marker" aria-hidden="true"></div>'
+        if include_screen_marker
+        else ""
+    )
+    return (
+        marker
+        + '<div class="tq-header">'
+        + f'<div class="tq-topic-chip tq-topic-chip--{accent}">'
+        + f'<span class="tq-topic-chip-ico">{svg}</span>'
+        + f'<span class="tq-topic-chip-name">{title_ko}</span>'
+        + "</div>"
+        + progress_html
+        + "</div>"
+    )
+
+
+def _render_topic_question_shell_html(
+    *,
+    topic_id: str,
+    q: Dict[str, str],
+    q_idx: int,
+    total_questions: int,
+) -> str:
+    visual = _topic_visual_for_id(topic_id)
+    accent = html.escape(visual["accent"])
+    badge = html.escape(_opic_type_badge_label(str(q.get("opic_type") or "")))
+    en = html.escape(str(q.get("en") or ""))
+    ko_raw = str(q.get("ko") or "").strip()
+    ko_block = (
+        f'<p class="tq-question-ko">{html.escape(ko_raw)}</p>' if ko_raw else ""
+    )
+    header = build_topic_practice_header_html(
+        topic_id,
+        q_idx,
+        total_questions=total_questions,
+        include_screen_marker=True,
+    )
+    return (
+        header
+        + f'<div class="tq-card">'
+        + f'<span class="tq-type-badge tq-type-badge--{accent}">{badge}</span>'
+        + f'<p class="tq-question">{en}</p>'
+        f"{ko_block}"
+        f"</div>"
+    )
+
+
+_TOPIC_WAVE_BAR_HEIGHTS_PX = (
+    14, 18, 22, 28, 32, 36, 34, 36, 34, 32, 28, 22, 18, 16, 14
+)
+
+
+def _topic_wave_bars_html() -> str:
+    """15 static bars — fixed heights for a resting waveform silhouette."""
+    bars = "".join(
+        f'<span class="tq-wave-bar" style="height:{h}px"></span>'
+        for h in _TOPIC_WAVE_BAR_HEIGHTS_PX
+    )
+    return f'<div class="tq-wave-bars" aria-hidden="true">{bars}</div>'
+
+
+def _render_topic_wave_mic_observer() -> None:
+    """Read-only poll of mic iframe button label; toggles .tq-wave-slot--active on parent."""
+    components.html(
+        """
+        <script>
+        (function () {
+          var POLL_MS = 280;
+          var STOP_HINT = "녹음 완료";
+          var timer = null;
+
+          function parentDoc() {
+            try {
+              if (window.parent && window.parent.document) {
+                return window.parent.document;
+              }
+            } catch (e) { /* cross-origin */ }
+            return null;
+          }
+
+          function findMicIframe(doc) {
+            try {
+              var ifr = doc.querySelector('iframe[src*="streamlit_mic_recorder"]');
+              if (ifr) return ifr;
+              var hosts = doc.querySelectorAll(
+                '[data-testid="stCustomComponentV1"], [data-testid="stCustomComponent"]'
+              );
+              for (var i = 0; i < hosts.length; i++) {
+                var inner = hosts[i].querySelector("iframe");
+                if (!inner) continue;
+                var src = inner.getAttribute("src") || "";
+                if (src.indexOf("streamlit_mic_recorder") >= 0) return inner;
+              }
+            } catch (e) { /* ignore */ }
+            return null;
+          }
+
+          function micShowsRecording(doc) {
+            try {
+              var ifr = findMicIframe(doc);
+              if (!ifr) return false;
+              var idoc = ifr.contentDocument;
+              if (!idoc) return false;
+              var btn = idoc.querySelector("button");
+              if (!btn) return false;
+              var text = (btn.innerText || btn.textContent || "").trim();
+              return text.indexOf(STOP_HINT) >= 0;
+            } catch (e) {
+              return false;
+            }
+          }
+
+          function tick() {
+            try {
+              var doc = parentDoc();
+              if (!doc || !doc.querySelector(".tq-screen-marker")) return;
+              var slot = doc.querySelector(".tq-wave-slot");
+              if (!slot) return;
+              slot.classList.toggle("tq-wave-slot--active", micShowsRecording(doc));
+            } catch (e) { /* ignore */ }
+          }
+
+          function start() {
+            if (timer) clearInterval(timer);
+            tick();
+            timer = setInterval(tick, POLL_MS);
+          }
+
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", start);
+          } else {
+            start();
+          }
+        })();
+        </script>
+        """,
+        height=0,
+    )
+
+
+def _render_topic_answer_card_top_html(topic_id: str) -> str:
+    visual = _topic_visual_for_id(topic_id)
+    accent = html.escape(visual["accent"])
+    mic_svg = TOPIC_ICONS.get("microphone-2", TOPIC_ICONS["circle"])
+    desc = (
+        "답변 시작을 누르고 영어로 말해 보세요. "
+        "녹음이 끝나면 AI가 텍스트로 인식합니다."
+    )
+    return (
+        f'<div class="tq-answer-card-top">'
+        f'<div class="tq-answer-head">'
+        f'<span class="tq-answer-ico tq-answer-ico--{accent}">{mic_svg}</span>'
+        f'<span class="tq-answer-title">말로 답변하기</span>'
+        f"</div>"
+        f'<p class="tq-answer-desc">{html.escape(desc)}</p>'
+        f'<div class="tq-wave-slot tq-wave-slot--{accent}">'
+        f"{_topic_wave_bars_html()}"
+        f"</div>"
+        f"</div>"
+    )
+
+
 def _render_question() -> None:
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
@@ -1743,8 +2001,6 @@ def _render_question() -> None:
         st.rerun()
         return
 
-    screen_title = _practice_screen_title()
-    opic_label = _opic_type_label(str(q.get("opic_type") or ""))
     eyebrow_tail = "롤플레이" if _is_roleplay_mode() else _topic_display_title(topic_id)
 
     render_top_bar(
@@ -1753,14 +2009,15 @@ def _render_question() -> None:
         back_key="topic_v2_question",
         eyebrow=f"{eyebrow_tail} · 질문",
     )
-    st.markdown(f"### {screen_title}")
-    if _is_single_question_retry():
-        st.caption("기록에서 다시 연습 · Q1/1")
-    else:
-        st.caption(f"Q{q_idx + 1}/3")
-    st.caption(opic_label)
-    st.markdown(f"**{q.get('en', '')}**")
-    st.caption(q.get("ko") or "")
+    st.markdown(
+        _render_topic_question_shell_html(
+            topic_id=topic_id,
+            q=q,
+            q_idx=q_idx,
+            total_questions=len(qs),
+        ),
+        unsafe_allow_html=True,
+    )
 
     bank_row = _bank_question_at_index(q_idx)
     question_id = str(bank_row.get("id") or "").strip()
@@ -1772,19 +2029,18 @@ def _render_question() -> None:
             except OSError:
                 audio_bytes = b""
             if len(audio_bytes) >= 64:
-                st.caption("질문을 최대 2번까지 들을 수 있어요.")
+                topic_accent = _topic_visual_for_id(topic_id)["accent"]
                 render_exam_question_audio_player(
                     audio_bytes,
                     "audio/mp3",
                     f"topic_{question_id}",
                     int(q_idx),
                     max_plays=2,
+                    accent=topic_accent,
                 )
 
-    st.markdown("### 말로 답변하기")
-    st.caption(
-        "답변 시작을 누르고 영어로 말해 보세요. 녹음이 끝나면 AI가 텍스트로 인식합니다."
-    )
+    st.markdown(_render_topic_answer_card_top_html(topic_id), unsafe_allow_html=True)
+    _render_topic_wave_mic_observer()
 
     from streamlit_mic_recorder import mic_recorder
 
@@ -1837,12 +2093,22 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
         title = _topic_display_title(topic)
         eyebrow = f"{title} · 저장"
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=eyebrow)
-    _render_topic_v2_attempt_caption(topic=topic, q_idx=q_idx)
-    st.markdown("### 답변이 저장되었어요.")
+    st.markdown(
+        build_topic_practice_header_html(
+            topic,
+            q_idx,
+            total_questions=3,
+            include_screen_marker=False,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    accent = str(_topic_visual_for_id(topic).get("accent") or "teal")
+    render_saved_status(accent=accent)
 
     last_row = _last_answer_row_for_q(q_idx)
     tr = _transcript_from_row(last_row) if last_row else ""
-    ab, _ = _get_topic_v2_audio_blob(topic, q_idx)
+    ab, audio_mime = _get_topic_v2_audio_blob(topic, q_idx)
     has_audio = len(ab) > 0
     is_manual = bool(
         last_row
@@ -1853,19 +2119,19 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
     )
 
     if has_audio:
-        st.markdown("#### 내 녹음 다시 듣기")
-        try:
-            st.audio(ab, format="audio/webm")
-        except Exception:
-            st.audio(ab)
+        render_saved_recording_header(accent=accent)
+        render_recording_playback_player(
+            ab,
+            audio_mime or "audio/webm",
+            f"topic_{topic}_{q_idx}",
+            accent=accent,
+            label="",
+            show_progress=True,
+        )
     elif is_manual:
         st.caption("텍스트 답변으로 저장되었습니다.")
 
-    st.markdown("#### AI가 인식한 답변")
-    if tr:
-        st.markdown(f"> {tr}")
-    else:
-        st.caption("(인식된 텍스트가 아직 없어요.)")
+    render_saved_transcript(transcript=tr, accent=accent)
 
     if has_audio and not (tr or "").strip():
         if st.button(
@@ -1882,35 +2148,9 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
     fb_disabled, fb_label = _feedback_request_button_state(aid)
     _render_feedback_guard_notice()
 
-    if _is_single_question_retry():
-        c1, c2 = st.columns(2)
-        with c1:
-            if can_ai:
-                if st.button(
-                    fb_label,
-                    type="primary",
-                    use_container_width=True,
-                    key="topic_v2_request_ai_feedback",
-                    disabled=fb_disabled,
-                ):
-                    _run_topic_v2_feedback_request(topic, q_idx, last_row)
-        with c2:
-            if st.button(
-                "같은 질문 다시 말하기",
-                use_container_width=True,
-                key="topic_v2_retry_same",
-            ):
-                _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
-                st.session_state[_KEY_FEEDBACK] = None
-                st.session_state[_KEY_STEP] = "question"
-                st.rerun()
-        if st.button("주제 선택으로 돌아가기", use_container_width=True, key="topic_v2_back_select"):
-            _goto_topic_select()
-            st.rerun()
-        return
+    st.markdown('<div class="tq-saved-actions" aria-hidden="true"></div>', unsafe_allow_html=True)
 
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
+    if _is_single_question_retry():
         if can_ai:
             if st.button(
                 fb_label,
@@ -1920,8 +2160,47 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
                 disabled=fb_disabled,
             ):
                 _run_topic_v2_feedback_request(topic, q_idx, last_row)
-    with c2:
-        if st.button("다음 질문", use_container_width=True, key="topic_v2_next_q"):
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button(
+                "같은 질문 다시 말하기",
+                type="secondary",
+                use_container_width=True,
+                key="topic_v2_retry_same",
+            ):
+                _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
+                st.session_state[_KEY_FEEDBACK] = None
+                st.session_state[_KEY_STEP] = "question"
+                st.rerun()
+        with c2:
+            if st.button(
+                "주제 선택으로 돌아가기",
+                type="secondary",
+                use_container_width=True,
+                key="topic_v2_back_select",
+            ):
+                _goto_topic_select()
+                st.rerun()
+        return
+
+    if can_ai:
+        if st.button(
+            fb_label,
+            type="primary",
+            use_container_width=True,
+            key="topic_v2_request_ai_feedback",
+            disabled=fb_disabled,
+        ):
+            _run_topic_v2_feedback_request(topic, q_idx, last_row)
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button(
+            "다음 질문",
+            type="secondary",
+            use_container_width=True,
+            key="topic_v2_next_q",
+        ):
             if q_idx < 2:
                 nxt = q_idx + 1
                 _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=nxt)
@@ -1932,14 +2211,24 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
                 _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=3)
                 st.session_state[_KEY_Q_INDEX] = 3
             st.rerun()
-    with c3:
-        if st.button("같은 질문 다시 말하기", use_container_width=True, key="topic_v2_retry_same"):
+    with c2:
+        if st.button(
+            "같은 질문 다시 말하기",
+            type="secondary",
+            use_container_width=True,
+            key="topic_v2_retry_same",
+        ):
             _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
             st.session_state[_KEY_FEEDBACK] = None
             st.session_state[_KEY_STEP] = "question"
             st.rerun()
-    with c4:
-        if st.button("주제 선택으로 돌아가기", use_container_width=True, key="topic_v2_back_select"):
+    with c3:
+        if st.button(
+            "주제 선택으로 돌아가기",
+            type="secondary",
+            use_container_width=True,
+            key="topic_v2_back_select",
+        ):
             _goto_topic_select()
             st.rerun()
 

@@ -56,6 +56,49 @@ _TOPIC_META: List[Tuple[str, str, str]] = [
     ("fashion", "옷·패션", "Fashion"),
 ]
 
+# topic_id -> (icon name, color name) for topic-practice cards.
+_TOPIC_VISUAL: Dict[str, Tuple[str, str]] = {
+    "home": ("home", "teal"),
+    "family_home": ("users", "teal"),
+    "movies_tv": ("device-tv", "purple"),
+    "performances": ("masks-theater", "purple"),
+    "park": ("tree", "teal"),
+    "beach": ("beach", "blue"),
+    "sports": ("ball-football", "amber"),
+    "cafe": ("coffee", "amber"),
+    "shopping": ("shopping-bag", "pink"),
+    "music": ("music", "pink"),
+    "singing": ("microphone-2", "pink"),
+    "instruments": ("guitar-pick", "purple"),
+    "cooking": ("chef-hat", "coral"),
+    "books": ("book", "amber"),
+    "walking": ("walk", "teal"),
+    "jogging": ("run", "amber"),
+    "gym": ("barbell", "amber"),
+    "travel": ("plane", "blue"),
+    "vacation": ("umbrella", "blue"),
+    "neighborhood": ("map-pin", "teal"),
+    "furniture": ("sofa", "teal"),
+    "holidays": ("gift", "pink"),
+    "recycling": ("recycle", "teal"),
+    "country_places": ("world", "blue"),
+    "free_time": ("mood-smile", "amber"),
+    "gatherings": ("confetti", "pink"),
+    "hotels": ("building-skyscraper", "blue"),
+    "technology": ("device-laptop", "purple"),
+    "phone": ("device-mobile", "purple"),
+    "internet": ("wifi", "purple"),
+    "industry": ("building-factory", "purple"),
+    "transportation": ("bus", "blue"),
+    "restaurant": ("tools-kitchen-2", "coral"),
+    "food": ("soup", "coral"),
+    "health": ("heartbeat", "coral"),
+    "bank": ("building-bank", "teal"),
+    "appointments": ("calendar-event", "coral"),
+    "weather": ("cloud", "blue"),
+    "fashion": ("shirt", "pink"),
+}
+
 # (topic_id, keywords) — earlier rows win on first match
 _TOPIC_RULES: List[Tuple[str, Tuple[str, ...]]] = [
     ("family_home", ("chores", "responsibilities at home", "family at home", "family member", "relative", "relatives", "lunch with your friend’s family", "family party", "family gathering", "help preparing for a large family", "schedule at home", "take care of things at home")),
@@ -409,7 +452,14 @@ def emit_module(
     roleplay_sets: List[Dict[str, Any]],
 ) -> str:
     topics = [
-        {"topic_id": tid, "title_ko": ko, "title_en": en} for tid, ko, en in _TOPIC_META
+        {
+            "topic_id": tid,
+            "title_ko": ko,
+            "title_en": en,
+            "icon": _TOPIC_VISUAL.get(tid, ("circle", "teal"))[0],
+            "accent": _TOPIC_VISUAL.get(tid, ("circle", "teal"))[1],
+        }
+        for tid, ko, en in _TOPIC_META
     ]
     lines = [
         '"""Structured OPIc question bank v2 — generated from data/raw_opic_questions_v2.txt."""',

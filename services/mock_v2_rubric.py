@@ -77,6 +77,12 @@ FEEDBACK STYLE:
 - question_feedback: one item per question_number 1..15 present in the payload (include all).
 - Each item: question_index (0-based), question_number (1-based), opic_type, status,
   feedback, better_direction.
+- Per-question length: write moderately concise Korean — enough for the student to act on
+  (what happened + one clear fix), but not an essay. Aim for roughly 2–4 sentences total
+  across feedback + better_direction per question (about 80–180 Korean characters each field
+  when possible). Do not repeat the same paragraph across many questions; tailor to that
+  question's opic_type/step. Skip filler and long re-explanations of the rubric.
+- summary: 2–5 Korean sentences (stay within that range).
 - strengths / weaknesses: 2–4 bullet points each when possible.
 - practice_mission: one concrete next-step mission in Korean.
 

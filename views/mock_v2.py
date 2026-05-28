@@ -9,6 +9,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
+from components.exam_question_screen import (
+    build_progress_segments_html,
+    opic_type_badge_label,
+    render_exam_answer_card_top,
+    render_exam_question_shell,
+    render_exam_wave_mic_observer,
+)
 from components.topbar import render_top_bar
 from services.mock_v2_question_selector import build_mock_v2_exam
 from services.stt_service import count_english_words
@@ -386,12 +393,6 @@ def _get_mock_v2_audio_blob(answer_id: str) -> Tuple[bytes, str]:
     return blob, mime
 
 
-def _delete_mock_v2_audio_blob(answer_id: str) -> None:
-    aid = str(answer_id or "").strip()
-    if aid:
-        _audio_blobs().pop(aid, None)
-
-
 def _normalize_mock_v2_stt(stt_result: Any) -> Dict[str, Any]:
     if isinstance(stt_result, str):
         text = stt_result.strip()
@@ -731,14 +732,6 @@ def _retry_mock_v2_stt(q_idx: int) -> bool:
     return True
 
 
-def _clear_answer_for_index(q_idx: int) -> None:
-    row = _answer_for_index(q_idx)
-    if row:
-        _delete_mock_v2_audio_blob(str(row.get("answer_id") or ""))
-    answers = [a for a in _answers_list() if int(a.get("question_index", -1)) != int(q_idx)]
-    st.session_state[_KEY_ANSWERS] = answers
-
-
 def _render_mock_v2_survey() -> None:
     render_top_bar("실전 모의고사", back_href="?nav=MOCK", eyebrow="실전 모의고사")
     st.title("실전 모의고사 · Background Survey")
@@ -858,17 +851,17 @@ def _render_mock_v2_question() -> None:
         back_href="?nav=MOCK",
         eyebrow="실전 모의고사",
     )
-    st.title("실전 모의고사")
-    st.markdown(f"### Q{qnum}/15")
-    st.caption(
-        f"**topic:** {q.get('topic', '')} · **combo:** {q.get('combo', '')} · "
-        f"**opic_type:** {q.get('opic_type', '')}"
-    )
-    st.markdown(f"**{q.get('question_text', '')}**")
-    st.info(str(q.get("ko_helper") or ""))
 
-    st.markdown("### 말로 답변하기")
-    st.caption("답변 시작을 누르고 영어로 말해 보세요. 녹음이 끝나면 저장됩니다.")
+    render_exam_question_shell(
+        eyebrow="실전 모의고사",
+        progress_html=build_progress_segments_html(qnum, _QUESTION_COUNT),
+        badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
+        question_en=str(q.get("question_text") or ""),
+        question_ko=str(q.get("ko_helper") or ""),
+        accent="teal",
+    )
+    render_exam_answer_card_top(accent="teal")
+    render_exam_wave_mic_observer()
 
     from streamlit_mic_recorder import mic_recorder
 
@@ -957,24 +950,25 @@ def _render_mock_v2_saved() -> None:
             st.rerun()
 
     is_last = qnum >= _QUESTION_COUNT
-    nav1, nav2 = st.columns(2)
-
-    with nav1:
-        if not is_last:
-            if st.button("다음 문제", type="primary", key="mock_v2_next_question"):
-                st.session_state[_KEY_INDEX] = idx + 1
-                st.session_state[_KEY_STEP] = "question"
-                st.rerun()
-        else:
-            if st.button("모의고사 완료", type="primary", key="mock_v2_finish_exam"):
-                st.session_state[_KEY_STEP] = "complete"
-                st.session_state[_KEY_FINISHED] = iso_now()
-                st.rerun()
-
-    with nav2:
-        if st.button("같은 문제 다시 말하기", key=f"mock_v2_retry_record_{qnum}"):
-            _clear_answer_for_index(idx)
+    if not is_last:
+        if st.button(
+            "다음 문제",
+            type="primary",
+            use_container_width=True,
+            key="mock_v2_next_question",
+        ):
+            st.session_state[_KEY_INDEX] = idx + 1
             st.session_state[_KEY_STEP] = "question"
+            st.rerun()
+    else:
+        if st.button(
+            "모의고사 완료",
+            type="primary",
+            use_container_width=True,
+            key="mock_v2_finish_exam",
+        ):
+            st.session_state[_KEY_STEP] = "complete"
+            st.session_state[_KEY_FINISHED] = iso_now()
             st.rerun()
 
 

@@ -13,6 +13,12 @@ import streamlit as st
 
 import re
 
+from components.exam_question_screen import (
+    build_progress_segments_html,
+    render_exam_answer_card_top,
+    render_exam_question_shell,
+    render_exam_wave_mic_observer,
+)
 from components.topbar import render_top_bar
 from utils.local_profile import iso_now
 
@@ -1185,51 +1191,6 @@ def _maybe_run_v2_analysis() -> str:
     return "pending"
 
 
-def _render_progress_chip(q_idx: int) -> None:
-    st.markdown(
-        f"""
-        <section class="continue-card continue-card--resume mx-landing-card" role="region"
-                 aria-label="진행 상황">
-          <div class="cc-eyebrow">미니 모의고사</div>
-          <div class="cc-title">Q{q_idx + 1} <span class="cc-of">/ {_QUESTION_COUNT}</span></div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _render_question_body(question: Dict[str, Any]) -> None:
-    type_label = html.escape(str(question.get("type_label") or ""))
-    question_en = html.escape(str(question.get("question_en") or ""))
-    question_ko = html.escape(str(question.get("question_ko") or "").strip())
-    ko_block = (
-        f'<div class="mx-rh-transcript">{question_ko}</div>'
-        if question_ko
-        else ""
-    )
-    st.markdown(
-        f"""
-        <section class="mx-report-hero" role="region" aria-label="문항">
-          <p class="mx-rh-eyebrow">{type_label}</p>
-          <div class="mx-rh-title">{question_en}</div>
-          {ko_block}
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _render_v2_question_header(q_idx: int) -> None:
-    render_top_bar(
-        "5분 진단",
-        back_href="?nav=MOCK",
-        eyebrow=f"미니 모의고사 · Q{q_idx + 1}/{_QUESTION_COUNT}",
-    )
-    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-    _render_progress_chip(q_idx)
-    _render_question_body(_question_at(q_idx))
-
-
 def _render_question_step(q_idx: int) -> None:
     if _answer_for_index(q_idx) is not None:
         _set_v2_step_saved(q_idx)
@@ -1240,7 +1201,23 @@ def _render_question_step(q_idx: int) -> None:
     except Exception:
         pass
 
-    _render_v2_question_header(q_idx)
+    render_top_bar(
+        "5분 진단",
+        back_href="?nav=MOCK",
+        eyebrow=f"미니 모의고사 · Q{q_idx + 1}/{_QUESTION_COUNT}",
+    )
+
+    question = _question_at(q_idx)
+    render_exam_question_shell(
+        eyebrow="5분 모의고사",
+        progress_html=build_progress_segments_html(q_idx + 1, _QUESTION_COUNT),
+        badge_label=str(question.get("type_label") or ""),
+        question_en=str(question.get("question_en") or ""),
+        question_ko=str(question.get("question_ko") or ""),
+        accent="teal",
+    )
+    render_exam_answer_card_top(accent="teal")
+    render_exam_wave_mic_observer()
 
     from streamlit_mic_recorder import mic_recorder
 

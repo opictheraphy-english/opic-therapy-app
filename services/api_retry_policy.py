@@ -16,6 +16,9 @@ RETRYABLE_ERRORS: FrozenSet[str] = frozenset(
         "timeout",
         "unavailable",
         "api_error",  # 5xx-style failures from classifiers
+        # Mock V2 report — truncated JSON / parse after MAX_TOKENS (report only).
+        "output_truncated",
+        "json_parse_failed",
     }
 )
 
