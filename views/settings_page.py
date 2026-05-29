@@ -5,8 +5,39 @@ from __future__ import annotations
 import streamlit as st
 
 from services.tts_service import NEURAL2_DANIEL, NEURAL2_EVA
+from utils.auth import current_user_name, is_authenticated, logout
 from utils.local_profile import reset_onboarding_for_rerun
 from utils.session_state import ensure_settings, sync_settings_to_legacy
+
+
+def _render_account_section() -> None:
+    ss = st.session_state
+    if is_authenticated(ss):
+        name = current_user_name(ss) or "회원"
+        email = str(ss.get("user_email") or "")
+        st.markdown(
+            f"""
+            <div class="glass-card-quiet" style="margin-bottom:12px;">
+              <p style="margin:0 0 4px 0;font-weight:700;color:#0f172a;">환영합니다, {name}님</p>
+              <p class="ds-muted" style="margin:0;">{email}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("로그아웃", use_container_width=True, key="settings_logout"):
+            logout(ss)
+    else:
+        st.markdown(
+            """
+            <div class="glass-card-quiet" style="margin-bottom:12px;">
+              <p style="margin:0 0 4px 0;font-weight:700;color:#0f172a;">게스트 모드로 이용 중</p>
+              <p class="ds-muted" style="margin:0;">구글로 로그인하면 학습 기록을 계정에 안전하게 이어갈 수 있어요.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("로그인하기", use_container_width=True, key="settings_login"):
+            logout(ss)
 
 
 def render_step_header(step_title: str) -> None:
@@ -26,6 +57,8 @@ def render_settings() -> None:
     st.caption(
         f"질문·패턴 음성: Cloud Neural2 우선 (Eva `{NEURAL2_EVA}` / Daniel `{NEURAL2_DANIEL}`), 필요 시 gTTS·macOS 보조."
     )
+
+    _render_account_section()
 
     sett = ensure_settings(st.session_state)
 

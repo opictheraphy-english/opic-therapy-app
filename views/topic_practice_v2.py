@@ -19,6 +19,12 @@ from components.audio_player import (
     render_exam_question_audio_player,
     render_recording_playback_player,
 )
+from components.exam_feedback_screen import (
+    render_feedback_keyword_chips,
+    render_feedback_label,
+    render_feedback_section_card,
+    render_feedback_summary,
+)
 from components.exam_saved_screen import (
     render_saved_recording_header,
     render_saved_status,
@@ -1485,6 +1491,18 @@ def _render_topic_v2_attempt_caption(*, topic: str, q_idx: int) -> None:
     st.caption(f"답변 상태 · {label}")
 
 
+def _render_topic_v2_accent_scope(accent: str) -> None:
+    """Plant a per-screen accent marker so primary buttons follow the topic
+    color (scoped CSS in ``ui/styles.py`` overrides the global teal primary)."""
+    key = str(accent or "teal").strip().lower()
+    if key not in ("teal", "blue", "purple", "pink", "amber", "coral"):
+        key = "teal"
+    st.markdown(
+        f'<div class="tq-accent-scope tq-accent-scope--{key}" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _log_topic_v2_feedback_ready(*, topic: str, q_idx: int, answer_id: str) -> None:
     try:
         logger.info(
@@ -1663,11 +1681,16 @@ def _render_topic_practice_card(row: Dict[str, Any], *, key_prefix: str) -> None
         f'<span class="tp-card-title">{html.escape(title_ko)}</span>'
         f"{sub_html}"
         "</div>"
+        '<span class="tp-card-chevron" aria-hidden="true">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+        '<polyline points="9 6 15 12 9 18"></polyline></svg>'
+        "</span>"
         "</div>",
         unsafe_allow_html=True,
     )
     if st.button(
-        "연습 시작",
+        f"{title_ko} 연습 시작",
         use_container_width=True,
         key=f"{key_prefix}_{topic_id}",
     ):
@@ -2104,6 +2127,7 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
     )
 
     accent = str(_topic_visual_for_id(topic).get("accent") or "teal")
+    _render_topic_v2_accent_scope(accent)
     render_saved_status(accent=accent)
 
     last_row = _last_answer_row_for_q(q_idx)
@@ -2294,6 +2318,9 @@ def _run_topic_v2_feedback_request(
 def _render_saved_complete(topic: str) -> None:
     title = _topic_display_title(topic)
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 완료")
+    _render_topic_v2_accent_scope(
+        str(_topic_visual_for_id(topic).get("accent") or "teal")
+    )
     st.markdown("### 이 주제 연습을 완료했어요.")
     if st.button("같은 주제 다시 연습", type="primary", use_container_width=True, key="topic_v2_restart_same_topic"):
         _start_topic_practice(topic)
@@ -2371,8 +2398,18 @@ def _render_feedback_ui() -> None:
 
     title = _topic_display_title(topic)
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 피드백")
-    _render_topic_v2_attempt_caption(topic=topic, q_idx=q_idx)
-    st.markdown("### AI 짧은 피드백")
+    accent = str(_topic_visual_for_id(topic).get("accent") or "teal")
+    _render_topic_v2_accent_scope(accent)
+    st.markdown(
+        build_topic_practice_header_html(
+            topic,
+            q_idx,
+            total_questions=3,
+            include_screen_marker=True,
+        ),
+        unsafe_allow_html=True,
+    )
+    render_feedback_label(accent=accent)
 
     summary = _topic_v2_fb_text(fb, "summary", _FB_FALLBACK_SUMMARY)
     strength = _topic_v2_fb_text(fb, "strength", _FB_FALLBACK_STRENGTH)
@@ -2384,23 +2421,28 @@ def _render_feedback_ui() -> None:
     mission = _topic_v2_fb_text(fb, "practice_mission", _FB_FALLBACK_PRACTICE_MISSION)
     kwords = _topic_v2_fb_keywords(fb)
 
-    st.markdown("#### 한 줄 총평")
-    st.write(summary)
-    st.markdown("#### 잘한 점")
-    st.write(strength)
-    st.markdown("#### 바로 고칠 점")
-    st.write(correction)
-    st.markdown("#### 더 자연스러운 표현")
-    st.write(better_disp)
-    st.markdown("#### 내 답변 업그레이드 예시")
-    st.write(upgrade_disp)
-    st.markdown("#### 다시 말하기 키워드")
-    if kwords:
-        st.markdown(" · ".join(f"`{w}`" for w in kwords))
-    else:
-        st.write(_EMPTY_FIELD_PLACEHOLDER)
-    st.markdown("#### 다음 연습 미션")
-    st.write(mission)
+    render_feedback_summary(summary, accent=accent)
+
+    fb_c1, fb_c2 = st.columns(2)
+    with fb_c1:
+        render_feedback_section_card(
+            "잘한 점", strength, accent="teal", icon="circle-check"
+        )
+    with fb_c2:
+        render_feedback_section_card(
+            "바로 고칠 점", correction, accent="amber", icon="target"
+        )
+
+    render_feedback_section_card(
+        "더 자연스러운 표현", better_disp, accent="blue", icon="edit"
+    )
+    render_feedback_section_card(
+        "내 답변 업그레이드 예시", upgrade_disp, accent="purple", icon="message-up"
+    )
+    render_feedback_keyword_chips(kwords, accent="teal")
+    render_feedback_section_card(
+        "다음 연습 미션", mission, accent="amber", icon="flag", filled=True
+    )
 
     st.divider()
     if _is_single_question_retry():
@@ -2409,6 +2451,7 @@ def _render_feedback_ui() -> None:
             if st.button(
                 "같은 질문 다시 말하기",
                 use_container_width=True,
+                type="primary",
                 key="topic_v2_fb_retry_same",
             ):
                 _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
@@ -2438,7 +2481,12 @@ def _render_feedback_ui() -> None:
             st.session_state[_KEY_STEP] = "question"
             st.rerun()
     with c2:
-        if st.button("다음 질문", use_container_width=True, key="topic_v2_fb_next"):
+        if st.button(
+            "다음 질문",
+            use_container_width=True,
+            type="primary",
+            key="topic_v2_fb_next",
+        ):
             st.session_state[_KEY_FEEDBACK] = None
             if q_idx < 2:
                 nxt = q_idx + 1
@@ -2481,6 +2529,9 @@ def _render_pending_ui() -> None:
 
     title = _topic_display_title(topic)
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 피드백")
+    _render_topic_v2_accent_scope(
+        str(_topic_visual_for_id(topic).get("accent") or "teal")
+    )
     _render_topic_v2_attempt_caption(topic=topic, q_idx=q_idx)
     st.markdown("### AI 피드백")
     st.info(msg)

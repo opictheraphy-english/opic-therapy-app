@@ -50,6 +50,12 @@ ensure_mock(st.session_state)
 ensure_pattern(st.session_state)
 sync_settings_to_legacy(st.session_state)
 
+# Auth: init state + process any Google OAuth redirect (?code=) before gates.
+from utils.auth import handle_oauth_callback, init_auth_state
+
+init_auth_state(st.session_state)
+handle_oauth_callback(st.session_state)
+
 if "mock_data" not in st.session_state:
     st.session_state.mock_data = {"recording_active": False}
 

@@ -15,3 +15,6 @@ matplotlib
 # PDF export (final report download — install on Render with main app deps)
 pillow>=10.0.0
 reportlab>=4.0.0
+
+# Auth / cloud (Supabase Google OAuth — login only; data sync is a later step)
+supabase>=2.0.0

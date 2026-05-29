@@ -69,14 +69,18 @@ def render_home() -> None:
 
 def _render_greeting(gid: str, um: str) -> None:
     """Warm, single-line hello. Profile mode shown as a soft pill chip."""
-    badge_label = "게스트 모드"
-    if um == "login_placeholder":
-        badge_label = "클라우드 연동 예정"
-    meta_html = (
-        f'<div class="gr-meta"><span class="gr-meta-dot"></span>{html.escape(badge_label)}</div>'
-        if gid
-        else ""
-    )
+    ss = st.session_state
+    if ss.get("user_authenticated") and not ss.get("is_guest"):
+        name = str(ss.get("user_name") or ss.get("user_email") or "회원").strip()
+        meta_html = (
+            f'<div class="gr-meta"><span class="gr-meta-dot"></span>👤 {html.escape(name)}</div>'
+        )
+    elif ss.get("is_guest") and gid:
+        meta_html = (
+            '<div class="gr-meta"><span class="gr-meta-dot"></span>게스트 모드</div>'
+        )
+    else:
+        meta_html = ""
     st.markdown(
         f"""
         <section class="greeting" aria-label="환영 인사">

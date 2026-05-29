@@ -3450,6 +3450,9 @@ GLOBAL_CSS = """
      * Launch light-theme lock — readable UI when OS/browser prefers dark
      * ================================================================== */
     @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: light only !important;
+      }
       html, body,
       [data-testid="stAppViewContainer"],
       .stApp,
@@ -3459,6 +3462,35 @@ GLOBAL_CSS = """
         background-color: #f8faf9 !important;
         color: #111827 !important;
         color-scheme: light only !important;
+      }
+      /* White card surfaces — keep light even if the UA tries to auto-dark.
+         Accent icon boxes / badges use explicit rgba and are left untouched,
+         and mint-gradient .continue-card variants keep their own background. */
+      .tp-card,
+      .tq-card,
+      .tq-answer-card-top,
+      .tq-saved-section,
+      .tq-saved-recording-top,
+      .section-card,
+      .glass-card,
+      .glass-card-quiet,
+      .topbar {
+        background-color: #ffffff !important;
+        color: #111827 !important;
+      }
+      .tp-card-title,
+      .tq-question,
+      .tq-answer-title,
+      .tq-saved-status-text,
+      .tq-saved-label,
+      .tq-saved-transcript {
+        color: #111827 !important;
+      }
+      .tp-card-sub,
+      .tq-question-ko,
+      .tq-answer-desc,
+      .tq-saved-transcript--empty {
+        color: #6b7280 !important;
       }
       .mx-record-stage,
       .mx-record-stage * {
@@ -3606,6 +3638,41 @@ GLOBAL_CSS = """
       border-color: rgba(13, 148, 136, 0.35) !important;
     }
 
+    /* Topic-practice primary buttons follow the selected topic's accent
+       (scoped marker .tq-accent-scope--* beats the global teal rule above).
+       Mock exams plant no marker, so they keep the teal default. */
+    [data-testid="stMain"]:has(.tq-accent-scope) .tq-accent-scope { display: none !important; }
+    [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
+      border-color: rgba(13, 148, 136, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #3b8ae0 0%, #2c6fb8 100%) !important;
+      border-color: rgba(55, 138, 221, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #6a5fd0 0%, #534ab7 100%) !important;
+      border-color: rgba(83, 74, 183, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #d9537e 0%, #b83f66 100%) !important;
+      border-color: rgba(217, 83, 126, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #be7b18 0%, #8a560f 100%) !important;
+      border-color: rgba(186, 117, 23, 0.40) !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: linear-gradient(180deg, #d85a30 0%, #b23f1c 100%) !important;
+      border-color: rgba(216, 90, 48, 0.35) !important;
+    }
+
     /* Expanders, alerts, captions */
     [data-testid="stExpander"] details {
       background: #ffffff !important;
@@ -3689,15 +3756,17 @@ GLOBAL_CSS = """
       flex-direction: row;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px 14px 12px;
+      padding: 10px 12px;
       overflow: visible;
-      border-radius: 16px 16px 0 0;
+      border-radius: 16px;
       background: #ffffff;
       border: 0.5px solid rgba(17, 24, 39, 0.08);
-      border-bottom: none;
-      box-shadow: none;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06);
       color: inherit !important;
       margin: 0;
+      pointer-events: none;
+      transition: transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out),
+        border-color 0.16s var(--ease-out);
     }
     .tp-card-ico {
       flex-shrink: 0;
@@ -3740,105 +3809,158 @@ GLOBAL_CSS = """
       margin: 0;
       overflow: visible;
     }
-    /* Card + "연습 시작" as one unit — topic-practice grid only (Streamlit 1.50) */
+    /* Right-aligned chevron in a circular accent button — clear "tap me" cue. */
+    .tp-card-chevron {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-left: 8px;
+      color: #0f766e;
+      background: rgba(13, 148, 136, 0.12);
+      transition: transform 0.16s var(--ease-out), background 0.16s var(--ease-out);
+    }
+    .tp-card-chevron svg {
+      width: 18px;
+      height: 18px;
+    }
+    /* Card = single tappable unit — transparent st.button overlays the card
+       (topic-practice grid only, Streamlit 1.50). The card markdown is the
+       visible surface; the button sits on top (inset:0) and receives clicks. */
+    /* Positioning anchor for the absolute overlay button. Both the column and
+       its vertical block are made relative so inset:0 always sizes to the card
+       even if Streamlit's wrapper nesting changes. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card) {
+      position: relative;
+    }
     [data-testid="stMain"]:has(.tp-cards-marker)
       div[data-testid="stColumn"]:has(.tp-card)
       > [data-testid="stVerticalBlock"] {
+      position: relative;
       gap: 0 !important;
+      height: auto !important;
+    }
+    /* Let the card's containers grow to the card's true height so the overlay
+       (sized to the column) covers the whole card — not a flex-clipped strip. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card) {
+      align-self: flex-start !important;
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      div[data-testid="stElementContainer"]:has(.tp-card) {
+      height: auto !important;
     }
     [data-testid="stMain"]:has(.tp-cards-marker)
       div[data-testid="stColumn"]:has(.tp-card)
       div[data-testid="stMarkdown"]:has(.tp-card) {
       margin-bottom: 0 !important;
     }
+    /* The markdown container ships a negative bottom margin (-1rem) that pulls
+       the card up and shrinks its element-container's reported height (58→42),
+       which previously starved the overlay. Zero it so the column wraps the
+       full card and the overlay covers all of it. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      div[data-testid="stMarkdownContainer"]:has(.tp-card) {
+      margin-bottom: 0 !important;
+    }
+    /* The whole card visual (wrapper + card + every child) must NOT capture
+       clicks — all clicks fall through to the transparent overlay button so
+       the entire card surface is tappable, not just the arrow. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      div[data-testid="stElementContainer"]:has(.tp-card),
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      div[data-testid="stMarkdown"]:has(.tp-card),
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card) .tp-card,
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card) .tp-card * {
+      pointer-events: none !important;
+    }
+    /* Streamlit sets .element-container { position: relative } by default, which
+       would trap an absolute stButton inside its own (collapsed, 0-height)
+       wrapper. So make the button's element-container ITSELF the overlay layer,
+       sized to the column, and let the inner button fill it. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"]) {
+      position: absolute !important;
+      inset: 0 !important;
+      height: 100% !important;
+      z-index: 3 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
     [data-testid="stMain"]:has(.tp-cards-marker)
       div[data-testid="stColumn"]:has(.tp-card)
       div[data-testid="stButton"] {
-      margin: 0 0 10px 0 !important;
-      padding-top: 0 !important;
+      position: static !important;
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
     }
     [data-testid="stMain"]:has(.tp-cards-marker)
       div[data-testid="stColumn"]:has(.tp-card)
       div[data-testid="stButton"]
       > button {
       width: 100% !important;
-      margin-top: 0 !important;
-      border-radius: 0 0 16px 16px !important;
-      border: 0.5px solid rgba(17, 24, 39, 0.08) !important;
-      border-top: none !important;
-      background: rgba(255, 255, 255, 0.98) !important;
-      color: var(--navy) !important;
-      box-shadow:
-        0 1px 0 rgba(15, 23, 42, 0.02),
-        0 6px 16px rgba(15, 23, 42, 0.04) !important;
-      font-weight: 600 !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 16px !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      color: transparent !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
+    /* Lift the card when the overlay button is hovered/focused (desktop). */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .tp-card,
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .tp-card {
+      transform: translateY(-2px);
+      border-color: rgba(13, 148, 136, 0.35) !important;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06), 0 10px 24px rgba(13, 148, 136, 0.16) !important;
+    }
+    /* Hover: nudge the arrow right + fill its circle a touch. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .tp-card-chevron {
+      transform: translateX(2px);
+      filter: brightness(0.96);
+    }
+    /* Tap feedback (mobile + desktop): press the card in slightly. */
+    [data-testid="stMain"]:has(.tp-cards-marker)
+      div[data-testid="stColumn"]:has(.tp-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
+      .tp-card {
+      transform: translateY(0) scale(0.985);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
     }
     [data-testid="stMain"]:has(.tp-cards-marker)
       div[data-testid="stColumn"]:has(.tp-card)
-      div[data-testid="stButton"]
-      > button:hover {
-      border-color: rgba(13, 148, 136, 0.35) !important;
-      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.12) !important;
-    }
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--teal)
-      div[data-testid="stButton"]
-      > button,
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--teal)
-      div[data-testid="stButton"]
-      > button:hover {
-      color: #0F6E56 !important;
-    }
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--blue)
-      div[data-testid="stButton"]
-      > button,
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--blue)
-      div[data-testid="stButton"]
-      > button:hover {
-      color: #185FA5 !important;
-    }
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--purple)
-      div[data-testid="stButton"]
-      > button,
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--purple)
-      div[data-testid="stButton"]
-      > button:hover {
-      color: #534AB7 !important;
-    }
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--pink)
-      div[data-testid="stButton"]
-      > button,
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--pink)
-      div[data-testid="stButton"]
-      > button:hover {
-      color: #993556 !important;
-    }
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--amber)
-      div[data-testid="stButton"]
-      > button,
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--amber)
-      div[data-testid="stButton"]
-      > button:hover {
-      color: #854F0B !important;
-    }
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--coral)
-      div[data-testid="stButton"]
-      > button,
-    [data-testid="stMain"]:has(.tp-cards-marker)
-      div[data-testid="stColumn"]:has(.tp-card--coral)
-      div[data-testid="stButton"]
-      > button:hover {
-      color: #993C1D !important;
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
+      .tp-card-chevron {
+      transform: translateX(1px) scale(0.94);
     }
     .tp-card--teal .tp-card-ico {
       background: rgba(13, 148, 136, 0.12);
@@ -3863,6 +3985,24 @@ GLOBAL_CSS = """
     .tp-card--coral .tp-card-ico {
       background: rgba(216, 90, 48, 0.12);
       color: #993C1D;
+    }
+    .tp-card--teal .tp-card-chevron {
+      color: #0F6E56; background: rgba(13, 148, 136, 0.14);
+    }
+    .tp-card--blue .tp-card-chevron {
+      color: #185FA5; background: rgba(55, 138, 221, 0.14);
+    }
+    .tp-card--purple .tp-card-chevron {
+      color: #534AB7; background: rgba(83, 74, 183, 0.14);
+    }
+    .tp-card--pink .tp-card-chevron {
+      color: #993556; background: rgba(217, 83, 126, 0.14);
+    }
+    .tp-card--amber .tp-card-chevron {
+      color: #854F0B; background: rgba(186, 117, 23, 0.16);
+    }
+    .tp-card--coral .tp-card-chevron {
+      color: #993C1D; background: rgba(216, 90, 48, 0.14);
     }
 
     /* --- Topic practice question screen (tq-*) — scoped like tp-cards ----- */
@@ -4436,6 +4576,194 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-saved-actions {
       margin-top: 4px;
     }
+
+    /* --- AI feedback screen (tq-feedback-*) — same tone as tq-saved-* with an
+       emphasized, accent-tinted summary card. ----------------------------- */
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 0 12px 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 148, 136, 0.12);
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico svg {
+      width: 15px;
+      height: 15px;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-text {
+      font-family: var(--font-display) !important;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      letter-spacing: -0.01em;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico--teal {
+      background: rgba(13, 148, 136, 0.12); color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico--blue {
+      background: rgba(55, 138, 221, 0.12); color: #185FA5;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico--purple {
+      background: rgba(83, 74, 183, 0.12); color: #534AB7;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico--pink {
+      background: rgba(217, 83, 126, 0.12); color: #993556;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico--amber {
+      background: rgba(186, 117, 23, 0.14); color: #854F0B;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-ico--coral {
+      background: rgba(216, 90, 48, 0.12); color: #993C1D;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary {
+      background: rgba(13, 148, 136, 0.06);
+      border: 1px solid rgba(13, 148, 136, 0.25);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 0 0 8px 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #0F6E56;
+      margin: 0 0 4px 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-text {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #111827;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--teal {
+      background: rgba(13, 148, 136, 0.06); border-color: rgba(13, 148, 136, 0.25);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--teal .tq-feedback-summary-label { color: #0F6E56; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--blue {
+      background: rgba(55, 138, 221, 0.06); border-color: rgba(55, 138, 221, 0.25);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--blue .tq-feedback-summary-label { color: #185FA5; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--purple {
+      background: rgba(83, 74, 183, 0.06); border-color: rgba(83, 74, 183, 0.25);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--purple .tq-feedback-summary-label { color: #534AB7; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--pink {
+      background: rgba(217, 83, 126, 0.06); border-color: rgba(217, 83, 126, 0.25);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--pink .tq-feedback-summary-label { color: #993556; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--amber {
+      background: rgba(186, 117, 23, 0.07); border-color: rgba(186, 117, 23, 0.27);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--amber .tq-feedback-summary-label { color: #854F0B; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--coral {
+      background: rgba(216, 90, 48, 0.06); border-color: rgba(216, 90, 48, 0.25);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary--coral .tq-feedback-summary-label { color: #993C1D; }
+
+    /* Feedback section cards (잘한 점 / 고칠 점 / 표현 / 업그레이드 / 키워드 / 미션) */
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section {
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 14px;
+      padding: 12px;
+      margin: 0 0 8px 0;
+      height: 100%;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 6px 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 148, 136, 0.12);
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico svg {
+      width: 14px;
+      height: 14px;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-body {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #4b5563;
+      white-space: pre-wrap;
+    }
+    /* Accent variants: label + icon color, and filled background. */
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--teal .tq-feedback-section-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--teal { color: #0F6E56; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--teal { background: rgba(13, 148, 136, 0.12); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--teal.tq-feedback-section--filled { background: rgba(13, 148, 136, 0.06); border-color: rgba(13, 148, 136, 0.25); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--blue .tq-feedback-section-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--blue { color: #185FA5; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--blue { background: rgba(55, 138, 221, 0.12); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--blue.tq-feedback-section--filled { background: rgba(55, 138, 221, 0.06); border-color: rgba(55, 138, 221, 0.25); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--purple .tq-feedback-section-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--purple { color: #534AB7; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--purple { background: rgba(83, 74, 183, 0.12); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--purple.tq-feedback-section--filled { background: rgba(83, 74, 183, 0.06); border-color: rgba(83, 74, 183, 0.25); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--pink .tq-feedback-section-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--pink { color: #993556; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--pink { background: rgba(217, 83, 126, 0.12); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--pink.tq-feedback-section--filled { background: rgba(217, 83, 126, 0.06); border-color: rgba(217, 83, 126, 0.25); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--amber .tq-feedback-section-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--amber { color: #854F0B; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--amber { background: rgba(186, 117, 23, 0.14); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--amber.tq-feedback-section--filled { background: rgba(186, 117, 23, 0.08); border-color: rgba(186, 117, 23, 0.27); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--coral .tq-feedback-section-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--coral { color: #993C1D; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-ico--coral { background: rgba(216, 90, 48, 0.12); }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section--coral.tq-feedback-section--filled { background: rgba(216, 90, 48, 0.06); border-color: rgba(216, 90, 48, 0.25); }
+
+    /* Keyword pill chips */
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+      background: #ffffff;
+      border: 1px solid rgba(13, 148, 136, 0.40);
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--teal { border-color: rgba(13, 148, 136, 0.40); color: #0F6E56; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--blue { border-color: rgba(55, 138, 221, 0.40); color: #185FA5; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--purple { border-color: rgba(83, 74, 183, 0.40); color: #534AB7; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--pink { border-color: rgba(217, 83, 126, 0.40); color: #993556; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--amber { border-color: rgba(186, 117, 23, 0.42); color: #854F0B; }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--coral { border-color: rgba(216, 90, 48, 0.40); color: #993C1D; }
 """
 
 
