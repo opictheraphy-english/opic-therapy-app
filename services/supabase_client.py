@@ -67,7 +67,19 @@ def build_google_oauth_url(redirect_to: str) -> Optional[str]:
             }
         )
         url = getattr(resp, "url", None)
-        return str(url) if url else None
+        if not url:
+            return None
+        url = str(url)
+        # supabase-py omits the apikey from the /auth/v1/authorize URL. A browser
+        # GET to that endpoint can't send an `apikey` header, so without it as a
+        # query param the gateway rejects with "No API key found in request".
+        _, anon_key = get_supabase_credentials()
+        if anon_key and "apikey=" not in url:
+            from urllib.parse import urlencode
+
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{urlencode({'apikey': anon_key})}"
+        return url
     except Exception as exc:
         logger.exception("[SUPABASE] sign_in_with_oauth failed: %s", exc)
         return None
