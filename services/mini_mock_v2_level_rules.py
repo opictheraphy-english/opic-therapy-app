@@ -194,6 +194,10 @@ SHARED_SCORE_AXIS_PHILOSOPHY: Tuple[str, ...] = (
     "All six axes are scored 0–100 as integers.",
     "Accuracy axes (grammar, vocabulary) do NOT raise the level on their own: "
     "strong grammar with weak structure/relevance cannot reach IH — see STRUCTURE_GATE.",
+    "Relevance is a GATING axis, not just one of six. If an answer does not "
+    "actually answer the question (question echo / parroting or total off-topic), "
+    "it is a non-answer: score relevance very low, do NOT count its words toward "
+    "response_amount, and it cannot support IM1 or above on its own — see relevance_gate.",
     "Text-first only: naturalness is transcript-based; pronunciation is never scored.",
 )
 
@@ -231,14 +235,18 @@ SHARED_QUESTION_TYPE_GUIDANCE: Dict[str, str] = {
 }
 
 MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE: Tuple[str, ...] = (
-    "1. First check response amount: total_word_count, total_sentence_count, "
-    "words_normalized_90s, total_duration_seconds if available, and connected "
-    "speech level vs level anchors.",
+    "0. FIRST apply the RELEVANCE / NON-ANSWER GATE: confirm each answer actually "
+    "answers its question. Discard question echoes and fully off-topic non-answers "
+    "BEFORE counting any words — their length must never be rewarded (see relevance_gate).",
+    "1. Then check response amount of the GENUINE answers only: total_word_count, "
+    "total_sentence_count, words_normalized_90s, total_duration_seconds if available, "
+    "and connected speech level vs level anchors.",
     "2. Then check quality: relevance, structure, grammar, vocabulary, naturalness, roleplay.",
     "3. Do not assign IH/AL based only on word count.",
     "4. Do not assign IM3/IH if Q3 roleplay fails badly (see ROLEPLAY_GATE).",
     "5. Do not assign IH/AL if structure or relevance is weak (see STRUCTURE_GATE).",
-    "6. IL–IM2: prioritize sentence production and answer length over advanced vocabulary.",
+    "6. IL–IM2: prioritize sentence production and answer length over advanced "
+    "vocabulary — but only for answers that genuinely address the question.",
     "7. IM3–IH: require connector use, longer sentence patterns, paragraph-like development.",
     "8. AL: requires strong detail, organization, flexibility, more native-like expressions — rare in mini mock.",
 )
@@ -261,6 +269,28 @@ STRUCTURE_GATE: str = (
     "are high. Strong accuracy with sentence-level-only discourse caps at IM3. "
     "This mirrors real OPIc: text type and task completion — not grammatical "
     "perfection — separate IM from IH."
+)
+
+RELEVANCE_GATE: str = (
+    "RELEVANCE / NON-ANSWER GATE (downward floor — the missing counterpart to the "
+    "structure/roleplay caps): a response only counts toward the level if it "
+    "ACTUALLY answers its question. The following are NON-ANSWERS and must NOT "
+    "raise the level no matter how many words or how perfect the grammar is: "
+    "(a) reading or repeating the question prompt back, in whole or in part "
+    "(question echo / parroting); (b) speech that never addresses the question "
+    "and is entirely off-topic; (c) memorized or random text unrelated to the "
+    "prompt. Words from a non-answer do NOT count toward response_amount or the "
+    "word/sentence anchors — strip them out BEFORE judging quantity. Treat such "
+    "an answer as insufficient_response. Per-answer signals may include "
+    "question_echo (true/false), question_overlap_ratio (share of answer words "
+    "also in question_text), and novel_word_count (answer words not in the "
+    "question): a high overlap with almost no novel content means a question "
+    "echo. If most or all answers are non-answers, set overall_level to "
+    "'응답 부족' — and even a single such transcript can never reach IM1 or above "
+    "on quantity alone (cap at IL at most). IMPORTANT consistency with the loose "
+    "relevance philosophy: genuine on-topic answers that branch into extra "
+    "detail (TMI) or reuse a few question keywords are NOT penalized — this gate "
+    "fires ONLY on true non-answers (question echo or total off-topic)."
 )
 
 MOCK_V2_USABLE_ANSWER_GATE: Dict[str, Any] = {
@@ -336,6 +366,7 @@ SHARED_WPM_RULES = MINI_MOCK_V2_WPM_RULES
 SHARED_LEVEL_DECISION_GUIDANCE = MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE
 SHARED_ROLEPLAY_GATE = MINI_MOCK_V2_ROLEPLAY_GATE
 SHARED_STRUCTURE_GATE = STRUCTURE_GATE
+SHARED_RELEVANCE_GATE = RELEVANCE_GATE
 SHARED_VOCABULARY_RULES = MINI_MOCK_V2_VOCABULARY_RULES
 SHARED_CONNECTOR_RULES = MINI_MOCK_V2_CONNECTOR_RULES
 SHARED_FEEDBACK_STYLE_EXAMPLES = MINI_MOCK_V2_FEEDBACK_STYLE_EXAMPLES
@@ -372,6 +403,7 @@ def format_level_rules_for_prompt() -> str:
         "decision_guidance": list(MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE),
         "roleplay_gate": MINI_MOCK_V2_ROLEPLAY_GATE,
         "structure_gate": STRUCTURE_GATE,
+        "relevance_gate": RELEVANCE_GATE,
         "mock_v2_usable_answer_gate": MOCK_V2_USABLE_ANSWER_GATE,
         "vocabulary_rules": MINI_MOCK_V2_VOCABULARY_RULES,
         "connector_rules": MINI_MOCK_V2_CONNECTOR_RULES,

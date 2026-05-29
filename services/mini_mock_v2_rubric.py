@@ -34,8 +34,8 @@ SHARED EVALUATION CALIBRATION (single source of truth, version {LEVEL_RULE_VERSI
 
 The JSON above is authoritative for: level anchors, the six score axes (score_axes),
 speech-rate bands (speech_rate_90s), question-type guidance, decision_guidance,
-roleplay_gate, and structure_gate. Follow it exactly. Do NOT restate or override
-any band numbers, axis meanings, or gates with your own assumptions.
+roleplay_gate, structure_gate, and relevance_gate. Follow it exactly. Do NOT restate
+or override any band numbers, axis meanings, or gates with your own assumptions.
 
 TEXT-FIRST EVALUATION ONLY:
 - You receive STT transcript text in student_answer fields, not audio.
@@ -59,8 +59,9 @@ response_amount, relevance, structure, grammar, vocabulary, naturalness.
 Apply score_axis_philosophy: accuracy alone never raises the level.
 
 LEVEL DECISION:
-- Follow decision_guidance, roleplay_gate, and structure_gate in the JSON exactly.
-- If ALL THREE answers are very short or empty, set overall_level = "응답 부족".
+- Follow decision_guidance, roleplay_gate, structure_gate, and relevance_gate in the JSON exactly.
+- If ALL THREE answers are very short, empty, OR non-answers (question echo / off-topic
+  per relevance_gate), set overall_level = "응답 부족".
 - total_words_anchor / sentence_count_anchor in the JSON are for Q1–Q3 combined (mini mock scope).
 - For status insufficient_response: do NOT fabricate grammar fixes; note insufficient response only.
 
@@ -126,19 +127,27 @@ SHARED EVALUATION CALIBRATION (single source of truth — follow exactly; not ha
 {level_rules_block}
 
 The JSON above is authoritative for level anchors, the six score_axes, speech_rate_90s
-bands, question_type_guidance, decision_guidance, roleplay_gate, and structure_gate.
+bands, question_type_guidance, decision_guidance, roleplay_gate, structure_gate, and
+relevance_gate.
 
 Rules:
 - Text only. No pronunciation, intonation, stress, or linking scores.
 - Use aggregate_metrics and each answer's question_text / question_type. Do not invent text.
 - Q1 description, Q2 experience, Q3 roleplay — apply the matching question_type_guidance entry.
 - Korean feedback: friendly, specific, explain level decisions practically (see examples below).
-- Levels: NH, IL, IM1, IM2, IM3, IH, AL, or "응답 부족" if all answers are too short.
+- Levels: NH, IL, IM1, IM2, IM3, IH, AL, or "응답 부족" if all answers are too short
+  OR are non-answers (question echo / off-topic — see relevance_gate).
+
+NON-ANSWER CHECK (apply relevance_gate FIRST): each answer carries question_echo,
+question_overlap_ratio, and novel_word_count. If an answer just repeats the question
+prompt or never addresses it, it is a non-answer — its words do NOT count toward
+response_amount/quantity and it cannot raise the level. Reading the question back is
+NOT an IM-level answer regardless of length.
 
 SCORE_BREAKDOWN (0–100 integers): the six keys in score_axes —
 response_amount, relevance, structure, grammar, vocabulary, naturalness.
-Apply score_axis_philosophy and both gates: accuracy alone never raises the level;
-weak structure/relevance caps at IM3 even with strong grammar/vocabulary.
+Apply score_axis_philosophy and all gates: accuracy alone never raises the level;
+weak structure/relevance caps at IM3; a non-answer (relevance_gate) cannot reach IM1+.
 
 Per-answer metrics (filler_hits, connector_count, repetition_hint) are supporting signals only.
 Speech rate: use speech_rate_90s and wpm_rules in the JSON — 90s word bands drive

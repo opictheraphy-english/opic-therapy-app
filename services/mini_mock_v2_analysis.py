@@ -98,13 +98,20 @@ def _question_type_kind(question_type: str, question_text: str) -> str:
 
 
 def _row_analysis_status(row: Dict[str, Any], text: str) -> str:
-    """Whether a saved row is sent to Gemini — usable text only, not STT/recording failure."""
+    """Whether a saved row is sent to Gemini — usable text only, not STT/recording failure.
+
+    A question echo (reading the prompt back) is treated as a non-answer even
+    when its word count clears MIN_USABLE_WORDS — its length must never feed the
+    level (see RELEVANCE_GATE in the shared level rules).
+    """
     row_status = str(row.get("status") or "").strip()
     if row_status in ("stt_failed", "recording_failed"):
         return "insufficient_response"
-    if count_english_words(text) >= MIN_USABLE_WORDS:
-        return "saved"
-    return "insufficient_response"
+    if count_english_words(text) < MIN_USABLE_WORDS:
+        return "insufficient_response"
+    if _question_echo_signal(text, str(row.get("question_text") or "")).get("question_echo"):
+        return "insufficient_response"
+    return "saved"
 
 
 def _log_v2_analysis_input(
@@ -219,6 +226,59 @@ def _repetition_hint(text: str) -> str:
     if ratio < 0.6:
         return "moderate_repetition"
     return "low"
+
+
+# Function words ignored when comparing an answer to its question prompt: they
+# overlap trivially even for genuine answers, so they would inflate the echo
+# ratio. Keeping question stems (tell/describe/what/how/...) here means a real
+# answer's CONTENT words must overlap the question for it to count as an echo.
+_ECHO_STOPWORDS = frozenset(
+    {
+        "a", "an", "the", "and", "or", "but", "so", "to", "of", "in", "on", "at",
+        "for", "with", "about", "is", "are", "am", "was", "were", "be", "been",
+        "do", "does", "did", "can", "could", "would", "will", "should", "i",
+        "you", "me", "my", "your", "we", "it", "this", "that", "these", "those",
+        "what", "how", "when", "where", "why", "who", "which", "please", "tell",
+        "describe", "talk", "give", "let", "some", "any", "as", "like",
+    }
+)
+
+# Echo thresholds: a verbatim "read the question back" answer scores overlap ~1.0
+# with ~0 novel content words. Genuine answers reuse a few keywords but add new
+# content, so they stay well under these limits.
+_ECHO_OVERLAP_MIN = 0.8
+_ECHO_NOVEL_MAX = 3
+
+
+def _content_tokens(text: str) -> List[str]:
+    return [
+        w
+        for w in re.findall(r"[a-zA-Z']+", (text or "").lower())
+        if w not in _ECHO_STOPWORDS and len(w) > 1
+    ]
+
+
+def _question_echo_signal(answer_text: str, question_text: str) -> Dict[str, Any]:
+    """Detect 'reading the question back' (parroting) deterministically.
+
+    Returns overlap ratio (share of answer content words also in the question),
+    count of novel content words (answer words not in the question), and an
+    is_echo flag. Conservative thresholds so genuine answers that merely reuse a
+    few question keywords are NOT flagged.
+    """
+    ans_tokens = _content_tokens(answer_text)
+    q_tokens = set(_content_tokens(question_text))
+    if not ans_tokens or not q_tokens:
+        return {"question_echo": False, "question_overlap_ratio": 0.0, "novel_word_count": len(ans_tokens)}
+    novel = [w for w in ans_tokens if w not in q_tokens]
+    overlap_ratio = round(1.0 - (len(novel) / len(ans_tokens)), 3)
+    novel_distinct = len(set(novel))
+    is_echo = overlap_ratio >= _ECHO_OVERLAP_MIN and novel_distinct <= _ECHO_NOVEL_MAX
+    return {
+        "question_echo": is_echo,
+        "question_overlap_ratio": overlap_ratio,
+        "novel_word_count": novel_distinct,
+    }
 
 
 def _per_answer_fluency_metrics(text: str) -> Dict[str, Any]:
@@ -383,19 +443,23 @@ def build_mini_mock_v2_report_payload(answers: List[Dict[str, Any]]) -> List[Dic
     ):
         resolved_text = _student_answer_text(row)
         word_count = count_english_words(resolved_text)
+        q_idx = int(row.get("question_index") or 0)
+        question_type = str(row.get("question_type") or "").strip()
+        question_text = str(row.get("question_text") or "").strip()
+        echo = _question_echo_signal(resolved_text, question_text)
         status = _row_analysis_status(row, resolved_text)
         text = resolved_text if status == "saved" else ""
         if text:
             text = _truncate_answer_for_report(text)
-        q_idx = int(row.get("question_index") or 0)
-        question_type = str(row.get("question_type") or "").strip()
-        question_text = str(row.get("question_text") or "").strip()
+        # A non-answer (echo / insufficient) contributes 0 to quantity so its
+        # length cannot lift response_amount or the level (RELEVANCE_GATE).
+        effective_word_count = word_count if status == "saved" else 0
         try:
             duration_seconds = float(row.get("duration_seconds") or 0.0)
         except (TypeError, ValueError):
             duration_seconds = 0.0
         wpm_available = bool(row.get("wpm_available"))
-        if wpm_available and duration_seconds > 0 and word_count > 0:
+        if wpm_available and duration_seconds > 0 and effective_word_count > 0:
             try:
                 wpm = float(row.get("wpm") or 0.0)
             except (TypeError, ValueError):
@@ -409,18 +473,21 @@ def build_mini_mock_v2_report_payload(answers: List[Dict[str, Any]]) -> List[Dic
             "connector_count": 0,
             "repetition_hint": "low",
         }
-        speech_row = build_per_answer_speech_metrics(word_count, duration_seconds)
+        speech_row = build_per_answer_speech_metrics(effective_word_count, duration_seconds)
         payload.append(
             {
                 "question_index": q_idx + 1,
                 "question_type": question_type,
                 "question_text": question_text,
                 "student_answer": text,
-                "word_count": word_count,
+                "word_count": effective_word_count,
                 "sentence_count": fluency["sentence_count"],
                 "duration_seconds": duration_seconds,
                 "wpm": wpm,
                 "wpm_available": wpm_available,
+                "question_echo": bool(echo.get("question_echo")),
+                "question_overlap_ratio": echo.get("question_overlap_ratio"),
+                "novel_word_count": echo.get("novel_word_count"),
                 "words_normalized_90s": speech_row.get("words_normalized_90s"),
                 "speech_rate_level": speech_row.get("speech_rate_level"),
                 "response_amount_score_rule": speech_row.get("response_amount_score_rule"),
