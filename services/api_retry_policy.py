@@ -41,8 +41,15 @@ MODEL_FALLBACK_ERRORS: FrozenSet[str] = frozenset(
 # `stt_pending` and the student re-runs STT later from the saved-answer
 # screen ("음성 인식 다시 시도" button already exists). A short 2nd attempt is
 # kept ONLY for model fallback so a single dead model does not strand STT.
-STT_MAX_ATTEMPTS = 2
-STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (1,)
+# gemini-2.5-flash is the only audio-capable model on this key, and it returns
+# intermittent 503 "high demand" (≈1 in 5 calls) that clears within seconds.
+# 503s fail fast (not the 20s call timeout), so we can afford a few retries of
+# the SAME model with escalating backoff and still finish well under the 25s
+# wrapper timeout. This turns a 2-strikes-and-out flow into one that rides out
+# a transient spike. (If all attempts still 503, the answer is saved as
+# stt_pending and the student re-runs from the saved-answer screen.)
+STT_MAX_ATTEMPTS = 4
+STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (1, 2, 3)
 
 # Report analysis runs inside a ThreadPoolExecutor with its own wrapper
 # timeout, so it does not block the websocket — longer backoff is safe here.

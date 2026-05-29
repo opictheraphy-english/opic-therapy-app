@@ -49,7 +49,8 @@ _SCORE_KEYS = (
 
 
 def build_mock_v2_report_model_candidates() -> List[str]:
-    """GEMINI_REAL_REPORT_MODEL → GEMINI_REPORT_MODEL → 2.5 flash / lite only."""
+    """GEMINI_REAL_REPORT_MODEL → GEMINI_REPORT_MODEL → 2.5 flash / lite, then
+    3.x cross-family fallback to survive a 503 spike on the 2.5 family."""
     report_env = (os.getenv("GEMINI_REPORT_MODEL") or "").strip()
     return _dedupe_models(
         [
@@ -57,6 +58,7 @@ def build_mock_v2_report_model_candidates() -> List[str]:
             report_env,
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
+            "gemini-3.5-flash",
         ]
     )
 

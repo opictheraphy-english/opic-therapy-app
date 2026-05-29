@@ -6,7 +6,9 @@ import os
 from typing import Dict, FrozenSet, List, Tuple
 
 # Gemini models — STT vs report (optional legacy GEMINI_MODEL applies to both if set).
-_DEFAULT_STT_MODEL = "gemini-3.5-flash"
+# STT default is the proven 2.5 Flash; the freshly-released 3.5 Flash was failing
+# audio STT frequently in its first weeks, so it is intentionally NOT used here.
+_DEFAULT_STT_MODEL = "gemini-2.5-flash"
 _DEFAULT_REPORT_MODEL = "gemini-2.5-flash"
 _LEGACY_GEMINI_MODEL = (os.getenv("GEMINI_MODEL") or "").strip()
 
@@ -36,24 +38,35 @@ def _dedupe_models(candidates: List[str]) -> List[str]:
 
 
 def build_stt_model_candidates() -> List[str]:
-    """STT model fallback chain — stable audio-capable models; 2.5 Flash-Lite removed (stopped responding to audio STT)."""
+    """STT model fallback chain — audio-capable models across model families.
+
+    Gemini capacity shifts over time: the 2.5 family and the 3.x family get
+    overloaded (503) at different times, so we span BOTH. When the primary is
+    momentarily overloaded the retry loop advances to the next family, which is
+    usually healthy. (2.0/1.5 Flash are excluded — "no longer available to new
+    users" 404 on this key. Order: cheaper 2.5 first, then 3.x as live fallback.)
+    """
     return _dedupe_models(
         [
             STT_MODEL_NAME,
-            "gemini-3.5-flash",
             "gemini-2.5-flash",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
         ]
     )
 
 
 def build_report_model_candidates() -> List[str]:
-    """Legacy mock exam report stack."""
+    """Legacy mock exam report stack — 2.5 family first, then 3.x cross-family
+    fallback so a 503 spike on one family does not kill the report.
+    (gemini-1.5-flash removed — 404 "no longer available to new users".)"""
     return _dedupe_models(
         [
             REPORT_MODEL_NAME,
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
-            "gemini-1.5-flash",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
         ]
     )
 
@@ -79,12 +92,14 @@ REAL_REPORT_MODEL_NAME = (
 
 
 def build_mini_mock_v2_report_model_candidates() -> List[str]:
-    """Mini Mock V2 final report only — no Pro models, no discontinued 2.0 Flash."""
+    """Mini Mock V2 final report — 2.5 family first, then 3.x cross-family
+    fallback to survive a 503 spike on the 2.5 family. No Pro / no 2.0 Flash."""
     return _dedupe_models(
         [
             MINI_REPORT_MODEL_NAME,
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
+            "gemini-3.5-flash",
         ]
     )
 
@@ -98,12 +113,14 @@ TOPIC_FEEDBACK_MODEL_NAME = (
 
 
 def build_topic_feedback_model_candidates() -> List[str]:
-    """Topic Practice V2 AI feedback — env override, then 2.5 Flash-Lite / Flash only."""
+    """Topic Practice V2 AI feedback — env override, 2.5 Flash-Lite / Flash, then
+    3.x cross-family fallback to survive a 503 spike on the 2.5 family."""
     return _dedupe_models(
         [
             TOPIC_FEEDBACK_MODEL_NAME,
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
+            "gemini-3.5-flash",
         ]
     )
 
