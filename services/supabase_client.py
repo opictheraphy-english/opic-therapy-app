@@ -25,8 +25,31 @@ def _read_secret(name: str) -> str:
     return str(val or os.getenv(name) or "").strip()
 
 
+def _normalize_supabase_url(raw: str) -> str:
+    """Reduce SUPABASE_URL to the bare project origin (scheme://host).
+
+    The supabase client expects just the project URL (e.g.
+    ``https://abcd.supabase.co``) and appends ``/auth/v1`` and ``/rest/v1``
+    itself. If the env value accidentally includes a path such as ``/rest/v1``,
+    the OAuth authorize URL becomes ``…/rest/v1/auth/v1/authorize`` which the
+    gateway routes to PostgREST and fails with PGRST125 ("Invalid path…").
+    Stripping any path/query/fragment makes the client robust to that misconfig.
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return ""
+    if "://" not in raw:
+        raw = "https://" + raw
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(raw)
+    scheme = parts.scheme or "https"
+    netloc = parts.netloc or parts.path  # tolerate "abcd.supabase.co" w/o scheme
+    return urlunsplit((scheme, netloc, "", "", "")).rstrip("/")
+
+
 def get_supabase_credentials() -> tuple[str, str]:
-    return _read_secret("SUPABASE_URL"), _read_secret("SUPABASE_ANON_KEY")
+    return _normalize_supabase_url(_read_secret("SUPABASE_URL")), _read_secret("SUPABASE_ANON_KEY")
 
 
 def supabase_configured() -> bool:
@@ -70,6 +93,15 @@ def build_google_oauth_url(redirect_to: str) -> Optional[str]:
         if not url:
             return None
         url = str(url)
+        # Log host+path only (never the apikey/state) so we can confirm the URL
+        # targets /auth/v1/authorize and not a misrouted /rest/v1/... path.
+        try:
+            from urllib.parse import urlsplit
+
+            _p = urlsplit(url)
+            logger.info("[SUPABASE] oauth authorize host=%s path=%s", _p.netloc, _p.path)
+        except Exception:
+            pass
         # supabase-py omits the apikey from the /auth/v1/authorize URL. A browser
         # GET to that endpoint can't send an `apikey` header, so without it as a
         # query param the gateway rejects with "No API key found in request".
