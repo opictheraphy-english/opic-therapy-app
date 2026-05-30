@@ -93,22 +93,39 @@ def build_google_oauth_url(redirect_to: str) -> Optional[str]:
         if not url:
             return None
         url = str(url)
+
+        from urllib.parse import urlencode, urlsplit, urlunsplit
+
+        base_url, anon_key = get_supabase_credentials()
+        parts = urlsplit(url)
+
+        # Self-heal a misrouted authorize URL. If the env/cached client produced a
+        # path like ``/rest/v1/auth/v1/authorize`` (SUPABASE_URL carried a path),
+        # the Kong gateway sends it to PostgREST and the browser gets PGRST125
+        # ("Invalid path specified in request URL"). Force the host+path to the
+        # correct GoTrue endpoint while keeping the PKCE query (provider, state,
+        # redirect_to, code_challenge) so the verifier stored on the client still
+        # matches.
+        if not parts.path.startswith("/auth/v1/") and base_url:
+            base_parts = urlsplit(base_url)
+            parts = parts._replace(
+                scheme=base_parts.scheme or parts.scheme or "https",
+                netloc=base_parts.netloc or parts.netloc,
+                path="/auth/v1/authorize",
+            )
+            url = urlunsplit(parts)
+
         # Log host+path only (never the apikey/state) so we can confirm the URL
         # targets /auth/v1/authorize and not a misrouted /rest/v1/... path.
         try:
-            from urllib.parse import urlsplit
-
-            _p = urlsplit(url)
-            logger.info("[SUPABASE] oauth authorize host=%s path=%s", _p.netloc, _p.path)
+            logger.info("[SUPABASE] oauth authorize host=%s path=%s", parts.netloc, parts.path)
         except Exception:
             pass
+
         # supabase-py omits the apikey from the /auth/v1/authorize URL. A browser
         # GET to that endpoint can't send an `apikey` header, so without it as a
         # query param the gateway rejects with "No API key found in request".
-        _, anon_key = get_supabase_credentials()
         if anon_key and "apikey=" not in url:
-            from urllib.parse import urlencode
-
             sep = "&" if "?" in url else "?"
             url = f"{url}{sep}{urlencode({'apikey': anon_key})}"
         return url
