@@ -167,14 +167,28 @@ def build_per_answer_speech_metrics(
 
 def build_exam_aggregate_speech_metrics(
     items: List[Dict[str, Any]],
+    *,
+    level_basis: str = "sum",
 ) -> Dict[str, Any]:
     """
-    Sum words/duration across saved answers; derive exam-level speech-rate signals.
+    Derive exam-level speech-rate signals from saved answers.
     Each item may include word_count, duration_seconds, wpm, wpm_available.
+
+    level_basis:
+      - "sum" (default, Mini Mock V2): combine all answers' words/duration and
+        normalize the TOTAL to one 90s window. Matches the 3-question combined
+        anchor design of the mini mock.
+      - "per_answer" (Mock V2 / 15-question exam): the level signal is the AVERAGE
+        of each answered question's per-answer words_normalized_90s. Summing 15
+        answers into one 90s window inflates the count into the AL band (and, when
+        duration is missing, returns the raw total word count = hundreds → AL),
+        which is wrong for a multi-question exam. Per-answer averaging reflects the
+        student's typical answer rate instead.
     """
     total_words = 0
     total_duration = 0.0
     wpm_vals: List[float] = []
+    per_answer_words_90s: List[float] = []
     for row in items:
         if not isinstance(row, dict):
             continue
@@ -186,13 +200,22 @@ def build_exam_aggregate_speech_metrics(
             dur = 0.0
         if dur > 0:
             total_duration += dur
+        if wc > 0:
+            per_answer_words_90s.append(words_normalized_to_90s(wc, dur))
         if row.get("wpm_available") and float(row.get("wpm") or 0) > 0:
             try:
                 wpm_vals.append(float(row.get("wpm") or 0))
             except (TypeError, ValueError):
                 pass
 
-    words_90s = words_normalized_to_90s(total_words, total_duration)
+    if level_basis == "per_answer":
+        words_90s = (
+            round(sum(per_answer_words_90s) / len(per_answer_words_90s), 1)
+            if per_answer_words_90s
+            else 0.0
+        )
+    else:
+        words_90s = words_normalized_to_90s(total_words, total_duration)
     avg_wpm = round(sum(wpm_vals) / len(wpm_vals), 1) if wpm_vals else compute_wpm(
         total_words, total_duration
     )

@@ -2362,15 +2362,22 @@ def _render_real_mock_flow(mx: dict) -> None:
         agg_cache = (
             mx.get("analytics_cache") if isinstance(mx.get("analytics_cache"), dict) else {}
         )
+        shared_level = str(mx.get("shared_overall_level") or "").strip()
+        shared_breakdown = (
+            mx.get("shared_score_breakdown")
+            if isinstance(mx.get("shared_score_breakdown"), dict)
+            else {}
+        )
         report_overlay: Dict[str, Any] = {
             "ok": True,
             "overall_level": str(
-                mx.get("overall_estimated_level")
+                shared_level
+                or mx.get("overall_estimated_level")
                 or agg_cache.get("overall_display")
                 or ""
             ),
             "summary": "",
-            "score_breakdown": {},
+            "score_breakdown": shared_breakdown,
             "strengths": [],
             "weaknesses": [],
             "practice_mission": "",
@@ -6946,6 +6953,42 @@ def _render_real_mock_final_ready(mx: dict) -> None:
         st.rerun()
 
 
+def _compute_real_mock_shared_overall_level(mx: dict) -> None:
+    """Re-grade the headline level with the shared OPIc rubric (Mock V2 path).
+
+    The per-question hybrid engine over-grades (no shared gates, quantity raises the
+    level). This runs the shared rubric over the 15 transcripts and stores the
+    authoritative overall level on the attempt for the final report to display.
+    """
+    try:
+        from services.mock_v2_analysis import analyze_real_mock_overall_level
+
+        rows = [r for r in (mx.get("results") or []) if isinstance(r, dict)]
+        if not rows:
+            return
+        shared = analyze_real_mock_overall_level(rows)
+        if not isinstance(shared, dict) or not shared.get("ok"):
+            logger.warning(
+                "[REAL_MOCK_SHARED_LEVEL] skipped category=%s",
+                (shared or {}).get("error_category") if isinstance(shared, dict) else "—",
+            )
+            return
+        level = str(shared.get("overall_level") or "").strip()
+        if not level:
+            return
+        mx["shared_overall_level"] = level
+        mx["shared_score_breakdown"] = shared.get("score_breakdown") or {}
+        try:
+            from services.exam_analytics import parse_level_to_token
+
+            mx["shared_overall_raw"] = parse_level_to_token(level) or ""
+        except Exception:
+            mx["shared_overall_raw"] = ""
+        logger.info("[REAL_MOCK_SHARED_LEVEL] overall_level=%s", level)
+    except Exception:
+        logger.exception("[REAL_MOCK_SHARED_LEVEL] failed")
+
+
 def _run_real_mock_final_analysis(mx: dict) -> None:
     """Analyze all saved answers once — only after user clicks 최종 리포트 받기."""
     api_key = get_gemini_api_key()
@@ -7035,6 +7078,7 @@ def _run_real_mock_final_analysis(mx: dict) -> None:
                     error_message=str(item.get("error") or "stt_pending"),
                     attempts=0,
                 )
+        _compute_real_mock_shared_overall_level(mx)
         mark_real_mock_exam_completed(mx, st.session_state)
         st.session_state[_REAL_MOCK_PAGE_KEY] = "FINAL_PREVIEW"
         _set_mock_page(mx, "TEST")

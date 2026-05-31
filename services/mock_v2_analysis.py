@@ -185,7 +185,9 @@ def build_mock_v2_report_payload(
 
     saved_count = len([a for a in answers if isinstance(a, dict)])
     valid_count = len([a for a in answers if isinstance(a, dict) and _is_usable_answer(a)])
-    speech_agg = build_exam_aggregate_speech_metrics(payload_answers)
+    speech_agg = build_exam_aggregate_speech_metrics(
+        payload_answers, level_basis="per_answer"
+    )
     avg_wpm = round(sum(wpm_vals) / len(wpm_vals), 1) if wpm_vals else float(
         speech_agg.get("average_wpm") or 0
     )
@@ -602,6 +604,53 @@ def _analyze_core(
     except Exception:
         pass
     return out
+
+
+def analyze_real_mock_overall_level(
+    rows: List[Dict[str, Any]],
+    questions: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Shared-rubric overall OPIc level for a completed 15-question real mock.
+
+    The real mock grades each question with the legacy hybrid engine
+    (services/evaluation), which does NOT apply the shared OPIc rubric gates or the
+    downward speech-rate cap. To keep the headline level consistent with mini mock /
+    topic practice / script coaching, we re-run the SAME shared rubric used by Mock V2
+    over the 15 transcripts and use its overall_level as the authoritative grade.
+
+    Real-mock rows are mapped into the Mock V2 answer payload. duration_seconds is
+    left at 0 on purpose: the transcript pipeline estimates duration as word_count/2,
+    which (since per-answer words_normalized_90s = wc * 90 / (wc/2) = 180) would push
+    every answer into the AL band. With duration 0, the per-answer signal falls back
+    to the raw word count, a sane per-answer proxy.
+    """
+    from services.transcript_analysis_service import normalize_analysis_row
+
+    answers: List[Dict[str, Any]] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        norm = normalize_analysis_row(r, mode="real_mock")
+        transcript = str(norm.get("transcript") or "").strip()
+        q_idx = int(norm.get("question_index") or 0)
+        answers.append(
+            {
+                "question_index": q_idx,
+                "question_number": q_idx + 1,
+                "question_text": str(norm.get("question_text") or ""),
+                "transcript": transcript,
+                "student_answer": transcript,
+                "duration_seconds": 0.0,
+                "wpm": 0.0,
+                "stt_status": "transcript_ready" if transcript else "",
+            }
+        )
+
+    if not any(a.get("transcript") for a in answers):
+        return _failure(category="insufficient", message="no_usable_answers")
+
+    q_list = questions if isinstance(questions, list) else []
+    return analyze_mock_v2_answers(answers, q_list)
 
 
 def analyze_mock_v2_answers(
