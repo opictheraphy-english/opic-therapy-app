@@ -75,13 +75,21 @@ def compute_wpm(word_count: int, duration_seconds: float) -> float:
 
 
 def words_normalized_to_90s(word_count: int, duration_seconds: float) -> float:
-    """Scale word count to a 90-second equivalent (when duration known)."""
+    """Scale word count to a 90-second equivalent (when duration known).
+
+    DOWNWARD-ONLY normalization: we only scale DOWN answers LONGER than the 90s
+    reference window. We must NOT extrapolate a short, fast burst UP to a full 90s
+    window — speaking 18 words in 7 seconds is not evidence of ~230 words of content,
+    it is simply a short answer. Upward extrapolation previously let a 7-second answer
+    score ~100 on response_amount (and read as AL on quantity). Response amount =
+    how much was actually said; a brief answer stays brief regardless of pace.
+    """
     try:
         wc = max(0, int(word_count))
         dur = float(duration_seconds)
     except (TypeError, ValueError):
         return float(max(0, int(word_count or 0)))
-    if dur <= 0:
+    if dur <= 0 or dur <= REFERENCE_SPEECH_SECONDS:
         return float(wc)
     return round(wc * (REFERENCE_SPEECH_SECONDS / dur), 1)
 
