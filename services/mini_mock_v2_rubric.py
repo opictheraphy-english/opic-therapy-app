@@ -34,8 +34,11 @@ SHARED EVALUATION CALIBRATION (single source of truth, version {LEVEL_RULE_VERSI
 
 The JSON above is authoritative for: level anchors, the six score axes (score_axes),
 speech-rate bands (speech_rate_90s), question-type guidance, decision_guidance,
-roleplay_gate, structure_gate, and relevance_gate. Follow it exactly. Do NOT restate
-or override any band numbers, axis meanings, or gates with your own assumptions.
+anchor_usage, roleplay_gate, structure_gate, relevance_gate, and
+advanced_function_gate. Follow it exactly. Do NOT restate or override any band
+numbers, axis meanings, or gates with your own assumptions. Classify by FUNCTION /
+text type first; word counts only corroborate (anchor_usage). IH vs AL follows
+advanced_function_gate (time-frame control + sustained paragraph discourse).
 
 TEXT-FIRST EVALUATION ONLY:
 - You receive STT transcript text in student_answer fields, not audio.
@@ -59,7 +62,9 @@ response_amount, relevance, structure, grammar, vocabulary, naturalness.
 Apply score_axis_philosophy: accuracy alone never raises the level.
 
 LEVEL DECISION:
-- Follow decision_guidance, roleplay_gate, structure_gate, and relevance_gate in the JSON exactly.
+- Follow decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
+  and advanced_function_gate in the JSON exactly. Classify by FUNCTION / text type first;
+  word counts only corroborate. IH vs AL follows advanced_function_gate.
 - If ALL THREE answers are very short, empty, OR non-answers (question echo / off-topic
   per relevance_gate), set overall_level = "응답 부족".
 - total_words_anchor / sentence_count_anchor in the JSON are for Q1–Q3 combined (mini mock scope).
@@ -127,8 +132,10 @@ SHARED EVALUATION CALIBRATION (single source of truth — follow exactly; not ha
 {level_rules_block}
 
 The JSON above is authoritative for level anchors, the six score_axes, speech_rate_90s
-bands, question_type_guidance, decision_guidance, roleplay_gate, structure_gate, and
-relevance_gate.
+bands, question_type_guidance, decision_guidance, anchor_usage, roleplay_gate,
+structure_gate, relevance_gate, and advanced_function_gate. Classify by FUNCTION /
+text type first; word counts only corroborate. IH vs AL follows
+advanced_function_gate (past+present narration + sustained paragraph discourse).
 
 Rules:
 - Text only. No pronunciation, intonation, stress, or linking scores.

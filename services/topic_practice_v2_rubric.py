@@ -27,8 +27,11 @@ def build_topic_practice_v2_feedback_rubric() -> str:
 {level_rules_block}
 
 위 JSON이 레벨 앵커, 6개 score_axes, speech_rate_90s 밴드, question_type_guidance,
-decision_guidance, roleplay_gate, structure_gate의 단일 기준이다. 밴드 숫자나
-평가 축 의미, 게이트를 여기서 다시 적거나 임의로 바꾸지 말 것.
+decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
+advanced_function_gate의 단일 기준이다. 밴드 숫자나 평가 축 의미, 게이트를 여기서
+다시 적거나 임의로 바꾸지 말 것. 레벨은 단어 수가 아니라 기능(function)·텍스트 타입으로
+먼저 판정하고(anchor_usage), 단어 수는 보조 근거로만 쓴다. IH와 AL의 구분은
+advanced_function_gate(과거·현재 시간틀 통제 + 문단 담화의 지속)를 따른다.
 
 입력: question_en, question_ko, topic, transcript(학생 영어 답변 텍스트), speech_rate_metrics(선택).
 

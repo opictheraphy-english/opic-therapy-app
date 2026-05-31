@@ -26,8 +26,8 @@ WORDS_IN_90S_BANDS: Dict[str, Tuple[int, int]] = {
     "IM1": (31, 60),     # 30–60
     "IM2": (61, 90),     # 60–90
     "IM3": (91, 120),    # 90–120
-    "IH": (121, 130),    # 110–130
-    "AL": (131, 10_000),  # 160+ typical
+    "IH": (121, 155),    # 120–155 (widened: was a 10-wide sliver; speed alone must not grant AL)
+    "AL": (156, 10_000),  # 156+ (≈160+ typical)
 }
 
 # Midpoints for 0–100 response_amount mapping

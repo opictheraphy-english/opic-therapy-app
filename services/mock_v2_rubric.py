@@ -28,8 +28,15 @@ SHARED EVALUATION CALIBRATION (single source of truth, version {LEVEL_RULE_VERSI
 The JSON above is authoritative — IDENTICAL to the calibration used by the
 3-question mini mock and single-question topic practice. Follow it exactly for:
 level anchors, the six score_axes, speech_rate_90s bands, question_type_guidance,
-decision_guidance, roleplay_gate, structure_gate, and mock_v2_usable_answer_gate.
+decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
+advanced_function_gate, and mock_v2_usable_answer_gate.
 Do NOT restate or override band numbers, axis meanings, or gates.
+
+LEVEL IS FUNCTIONAL, NOT A WORD COUNT: classify by FUNCTION / text type first
+(see decision_guidance + anchor_usage); word counts only corroborate. IH vs AL is
+decided by advanced_function_gate — AL needs controlled narration across past AND
+present time frames AND sustained (not merely attempted) paragraph discourse;
+present-only or attempt-only performance caps at IH regardless of length.
 
 TEXT-FIRST EVALUATION ONLY:
 - You receive STT transcript text in student_answer fields, not audio.

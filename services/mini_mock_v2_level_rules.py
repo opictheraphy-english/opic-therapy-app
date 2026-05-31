@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Tuple
 
-LEVEL_RULE_VERSION = "shared_level_rules_2026_05_beta_06"
+LEVEL_RULE_VERSION = "shared_level_rules_2026_05_beta_07_actfl"
 
 # ---------------------------------------------------------------------------
 # DURATION / WPM CONTEXT
@@ -198,7 +198,14 @@ SHARED_SCORE_AXIS_PHILOSOPHY: Tuple[str, ...] = (
     "actually answer the question (question echo / parroting or total off-topic), "
     "it is a non-answer: score relevance very low, do NOT count its words toward "
     "response_amount, and it cannot support IM1 or above on its own — see relevance_gate.",
-    "Text-first only: naturalness is transcript-based; pronunciation is never scored.",
+    "Text-first only: naturalness is transcript-based; pronunciation is never scored. "
+    "Delivery/comprehensibility (accent, intelligibility) is intentionally OUT OF "
+    "SCOPE here — a live OPIc rater also hears delivery, so a transcript-only grade "
+    "may read slightly generous for pronunciation-limited speakers.",
+    "Level is decided by FUNCTION and text type FIRST, with word/sentence counts as "
+    "corroboration only (see anchor_usage). Tense / time-frame control is not merely "
+    "the grammar axis: narrating across past and present is a FUNCTION that gates "
+    "Advanced (AL) — see advanced_function_gate.",
 )
 
 SHARED_QUESTION_TYPE_GUIDANCE: Dict[str, str] = {
@@ -222,7 +229,11 @@ SHARED_QUESTION_TYPE_GUIDANCE: Dict[str, str] = {
         "solve a problem; a related past experience if it asks for one. Must "
         "sound conversational. Do NOT judge a roleplay answer as an experience "
         "narrative, and do NOT assume a schedule-change scenario unless the "
-        "question_text says so."
+        "question_text says so. NOTE: when the prompt asks the student to solve "
+        "a problem or react to an unexpected change, this is the ACTFL Advanced "
+        "'situation with a complication' task — handling it smoothly (explain the "
+        "issue, propose a solution/alternative, manage the interaction) is strong "
+        "positive evidence for IH/AL; failing or avoiding it caps at Intermediate."
     ),
     "comparison": (
         "Full-exam advanced item: compare two things clearly WITH reasons; "
@@ -235,20 +246,31 @@ SHARED_QUESTION_TYPE_GUIDANCE: Dict[str, str] = {
 }
 
 MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE: Tuple[str, ...] = (
-    "0. FIRST apply the RELEVANCE / NON-ANSWER GATE: confirm each answer actually "
-    "answers its question. Discard question echoes and fully off-topic non-answers "
-    "BEFORE counting any words — their length must never be rewarded (see relevance_gate).",
-    "1. Then check response amount of the GENUINE answers only: total_word_count, "
-    "total_sentence_count, words_normalized_90s, total_duration_seconds if available, "
-    "and connected speech level vs level anchors.",
-    "2. Then check quality: relevance, structure, grammar, vocabulary, naturalness, roleplay.",
-    "3. Do not assign IH/AL based only on word count.",
-    "4. Do not assign IM3/IH if Q3 roleplay fails badly (see ROLEPLAY_GATE).",
-    "5. Do not assign IH/AL if structure or relevance is weak (see STRUCTURE_GATE).",
-    "6. IL–IM2: prioritize sentence production and answer length over advanced "
-    "vocabulary — but only for answers that genuinely address the question.",
-    "7. IM3–IH: require connector use, longer sentence patterns, paragraph-like development.",
-    "8. AL: requires strong detail, organization, flexibility, more native-like expressions — rare in mini mock.",
+    "0. RELEVANCE / NON-ANSWER GATE FIRST: confirm each answer actually answers its "
+    "question. Discard question echoes and fully off-topic non-answers BEFORE counting "
+    "anything — their length must never be rewarded (see relevance_gate).",
+    "1. CLASSIFY BY FUNCTION / TEXT TYPE FIRST — this is the PRIMARY level driver "
+    "(ACTFL is functional, not a word count). For the genuine answers, ask what the "
+    "speaker actually DOES: isolated words / lists (NH–IL); creates with language at "
+    "the sentence level (IM1–IM2); connected, paragraph-like development (IM3); an "
+    "organized paragraph that ATTEMPTS advanced narration/comparison/opinion (IH); or "
+    "SUSTAINED, multi-time-frame paragraph discourse (AL). Use the level anchors' "
+    "connected_speech field and advanced_function_gate for this.",
+    "2. Use response amount only as CORROBORATION, not the driver (see anchor_usage): "
+    "total_word_count, total_sentence_count, words_normalized_90s, total_duration_seconds "
+    "if available, checked against the anchors. NEVER promote to IH/AL on counts alone.",
+    "3. Check quality: relevance, structure, grammar, vocabulary, naturalness, roleplay.",
+    "4. ADVANCED FUNCTION GATE for IH vs AL: AL requires controlled narration across "
+    "past AND present time frames AND discourse the speaker can SUSTAIN (not merely "
+    "attempt); present-only description or attempt-only performance caps at IH "
+    "(see advanced_function_gate).",
+    "5. Do not assign IM3/IH if Q3 roleplay fails badly (see ROLEPLAY_GATE).",
+    "6. Do not assign IH/AL if structure or relevance is weak (see STRUCTURE_GATE).",
+    "7. IL–IM2: prioritize complete sentence production over advanced vocabulary — "
+    "but only for answers that genuinely address the question.",
+    "8. IM3–IH: require connector use, longer sentence patterns, paragraph-like development.",
+    "9. AL: sustained detail, organization, flexibility, multi-time-frame narration, and "
+    "more native-like expressions — rare in mini mock.",
 )
 
 MINI_MOCK_V2_ROLEPLAY_GATE: str = (
@@ -291,6 +313,39 @@ RELEVANCE_GATE: str = (
     "relevance philosophy: genuine on-topic answers that branch into extra "
     "detail (TMI) or reuse a few question keywords are NOT penalized — this gate "
     "fires ONLY on true non-answers (question echo or total off-topic)."
+)
+
+ADVANCED_FUNCTION_GATE: str = (
+    "ADVANCED FUNCTION GATE (the ACTFL Intermediate->Advanced discriminator — this "
+    "decides IH vs AL, not word count): real OPIc separates Advanced from "
+    "Intermediate by FUNCTIONS the speaker can sustain, not by length. Apply three "
+    "checks before assigning IH or AL: "
+    "(1) TIME FRAMES — Advanced speakers narrate and describe across major time "
+    "frames (past AND present, ideally future/hypothetical) with controlled tense. "
+    "A sample that only describes in the present tense, or whose past narration "
+    "collapses, has NOT shown the Advanced function: cap at IM3/IH and do NOT assign "
+    "AL no matter how many words. Tense control here is a FUNCTION, not just the "
+    "grammar accuracy axis. "
+    "(2) SUSTAIN vs ATTEMPT — IH = the speaker ATTEMPTS paragraph-level / advanced "
+    "tasks (narration, comparison, opinion) but cannot fully SUSTAIN them: breaks "
+    "down, shortens, or drops into lists/sentences. AL = the speaker SUSTAINS "
+    "organized paragraph-level discourse CONSISTENTLY across the sample. One strong "
+    "answer among weak ones is IH-evidence, not AL. "
+    "(3) COMPLICATION — handling an unexpected situation / problem-solving roleplay "
+    "(see roleplay guidance) is Advanced evidence; avoiding or failing it caps at "
+    "Intermediate. "
+    "Summary: AL requires sustained, multi-time-frame, paragraph-level performance; "
+    "if any of the three is missing, IH is the ceiling."
+)
+
+ANCHOR_USAGE_NOTE: str = (
+    "ANCHOR USAGE: total_words_anchor and sentence_count_anchor are CORROBORATING "
+    "RANGES, not pass/fail thresholds. Decide the level from FUNCTION and text type "
+    "first (what tasks the sample sustains — see decision_guidance and "
+    "advanced_function_gate); then use the word/sentence anchors only as a sanity "
+    "check. A long answer that does not show the level's FUNCTION does not earn that "
+    "level; a slightly shorter answer that clearly sustains the function is not "
+    "blocked by the count. Never promote to IH/AL on hitting a word anchor alone."
 )
 
 MOCK_V2_USABLE_ANSWER_GATE: Dict[str, Any] = {
@@ -367,6 +422,8 @@ SHARED_LEVEL_DECISION_GUIDANCE = MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE
 SHARED_ROLEPLAY_GATE = MINI_MOCK_V2_ROLEPLAY_GATE
 SHARED_STRUCTURE_GATE = STRUCTURE_GATE
 SHARED_RELEVANCE_GATE = RELEVANCE_GATE
+SHARED_ADVANCED_FUNCTION_GATE = ADVANCED_FUNCTION_GATE
+SHARED_ANCHOR_USAGE_NOTE = ANCHOR_USAGE_NOTE
 SHARED_VOCABULARY_RULES = MINI_MOCK_V2_VOCABULARY_RULES
 SHARED_CONNECTOR_RULES = MINI_MOCK_V2_CONNECTOR_RULES
 SHARED_FEEDBACK_STYLE_EXAMPLES = MINI_MOCK_V2_FEEDBACK_STYLE_EXAMPLES
@@ -401,9 +458,11 @@ def format_level_rules_for_prompt() -> str:
             },
         },
         "decision_guidance": list(MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE),
+        "anchor_usage": ANCHOR_USAGE_NOTE,
         "roleplay_gate": MINI_MOCK_V2_ROLEPLAY_GATE,
         "structure_gate": STRUCTURE_GATE,
         "relevance_gate": RELEVANCE_GATE,
+        "advanced_function_gate": ADVANCED_FUNCTION_GATE,
         "mock_v2_usable_answer_gate": MOCK_V2_USABLE_ANSWER_GATE,
         "vocabulary_rules": MINI_MOCK_V2_VOCABULARY_RULES,
         "connector_rules": MINI_MOCK_V2_CONNECTOR_RULES,
