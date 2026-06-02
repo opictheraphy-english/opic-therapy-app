@@ -4252,6 +4252,16 @@ def run_topic_report_analysis_once(mx: dict) -> None:
                 st.session_state.pop("topic_pending_reason", None)
                 st.session_state["topic_practice_step"] = "report"
                 path_label = str(report.get("report_source") or "completed")
+                try:
+                    from utils.history_sync import save_topic_report
+
+                    save_topic_report(
+                        report,
+                        topic_title=topic_title,
+                        sig=f"{topic_id}_{submission_id}",
+                    )
+                except Exception:
+                    pass
             else:
                 status = TOPIC_REPORT_PENDING_RETRY
                 st.session_state["topic_report_status"] = status
@@ -7079,6 +7089,25 @@ def _run_real_mock_final_analysis(mx: dict) -> None:
                     attempts=0,
                 )
         _compute_real_mock_shared_overall_level(mx)
+        try:
+            from utils.history_sync import save_real_mock_report
+
+            saved_rows = [
+                r for r in (mx.get("results") or []) if isinstance(r, dict)
+            ]
+            save_real_mock_report(
+                sig=f"{mx.get('attempt_no') or 1}_{submission_id}",
+                overall_level=str(mx.get("shared_overall_level") or ""),
+                score_breakdown=mx.get("shared_score_breakdown") or {},
+                content={
+                    "overall_level": mx.get("shared_overall_level") or "",
+                    "shared_overall_raw": mx.get("shared_overall_raw") or "",
+                    "score_breakdown": mx.get("shared_score_breakdown") or {},
+                    "results": saved_rows,
+                },
+            )
+        except Exception:
+            pass
         mark_real_mock_exam_completed(mx, st.session_state)
         st.session_state[_REAL_MOCK_PAGE_KEY] = "FINAL_PREVIEW"
         _set_mock_page(mx, "TEST")

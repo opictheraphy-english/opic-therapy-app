@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import logging
+import time
 from typing import Any, Dict, List
 
 import streamlit as st
@@ -95,6 +96,12 @@ def _render_input_form() -> None:
         st.session_state[_KEY_DIAGNOSE_RESULT] = result
         if result.get("ok"):
             st.session_state[_KEY_STEP] = "result"
+            try:
+                from utils.history_sync import save_script_diagnose
+
+                save_script_diagnose(result, question=q, sig=str(time.time()))
+            except Exception:
+                pass
         st.rerun()
 
 
@@ -122,6 +129,12 @@ def _run_upgrade(current_level: str, target_level: str = "") -> None:
     st.session_state[_KEY_UPGRADE_RESULT] = result
     if result.get("ok"):
         st.session_state[_KEY_STEP] = "upgrade_result"
+        try:
+            from utils.history_sync import save_script_upgrade
+
+            save_script_upgrade(result, sig=str(time.time()))
+        except Exception:
+            pass
     st.rerun()
 
 

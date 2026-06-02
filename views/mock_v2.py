@@ -988,6 +988,17 @@ def _run_mock_v2_report_generation() -> None:
     st.session_state[_KEY_REPORT] = result
     if result.get("ok"):
         st.session_state[_KEY_STEP] = "report"
+        try:
+            from utils.history_sync import save_mock_v2_report
+
+            sig = str(
+                st.session_state.get(_KEY_FINISHED)
+                or st.session_state.get(_KEY_STARTED)
+                or ""
+            )
+            save_mock_v2_report(result, sig=sig)
+        except Exception:
+            pass
     else:
         st.session_state[_KEY_STEP] = "report_pending"
     st.rerun()
