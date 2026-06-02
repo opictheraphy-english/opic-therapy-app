@@ -56,6 +56,9 @@ def render_home() -> None:
     else:
         _render_start_card(prog_disk, sett)
 
+    # 2.5) 내 학습 기록 진입점
+    _render_history_entry()
+
     # 3) Quick Action Cards
     _render_quick_actions()
 
@@ -265,6 +268,30 @@ def _render_start_card(
     ):
         page, mock, reset = primary_nav
         navigate_to(page, mock=mock, reset=reset)
+        st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# 2.5) 내 학습 기록 진입점
+# ---------------------------------------------------------------------------
+
+def _render_history_entry() -> None:
+    """Slim full-width entry into the saved-history view (login handled there)."""
+    st.markdown(
+        """
+        <section class="continue-card continue-card--start" role="region"
+                 aria-label="내 학습 기록" style="margin-top:10px;">
+          <div class="cc-row-top">
+            <div class="cc-eyebrow">내 기록</div>
+          </div>
+          <div class="cc-title">지난 학습 기록 보기</div>
+          <div class="cc-meta">모의고사 · 주제별 연습 · 스크립트 첨삭 결과를 다시 확인해요</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("학습 기록 열기", use_container_width=True, key="home_open_history"):
+        navigate_to("HISTORY")
         st.rerun()
 
 

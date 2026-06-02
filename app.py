@@ -106,7 +106,7 @@ def _router_debug(tag: str, ss: Any, nav_p: str | None, mock_p: str | None) -> N
     )
 
 
-_ALLOWED_PAGES = {"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS"}
+_ALLOWED_PAGES = {"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS", "HISTORY"}
 _ALLOWED_MOCK_SUBPAGES = {
     "PICK",
     "TOPIC",
@@ -225,6 +225,12 @@ def _render_active_page() -> None:
         from views.settings_page import render_settings
 
         render_settings()
+        return
+
+    if page == "HISTORY":
+        from views.history import render_history
+
+        render_history()
         return
 
 

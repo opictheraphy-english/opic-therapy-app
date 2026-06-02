@@ -8,7 +8,9 @@ from urllib.parse import parse_qs
 
 import streamlit as st
 
-_ALLOWED_PAGES = frozenset({"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS"})
+_ALLOWED_PAGES = frozenset(
+    {"HOME", "MOCK", "PATTERN", "SCRIPTS", "LECTURES", "SETTINGS", "HISTORY"}
+)
 
 _SVG = {
     "home": (
