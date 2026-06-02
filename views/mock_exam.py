@@ -2560,9 +2560,9 @@ def render_learning_portal(mx: dict) -> None:
             """
             <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
                      aria-label="5분 진단 미니 모의고사">
+              <span class="mx-mode-badge">추천 · 약 5분</span>
               <div class="cc-title">5분 진단 미니 모의고사</div>
               <div class="cc-meta">묘사, 경험, 롤플레이 3문항으로 빠르게 현재 답변 습관을 진단해요.</div>
-              <p class="mx-mode-badge">추천 · 약 5분</p>
             </section>
             """,
             unsafe_allow_html=True,

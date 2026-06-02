@@ -2478,12 +2478,32 @@ GLOBAL_CSS = """
       justify-content: flex-start;
     }
     section.main:has(.mx-landing-marker) .mx-portal-mode-card {
+      position: relative;
       min-height: 128px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       flex: 1 1 auto;
       margin-bottom: 0;
+    }
+    /* "추천 · 약 5분" badge pinned top-right so it adds no card height —
+       keeps the 5-min card the same height as 실전 모의고사 → buttons align. */
+    section.main:has(.mx-landing-marker) .mx-portal-mode-card .mx-mode-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      margin: 0 !important;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #2563eb !important;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    /* Title shouldn't run under the pinned badge (only the badge card). */
+    section.main:has(.mx-landing-marker) .mx-portal-mode-card:has(.mx-mode-badge) .cc-title {
+      padding-right: 76px;
     }
     section.main:has(.mx-landing-marker) .mx-portal-mode-spacer {
       min-height: 1px;
