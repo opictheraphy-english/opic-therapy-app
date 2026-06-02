@@ -2516,6 +2516,49 @@ GLOBAL_CSS = """
     section.main:has(.mx-landing-marker) .mx-portal-practice-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button {
       width: 100%;
     }
+
+    /* ------------------------------------------------------------------
+     * Portal card alignment — version-independent (Streamlit 1.50 renders
+     * the main container as ``stMain``, so the older ``section.main`` scope
+     * above no longer matches). ``.mx-portal-mode-card`` is unique to this
+     * portal, so we size it directly (no main-section dependency). All four
+     * cards share one fixed height → the start buttons that follow each card
+     * line up across columns. ----------------------------------------- */
+    .mx-portal-mode-card {
+      position: relative !important;
+      min-height: 150px !important;
+      height: 150px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      gap: 6px !important;
+      flex: 0 0 auto !important;
+      margin: 0 !important;
+    }
+    .mx-portal-mode-card .mx-mode-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      margin: 0 !important;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #2563eb !important;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    .mx-portal-mode-card:has(.mx-mode-badge) .cc-title {
+      padding-right: 80px;
+    }
+
+    @media (max-width: 640px) {
+      .mx-portal-mode-card {
+        min-height: 138px !important;
+        height: 138px !important;
+      }
+    }
+
     @media (max-width: 640px) {
       section.main:has(.mx-landing-marker) .mx-portal-sample-section {
         margin-bottom: 22px;
