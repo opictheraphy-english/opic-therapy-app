@@ -2534,7 +2534,7 @@ GLOBAL_CSS = """
       justify-content: flex-start !important;
       gap: 5px !important;
       flex: 0 0 auto !important;
-      margin: 0 !important;
+      margin: 0 0 10px 0 !important;
     }
     .mx-portal-mode-card .mx-mode-badge {
       position: absolute;
