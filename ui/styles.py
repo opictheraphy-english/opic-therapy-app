@@ -2526,12 +2526,13 @@ GLOBAL_CSS = """
      * line up across columns. ----------------------------------------- */
     .mx-portal-mode-card {
       position: relative !important;
-      min-height: 150px !important;
-      height: 150px !important;
+      min-height: 112px !important;
+      height: 112px !important;
+      padding: 15px 18px !important;
       display: flex !important;
       flex-direction: column !important;
       justify-content: flex-start !important;
-      gap: 6px !important;
+      gap: 5px !important;
       flex: 0 0 auto !important;
       margin: 0 !important;
     }
@@ -2554,8 +2555,8 @@ GLOBAL_CSS = """
 
     @media (max-width: 640px) {
       .mx-portal-mode-card {
-        min-height: 138px !important;
-        height: 138px !important;
+        min-height: 118px !important;
+        height: 118px !important;
       }
     }
 
