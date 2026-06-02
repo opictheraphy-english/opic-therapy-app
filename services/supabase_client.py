@@ -159,10 +159,65 @@ def exchange_code_for_user(code: str) -> Optional[Dict[str, Any]]:
         or meta.get("name")
         or (email.split("@")[0] if email else "")
     )
+
+    # Capture session tokens so authenticated PostgREST calls (history sync) can
+    # use the user's JWT. expires_at is a unix epoch (seconds).
+    session = getattr(resp, "session", None)
+    access_token = getattr(session, "access_token", None) if session else None
+    refresh_token = getattr(session, "refresh_token", None) if session else None
+    expires_at = getattr(session, "expires_at", None) if session else None
+
     return {
         "id": getattr(user, "id", None),
         "email": email,
         "name": name,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_at": expires_at,
+    }
+
+
+def refresh_access_token(refresh_token: str) -> Optional[Dict[str, Any]]:
+    """Exchange a refresh token for a fresh access token via GoTrue directly.
+
+    Stateless on purpose: the cached Supabase client is shared across all users
+    (``st.cache_resource``), so calling ``set_session`` on it could leak one
+    user's session into another's request. We hit the token endpoint with httpx
+    and return the new tokens for the caller to store in that user's session.
+    Returns ``{access_token, refresh_token, expires_at}`` or ``None``.
+    """
+    if not refresh_token:
+        return None
+    base_url, anon_key = get_supabase_credentials()
+    if not base_url or not anon_key:
+        return None
+    try:
+        import httpx
+
+        resp = httpx.post(
+            f"{base_url}/auth/v1/token",
+            params={"grant_type": "refresh_token"},
+            headers={"apikey": anon_key, "Content-Type": "application/json"},
+            json={"refresh_token": refresh_token},
+            timeout=10.0,
+        )
+    except Exception as exc:
+        logger.warning("[SUPABASE] token refresh request failed: %s", exc)
+        return None
+    if resp.status_code != 200:
+        logger.warning("[SUPABASE] token refresh http=%s", resp.status_code)
+        return None
+    try:
+        data = resp.json()
+    except Exception:
+        return None
+    access = data.get("access_token")
+    if not access:
+        return None
+    return {
+        "access_token": access,
+        "refresh_token": data.get("refresh_token") or refresh_token,
+        "expires_at": data.get("expires_at"),
     }
 
 
