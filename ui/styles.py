@@ -2479,11 +2479,15 @@ GLOBAL_CSS = """
     }
     section.main:has(.mx-landing-marker) .mx-portal-mode-card {
       position: relative;
-      min-height: 128px;
+      /* Fixed, identical height for every card so the start buttons (which sit
+         directly below each card) line up across columns. ``flex: 0 0 auto``
+         stops Streamlit's column from stretching cards to uneven heights. */
+      min-height: 144px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      flex: 1 1 auto;
+      justify-content: flex-start;
+      gap: 8px;
+      flex: 0 0 auto;
       margin-bottom: 0;
     }
     /* "추천 · 약 5분" badge pinned top-right so it adds no card height —
@@ -2518,7 +2522,7 @@ GLOBAL_CSS = """
         padding-bottom: 16px;
       }
       section.main:has(.mx-landing-marker) .mx-portal-mode-card {
-        min-height: 112px;
+        min-height: 132px;
       }
     }
 
