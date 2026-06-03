@@ -129,14 +129,6 @@ def _sc_bullets_html(items: Any) -> str:
     return f"<ul>{lis}</ul>" if lis else ""
 
 
-def _render_bullet_list(title: str, items: List[str]) -> None:
-    if not items:
-        return
-    st.markdown(f"##### {title}")
-    for item in items:
-        st.markdown(f"- {html.escape(str(item))}")
-
-
 def _run_upgrade(current_level: str, target_level: str = "") -> None:
     from services.script_coaching_upgrade_analysis import upgrade_script
 
@@ -177,20 +169,15 @@ def _render_upgrade_section(report: Dict[str, Any]) -> None:
         if msg:
             st.error(msg)
 
-    st.markdown(
-        """
-        <section class="continue-card" role="region">
-          <div class="cc-eyebrow">스크립트 변환</div>
-          <div class="cc-title">더 높은 등급으로 다시 써 보기</div>
-          <div class="cc-meta">진단 등급을 기준으로 AI가 스크립트를 목표 등급 수준으로 변환해 줍니다.</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
+    _sc_card(
+        "더 높은 등급으로 다시 써 보기",
+        "<p>진단 등급을 기준으로 AI가 스크립트를 목표 등급 수준으로 변환해 줍니다.</p>",
     )
 
     if mode == "polish":
-        st.markdown(
-            "이미 최상위 등급입니다. 표현을 더 다듬어 볼까요?",
+        _sc_card(
+            "이미 최상위 등급이에요",
+            "<p>표현을 한 단계 더 다듬은 보완본을 만들어 드릴까요?</p>",
         )
         if st.button(
             "보완본 받기",
@@ -393,35 +380,38 @@ def _render_upgrade_result(report: Dict[str, Any]) -> None:
     transition = _level_transition_label(report)
     st.markdown(
         f"""
-        <section class="continue-card continue-card--start mx-landing-card" role="region">
-          <div class="cc-eyebrow">스크립트 첨삭</div>
-          <div class="cc-title">스크립트 변환 결과</div>
-          <div class="cc-meta">등급 변환: <strong>{transition}</strong></div>
+        <section class="mx-mode-intro" role="region" aria-label="스크립트 변환 리포트">
+          <h2 class="mx-mode-title">스크립트 변환 리포트</h2>
+          <p class="mx-mode-subtitle">목표 등급 수준으로 다시 쓴 스크립트예요.</p>
+          <p class="tp-mini-topic">등급 변환 · {transition}</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
     upgraded = str(report.get("upgraded_script") or "").strip()
-    st.markdown("##### 업그레이드된 스크립트")
-    st.text_area(
+    _sc_card(
         "업그레이드된 스크립트",
-        value=upgraded,
-        height=280,
-        disabled=True,
-        label_visibility="collapsed",
-        key="script_coaching_upgraded_script_display",
+        f'<p class="sc-script">{html.escape(upgraded)}</p>'
+        if upgraded
+        else "<p>변환된 스크립트를 불러오지 못했어요.</p>",
     )
 
-    _render_bullet_list("이렇게 바꿨어요", report.get("change_notes") or [])
+    change_notes = report.get("change_notes") or []
+    if change_notes:
+        body = _sc_bullets_html(change_notes)
+        if body:
+            _sc_card("이렇게 바꿨어요", body)
 
     fill_guides = report.get("fill_in_guides") or []
     if fill_guides:
-        st.markdown(
-            "아래 항목은 AI가 지어내지 않고, **직접 추가하면 좋을 내용**이에요. "
-            "빈칸을 채워 넣으면 스크립트가 더 풍부해집니다."
-        )
-        _render_bullet_list("직접 추가해 보세요", fill_guides)
+        body = _sc_bullets_html(fill_guides)
+        if body:
+            note = (
+                "<p>아래 항목은 AI가 지어내지 않고 <strong>직접 추가하면 좋을 내용</strong>이에요. "
+                "빈칸을 채워 넣으면 스크립트가 더 풍부해집니다.</p>"
+            )
+            _sc_card("직접 추가해 보세요", note + body)
 
     if st.button(
         "진단 결과로 돌아가기",
