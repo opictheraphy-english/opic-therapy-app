@@ -22,7 +22,12 @@ from services.supabase_client import (
     sign_out,
     supabase_configured,
 )
-from utils.local_profile import complete_entry_guest, load_app_session, merge_app_session
+from utils.browser_session import (
+    clear_refresh_token,
+    read_refresh_token,
+    store_refresh_token,
+)
+from utils.local_profile import complete_entry_guest, merge_app_session
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +50,20 @@ def init_auth_state(ss: MutableMapping[str, Any]) -> None:
         ss.setdefault(key, default)
 
     # The bottom nav does a full page reload, which starts a fresh Streamlit
-    # session and wipes session_state. Restore the login identity from disk once
-    # per session so the user stays logged in across navigation. (Only the
-    # profile is persisted here — Supabase token persistence comes with data
-    # sync in a later step; no authenticated API calls happen yet.)
+    # session and wipes session_state. Restore the login from this browser's
+    # **own cookie** once per session so the user stays logged in across
+    # navigation — WITHOUT ever reading identity from shared server disk (which
+    # would leak one student's login into another's session).
     if not ss.get("_auth_restored"):
-        _restore_auth_from_disk(ss)
+        _restore_auth_from_cookie(ss)
         ss["_auth_restored"] = True
+
+    # Ensure this browser's login cookie matches the in-memory refresh token.
+    # Critical for the post-OAuth path: handle_oauth_callback() does st.rerun()
+    # right after login, which discards that run's component output — so a cookie
+    # written during _set_authenticated() would never reach the browser. Writing
+    # it here, on the subsequent rendering run, guarantees it lands.
+    _sync_login_cookie(ss)
 
     # Returning guests (new browser session) flagged from disk user_mode so the
     # "게스트 모드" chip and any future guest gating stay consistent.
@@ -59,18 +71,49 @@ def init_auth_state(ss: MutableMapping[str, Any]) -> None:
         ss["is_guest"] = True
 
 
-def _restore_auth_from_disk(ss: MutableMapping[str, Any]) -> None:
+def _sync_login_cookie(ss: MutableMapping[str, Any]) -> None:
+    """Write the refresh-token cookie iff it differs from what we last wrote this
+    session. No-op for logged-out users (the cookie is cleared on logout)."""
+    if not ss.get("user_authenticated"):
+        return
+    rt = ss.get("sb_refresh_token")
+    if not rt or ss.get("_rt_cookie_value") == rt:
+        return
+    store_refresh_token(str(rt))
+    ss["_rt_cookie_value"] = rt
+
+
+def _restore_auth_from_cookie(ss: MutableMapping[str, Any]) -> None:
+    """Rebuild the login from this browser's refresh-token cookie.
+
+    The cookie holds only the Supabase refresh token (per-browser, never on
+    shared disk). We exchange it for a fresh access token + the user identity,
+    so two browsers can never see each other's account. A revoked/expired token
+    simply leaves the session logged out and clears the stale cookie."""
     if ss.get("user_authenticated"):
         return
-    disk = load_app_session()
-    if disk.get("user_mode") == "google" and disk.get("user_id"):
-        ss["user_authenticated"] = True
-        ss["is_guest"] = False
-        ss["user_id"] = disk.get("user_id")
-        ss["user_email"] = disk.get("user_email")
-        ss["user_name"] = disk.get("user_name")
-        for key in _TOKEN_KEYS:
-            ss[key] = disk.get(key)
+    rt = read_refresh_token()
+    if not rt:
+        return
+    refreshed = refresh_access_token(str(rt))
+    if not refreshed or not refreshed.get("id"):
+        # Token no longer valid — drop it so we don't retry every rerun.
+        clear_refresh_token()
+        return
+    ss["user_authenticated"] = True
+    ss["is_guest"] = False
+    ss["user_id"] = refreshed.get("id")
+    ss["user_email"] = refreshed.get("email")
+    ss["user_name"] = refreshed.get("name")
+    ss["sb_access_token"] = refreshed.get("access_token")
+    ss["sb_refresh_token"] = refreshed.get("refresh_token")
+    ss["sb_token_expires_at"] = refreshed.get("expires_at")
+    ss["entry_gate_completed"] = True
+    ss["user_mode"] = "google"
+    ss.setdefault("onboarding_completed", True)
+    # Persist the rotated refresh token back to the cookie (GoTrue rotates it).
+    store_refresh_token(refreshed.get("refresh_token"))
+    ss["_rt_cookie_value"] = refreshed.get("refresh_token")
 
 
 def is_authenticated(ss: MutableMapping[str, Any]) -> bool:
@@ -135,32 +178,30 @@ def _set_authenticated(ss: MutableMapping[str, Any], user: dict) -> None:
     ss["user_mode"] = "google"
     if "onboarding_completed" not in ss:
         ss["onboarding_completed"] = False
+    # Only the non-sensitive app-flow flags go to this browser's (per-device)
+    # local profile. Identity + tokens are NEVER written to server disk — the
+    # refresh token lives in this browser's cookie and the identity is
+    # re-derived from it on each fresh session.
     merge_app_session(
         {
             "entry_gate_completed": True,
             "user_mode": "google",
-            "user_id": user.get("id"),
-            "user_email": user.get("email"),
-            "user_name": user.get("name"),
-            "sb_access_token": user.get("access_token"),
-            "sb_refresh_token": user.get("refresh_token"),
-            "sb_token_expires_at": user.get("expires_at"),
         }
     )
+    # The cookie itself is written by _sync_login_cookie() on the next (rendering)
+    # run — this run is discarded by handle_oauth_callback()'s st.rerun().
 
 
 def _store_refreshed_tokens(ss: MutableMapping[str, Any], tokens: dict) -> str:
-    """Persist refreshed tokens to session + disk; return the new access token."""
+    """Persist refreshed tokens to session + cookie; return the new access token.
+
+    Tokens are kept in ``session_state`` (per-browser memory) and the refresh
+    token in this browser's cookie. Nothing identity-related touches disk."""
     ss["sb_access_token"] = tokens.get("access_token")
     ss["sb_refresh_token"] = tokens.get("refresh_token")
     ss["sb_token_expires_at"] = tokens.get("expires_at")
-    merge_app_session(
-        {
-            "sb_access_token": tokens.get("access_token"),
-            "sb_refresh_token": tokens.get("refresh_token"),
-            "sb_token_expires_at": tokens.get("expires_at"),
-        }
-    )
+    store_refresh_token(tokens.get("refresh_token"))
+    ss["_rt_cookie_value"] = tokens.get("refresh_token")
     return str(tokens.get("access_token") or "")
 
 
@@ -270,16 +311,13 @@ def logout(ss: MutableMapping[str, Any]) -> None:
     ss.pop("_login_info_open", None)
     ss.pop("_google_oauth_url", None)
     ss["_auth_restored"] = True  # don't re-restore the just-cleared identity
+    ss.pop("_rt_cookie_value", None)
+    # Drop this browser's login cookie so a fresh session can't restore it.
+    clear_refresh_token()
     merge_app_session(
         {
             "entry_gate_completed": False,
             "user_mode": None,
-            "user_id": None,
-            "user_email": None,
-            "user_name": None,
-            "sb_access_token": None,
-            "sb_refresh_token": None,
-            "sb_token_expires_at": None,
         }
     )
     st.rerun()

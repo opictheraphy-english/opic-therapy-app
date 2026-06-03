@@ -13,8 +13,33 @@ logger = logging.getLogger(__name__)
 
 _ROOT = Path(__file__).resolve().parent.parent
 LOCAL_DIR = _ROOT / "local_data"
-APP_SESSION_FILE = LOCAL_DIR / "app_session.json"
-USER_PROGRESS_FILE = LOCAL_DIR / "user_progress.json"
+# Per-browser subdirectories. The app is a single server process shared by every
+# student, so all on-disk state MUST be keyed by a per-browser device id — never
+# a single global file (that is what previously leaked one user's login/progress
+# into everyone else's session).
+_SESSIONS_DIR = LOCAL_DIR / "sessions"
+_PROGRESS_DIR = LOCAL_DIR / "progress"
+
+
+def _device_id() -> str:
+    """Per-browser id used to key disk files. Falls back to ``_shared`` only when
+    no Streamlit/browser context exists (e.g. scripts/tests) — never in a real
+    request, where the cookie-backed id is always available."""
+    try:
+        from utils.browser_session import get_or_create_device_id
+
+        did = get_or_create_device_id()
+        return did or "_shared"
+    except Exception:
+        return "_shared"
+
+
+def _app_session_file() -> Path:
+    return _SESSIONS_DIR / f"{_device_id()}.json"
+
+
+def _user_progress_file() -> Path:
+    return _PROGRESS_DIR / f"{_device_id()}.json"
 
 MOCK_SNAPSHOT_KEYS = (
     "results",
@@ -36,8 +61,33 @@ MOCK_SNAPSHOT_KEYS = (
 )
 
 
+# Legacy single-file paths (pre per-device isolation). These were shared by ALL
+# users and leaked login identity/progress across browsers — purge them once per
+# process so no stale secret lingers on the deployed server's disk.
+_LEGACY_APP_SESSION = LOCAL_DIR / "app_session.json"
+_LEGACY_USER_PROGRESS = LOCAL_DIR / "user_progress.json"
+_legacy_purged = False
+
+
+def _purge_legacy_global_files() -> None:
+    global _legacy_purged
+    if _legacy_purged:
+        return
+    _legacy_purged = True
+    for path in (_LEGACY_APP_SESSION, _LEGACY_USER_PROGRESS):
+        try:
+            if path.is_file():
+                path.unlink()
+                logger.warning("[SECURITY] purged legacy shared session file: %s", path.name)
+        except Exception as e:  # pragma: no cover - best effort
+            logger.warning("legacy purge failed for %s: %s", path.name, e)
+
+
 def ensure_local_dir() -> None:
     LOCAL_DIR.mkdir(parents=True, exist_ok=True)
+    _SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    _PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+    _purge_legacy_global_files()
 
 
 def _iso_now() -> str:
@@ -55,10 +105,11 @@ def new_guest_id() -> str:
 
 def load_app_session() -> Dict[str, Any]:
     ensure_local_dir()
-    if not APP_SESSION_FILE.is_file():
+    path = _app_session_file()
+    if not path.is_file():
         return {}
     try:
-        return json.loads(APP_SESSION_FILE.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
         logger.warning("app_session read failed: %s", e)
         return {}
@@ -68,7 +119,9 @@ def save_app_session(data: Dict[str, Any]) -> None:
     ensure_local_dir()
     payload = dict(data)
     payload["updated_at"] = _iso_now()
-    APP_SESSION_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _app_session_file().write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def merge_app_session(updates: Dict[str, Any]) -> Dict[str, Any]:
@@ -356,7 +409,7 @@ def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
         }
 
     try:
-        USER_PROGRESS_FILE.write_text(
+        _user_progress_file().write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, default=str),
             encoding="utf-8",
         )
@@ -371,10 +424,11 @@ def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
 
 def load_user_progress() -> Dict[str, Any]:
     ensure_local_dir()
-    if not USER_PROGRESS_FILE.is_file():
+    path = _user_progress_file()
+    if not path.is_file():
         return {}
     try:
-        return json.loads(USER_PROGRESS_FILE.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
         logger.warning("user_progress read failed: %s", e)
         return {}

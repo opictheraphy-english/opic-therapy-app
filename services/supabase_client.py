@@ -184,7 +184,14 @@ def refresh_access_token(refresh_token: str) -> Optional[Dict[str, Any]]:
     (``st.cache_resource``), so calling ``set_session`` on it could leak one
     user's session into another's request. We hit the token endpoint with httpx
     and return the new tokens for the caller to store in that user's session.
-    Returns ``{access_token, refresh_token, expires_at}`` or ``None``.
+
+    The GoTrue refresh response also carries the ``user`` object, so we return
+    the identity (``id``/``email``/``name``) too. This lets a fresh browser
+    session restore the full login from nothing but the refresh-token cookie —
+    no identity is ever read from shared server disk.
+
+    Returns ``{access_token, refresh_token, expires_at, id, email, name}`` or
+    ``None``.
     """
     if not refresh_token:
         return None
@@ -214,10 +221,22 @@ def refresh_access_token(refresh_token: str) -> Optional[Dict[str, Any]]:
     access = data.get("access_token")
     if not access:
         return None
+
+    user = data.get("user") or {}
+    meta = user.get("user_metadata") or {}
+    email = user.get("email") or meta.get("email") or ""
+    name = (
+        meta.get("full_name")
+        or meta.get("name")
+        or (email.split("@")[0] if email else "")
+    )
     return {
         "access_token": access,
         "refresh_token": data.get("refresh_token") or refresh_token,
         "expires_at": data.get("expires_at"),
+        "id": user.get("id"),
+        "email": email,
+        "name": name,
     }
 
 

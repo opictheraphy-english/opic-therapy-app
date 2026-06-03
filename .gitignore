@@ -5,5 +5,8 @@ __pycache__/
 # Pre-built pattern audio (run: python generate_pattern_audio.py)
 assets/pattern_audio/*.mp3
 
-# Local guest profile & progress (device-local JSON)
+# Local guest profile & progress (per-browser device-local JSON)
 local_data/*.json
+local_data/**/*.json
+local_data/sessions/
+local_data/progress/
