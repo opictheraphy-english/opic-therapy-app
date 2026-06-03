@@ -129,6 +129,46 @@ def _extract_response_text(response: Any) -> str:
     return ""
 
 
+# --- Repetition / hallucination guard --------------------------------------
+# Gemini (and Whisper-family) STT can hallucinate on ~1s / near-silent / very
+# low-information audio: it ignores the audio and emits a degenerate loop of one
+# phrase until the token cap (e.g. "...and I was just playing in the water, and I
+# was just having a good time," repeated dozens of times). Such output has
+# abnormally low lexical diversity and/or a short phrase repeated many times, so
+# we detect it and treat it as no usable speech (-> insufficient_response) rather
+# than grading a 1-second non-answer as a long, fluent response.
+_HALLU_MIN_WORDS = 25
+_HALLU_UNIQUE_RATIO = 0.22
+_HALLU_NGRAM_N = 5
+_HALLU_NGRAM_MIN_REPEAT = 5
+
+
+def looks_like_repetition_hallucination(text: str) -> bool:
+    """True iff ``text`` looks like an STT repetition-loop hallucination.
+
+    Conservative by design (only fires on clearly degenerate output) so genuine
+    answers — even disfluent ones with fillers — are never dropped:
+      * unique-word ratio below ~0.22 over 25+ words, or
+      * a 5-word phrase repeated 5+ times.
+    """
+    words = re.findall(r"[a-zA-Z']+", (text or "").lower())
+    n = len(words)
+    if n < _HALLU_MIN_WORDS:
+        return False
+    if len(set(words)) / n < _HALLU_UNIQUE_RATIO:
+        return True
+    if n >= _HALLU_NGRAM_N * 2:
+        from collections import Counter
+
+        grams = Counter(
+            tuple(words[i : i + _HALLU_NGRAM_N])
+            for i in range(n - _HALLU_NGRAM_N + 1)
+        )
+        if grams and grams.most_common(1)[0][1] >= _HALLU_NGRAM_MIN_REPEAT:
+            return True
+    return False
+
+
 def _normalize_transcript(raw: str) -> str:
     text = (raw or "").strip()
     if not text:
@@ -390,6 +430,21 @@ def _transcribe_answer_audio_impl(
             transcript = _normalize_transcript(raw_transcript)
             if not transcript and raw_transcript:
                 transcript = raw_transcript
+            if transcript and looks_like_repetition_hallucination(transcript):
+                try:
+                    logger.warning(
+                        "[STT_HALLUCINATION] repetition/low-diversity detected "
+                        "model=%s words=%s audio_len=%s -> insufficient",
+                        model_name,
+                        count_english_words(transcript),
+                        audio_len,
+                    )
+                except Exception:
+                    pass
+                # Keep raw_transcript for debugging, but drop the usable
+                # transcript so this routes to insufficient_response (not a
+                # retryable error — re-running STT would re-hallucinate).
+                transcript = ""
             if raw_transcript:
                 elapsed = time.perf_counter() - t0
                 result = _stt_success_result(
