@@ -1325,6 +1325,33 @@ GLOBAL_CSS = """
       margin: 6px 0;
       box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
     }
+    /* Script-coaching report — text sections wrapped in the same boxed style. */
+    .sc-report-card {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 13px 15px;
+      margin: 8px 0;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+    .sc-report-card .sc-card-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #0f766e;
+      margin: 0 0 8px 0;
+      letter-spacing: -0.01em;
+    }
+    .sc-report-card .sc-card-body {
+      color: #334155;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .sc-report-card .sc-card-body p { margin: 0 0 6px 0; }
+    .sc-report-card .sc-card-body p:last-child { margin-bottom: 0; }
+    .sc-report-card .sc-card-body ul { margin: 0; padding-left: 18px; }
+    .sc-report-card .sc-card-body li { margin: 4px 0; }
+    .sc-report-card .sc-q { font-weight: 600; color: #0f172a; }
+    .sc-report-card .sc-script { color: #334155; white-space: pre-wrap; }
     .grammar-fix .gf-line {
       display: flex;
       gap: 8px;

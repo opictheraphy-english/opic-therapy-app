@@ -109,6 +109,26 @@ def _render_input_form() -> None:
         st.rerun()
 
 
+def _sc_card(title: str, body_html: str) -> None:
+    """Render a script-report section inside the boxed card style."""
+    st.markdown(
+        f'<section class="sc-report-card" role="region">'
+        f'<div class="sc-card-title">{html.escape(title)}</div>'
+        f'<div class="sc-card-body">{body_html}</div>'
+        f"</section>",
+        unsafe_allow_html=True,
+    )
+
+
+def _sc_bullets_html(items: Any) -> str:
+    if not isinstance(items, (list, tuple)):
+        return ""
+    lis = "".join(
+        f"<li>{html.escape(str(x))}</li>" for x in items if str(x).strip()
+    )
+    return f"<ul>{lis}</ul>" if lis else ""
+
+
 def _render_bullet_list(title: str, items: List[str]) -> None:
     if not items:
         return
@@ -232,18 +252,20 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
     question = str(st.session_state.get(_KEY_QUESTION_EN) or "").strip()
     script_text = str(st.session_state.get(_KEY_SCRIPT_TEXT) or "").strip()
     if question or script_text:
-        st.markdown("##### 내가 작성한 스크립트")
+        parts: List[str] = []
         if question:
-            st.markdown(f"**Q.** {html.escape(question)}")
+            parts.append(f'<p class="sc-q">Q. {html.escape(question)}</p>')
         if script_text:
-            st.markdown(
-                f'<p class="mx-tp-transcript">{html.escape(script_text)}</p>',
-                unsafe_allow_html=True,
-            )
+            parts.append(f'<p class="sc-script">{html.escape(script_text)}</p>')
+        _sc_card("내가 작성한 스크립트", "".join(parts))
 
     summary = str(report.get("summary") or "").strip()
-    st.markdown("##### 전체 총평")
-    st.markdown(html.escape(summary) if summary else "진단 결과를 아래에서 함께 확인해 주세요.")
+    _sc_card(
+        "전체 총평",
+        f"<p>{html.escape(summary)}</p>"
+        if summary
+        else "<p>진단 결과를 아래에서 함께 확인해 주세요.</p>",
+    )
 
     breakdown = report.get("score_breakdown")
     if isinstance(breakdown, dict) and breakdown:
@@ -256,16 +278,12 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
             st.progress(max(0, min(100, score)) / 100.0)
             st.caption(f"{label}: {score}/100")
 
-    st.markdown("##### 가장 좋았던 점")
     strengths = report.get("strengths") or []
-    if strengths:
-        for bullet in strengths:
-            st.markdown(f"- {html.escape(str(bullet))}")
-    else:
-        st.markdown(
-            '<p class="mx-coach-empty-note">이번 답변에서 강점을 더 끌어올릴 여지가 있어요.</p>',
-            unsafe_allow_html=True,
-        )
+    _sc_card(
+        "가장 좋았던 점",
+        _sc_bullets_html(strengths)
+        or "<p>이번 답변에서 강점을 더 끌어올릴 여지가 있어요.</p>",
+    )
 
     st.markdown("##### 바로 고치면 좋은 문법")
     render_grammar_corrections(
@@ -283,46 +301,48 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
         empty_message="표현을 한 단계 올릴 만한 포인트를 찾지 못했어요.",
     )
 
-    st.markdown("##### 답변 구조 피드백")
     structure_fb = report.get("structure_feedback")
     if isinstance(structure_fb, dict) and (
         structure_fb.get("good") or structure_fb.get("missing") or structure_fb.get("next")
     ):
+        lines: List[str] = []
         for g in structure_fb.get("good") or []:
-            st.markdown(f"- 잘한 점: {html.escape(str(g))}")
+            lines.append(f"<li>잘한 점: {html.escape(str(g))}</li>")
         for m in structure_fb.get("missing") or []:
-            st.markdown(f"- 보완: {html.escape(str(m))}")
+            lines.append(f"<li>보완: {html.escape(str(m))}</li>")
         nxt = str(structure_fb.get("next") or "").strip()
         if nxt:
-            st.markdown(f"- 다음: {html.escape(nxt)}")
+            lines.append(f"<li>다음: {html.escape(nxt)}</li>")
+        structure_body = f"<ul>{''.join(lines)}</ul>"
     else:
-        st.markdown(
-            '<p class="mx-coach-empty-note">도입 → 뒷받침 2~3개 → 마무리 흐름을 의식해 보세요.</p>',
-            unsafe_allow_html=True,
-        )
+        structure_body = "<p>도입 → 뒷받침 2~3개 → 마무리 흐름을 의식해 보세요.</p>"
+    _sc_card("답변 구조 피드백", structure_body)
 
     improved = report.get("improved_sentences") or []
     if improved:
-        st.markdown("##### 다시 말하기 추천 문장")
+        sents: List[str] = []
         for item in improved:
             if isinstance(item, dict):
                 sent = str(item.get("sentence") or "").strip()
             else:
                 sent = str(item or "").strip()
             if sent:
-                st.markdown(f"- {html.escape(sent)}")
+                sents.append(sent)
+        body = _sc_bullets_html(sents)
+        if body:
+            _sc_card("다시 말하기 추천 문장", body)
 
     missions = report.get("missions") or []
     if missions:
-        st.markdown("##### 다음 연습 미션")
-        for mission in missions:
-            st.markdown(f"- {html.escape(str(mission))}")
+        body = _sc_bullets_html(missions)
+        if body:
+            _sc_card("다음 연습 미션", body)
 
     weaknesses = report.get("weaknesses") or []
     if weaknesses:
-        st.markdown("##### 보완점")
-        for bullet in weaknesses:
-            st.markdown(f"- {html.escape(str(bullet))}")
+        body = _sc_bullets_html(weaknesses)
+        if body:
+            _sc_card("보완점", body)
 
     _render_upgrade_section(report)
 
