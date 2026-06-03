@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "script_coaching_diagnose_v1"
+RUBRIC_VERSION = "script_coaching_diagnose_v2"
 
 
 def build_script_coaching_diagnose_rubric() -> str:
@@ -94,6 +94,19 @@ structure_gate를 그대로 따른다. 단, 아래의 스크립트 전용 규칙
 - strengths: 잘한 점 2~3개(문자열 배열).
 - weaknesses: 보완할 점 2~3개(문자열 배열).
 
+구조화 피드백(주제별 연습 리포트와 동일한 카드로 보여줄 데이터):
+- grammar_corrections: 실제 문법 오류 2~4개. 각 항목은 {{"before": 학생 원문 구절(영어 그대로),
+  "after": 고친 영어 구절, "why": 한국어 1문장 이유}}. 원문에 없는 문장을 지어내지 말 것.
+  오류가 거의 없으면 빈 배열 [].
+- expression_upgrades: 더 자연스럽게 올릴 표현 2~4개. 각 항목은 {{"before": 학생 원문 구절(영어),
+  "better": [더 자연스러운 영어 대안 1~3개], "why": 한국어 1문장 이유}}. 원문보다 한 단계만
+  자연스럽게. 없으면 [].
+- structure_feedback: {{"good": [잘한 구조 1~2개·한국어], "missing": [빠진 구조 1~2개·한국어],
+  "next": 다음에 시도할 구조 조언 1문장·한국어}}.
+- improved_sentences: 학생 답변에서 한 단계 다시 쓰면 좋은 핵심 문장 1~3개. 각 항목은
+  {{"sentence": 자연스럽게 다시 쓴 영어 문장 1개}}. 학생 원문 의미를 유지하되 더 매끄럽게.
+- missions: 다음에 연습하면 좋은 미션 2개(한국어 문자열 배열). 구체적 행동으로.
+
 출력 형식: **JSON만** (마크다운 코드펜스 없음). 스키마를 정확히 지킬 것:
 
 {{
@@ -118,8 +131,14 @@ structure_gate를 그대로 따른다. 단, 아래의 스크립트 전용 규칙
   "correction_focus": "<한국어 1-2문장, 원문 구절 따옴표 인용>",
   "better_expression": "<한국어 1-2문장, 원문 구절 따옴표 인용>",
   "strengths": ["<한국어>", "..."],
-  "weaknesses": ["<한국어>", "..."]
+  "weaknesses": ["<한국어>", "..."],
+  "grammar_corrections": [{{"before": "<영어 원문 구절>", "after": "<고친 영어>", "why": "<한국어 1문장>"}}],
+  "expression_upgrades": [{{"before": "<영어 원문 구절>", "better": ["<영어 대안>"], "why": "<한국어 1문장>"}}],
+  "structure_feedback": {{"good": ["<한국어>"], "missing": ["<한국어>"], "next": "<한국어 1문장>"}},
+  "improved_sentences": [{{"sentence": "<다시 쓴 영어 문장>"}}],
+  "missions": ["<한국어>", "<한국어>"]
 }}
 
 word_count와 connector_summary는 text_metrics 값을 그대로 옮긴다 — 새로 세지 말 것.
+grammar_corrections/expression_upgrades의 before는 반드시 학생이 쓴 원문에서 인용한다.
 스키마에 없는 키를 추가하지 말 것. naturalness/pronunciation 축을 만들지 말 것."""

@@ -74,6 +74,57 @@ def _empty_scores() -> Dict[str, int]:
     return {k: 0 for k in _SCORE_KEYS}
 
 
+def _normalize_grammar_row(row: Any) -> Dict[str, str]:
+    if not isinstance(row, dict):
+        return {}
+    wrong = _coerce_str(row.get("before") or row.get("wrong") or row.get("original"))
+    right = _coerce_str(row.get("after") or row.get("right") or row.get("corrected"))
+    note = _coerce_str(row.get("why") or row.get("note") or row.get("reason"))
+    if not wrong and not right:
+        return {}
+    return {"wrong": wrong, "right": right, "note": note}
+
+
+def _normalize_expression_row(row: Any) -> Dict[str, Any]:
+    if not isinstance(row, dict):
+        return {}
+    phrase = _coerce_str(row.get("before") or row.get("phrase") or row.get("original"))
+    alts = row.get("better") or row.get("alternatives") or row.get("upgrades") or []
+    if isinstance(alts, str):
+        alts = [alts]
+    alts = [_coerce_str(a) for a in alts if _coerce_str(a)]
+    note = _coerce_str(row.get("why") or row.get("note") or row.get("reason"))
+    if not phrase and not alts:
+        return {}
+    return {"phrase": phrase, "alternatives": alts[:3], "note": note}
+
+
+def _normalize_structure_feedback(val: Any) -> Dict[str, Any]:
+    if not isinstance(val, dict):
+        return {"good": [], "missing": [], "next": ""}
+    return {
+        "good": _coerce_str_list(val.get("good"), limit=3),
+        "missing": _coerce_str_list(val.get("missing"), limit=3),
+        "next": _coerce_str(val.get("next")),
+    }
+
+
+def _normalize_improved_sentences(val: Any) -> List[Dict[str, str]]:
+    out: List[Dict[str, str]] = []
+    if not isinstance(val, list):
+        return out
+    for item in val:
+        if isinstance(item, dict):
+            sent = _coerce_str(item.get("sentence") or item.get("text"))
+            lbl = _coerce_str(item.get("question_label") or item.get("label"))
+        else:
+            sent = _coerce_str(item)
+            lbl = ""
+        if sent:
+            out.append({"question_label": lbl, "sentence": sent})
+    return out[:3]
+
+
 def _failure(*, category: str, message: str) -> Dict[str, Any]:
     return {
         "ok": False,
@@ -89,6 +140,11 @@ def _failure(*, category: str, message: str) -> Dict[str, Any]:
         "better_expression": "",
         "strengths": [],
         "weaknesses": [],
+        "grammar_corrections": [],
+        "expression_upgrades": [],
+        "structure_feedback": {"good": [], "missing": [], "next": ""},
+        "improved_sentences": [],
+        "missions": [],
         "error_category": category,
         "error_message": message,
     }
@@ -132,7 +188,7 @@ def _invoke_model(
     )
     parts = [genai_types.Part.from_text(text=prompt)]
     contents = [genai_types.Content(role="user", parts=parts)]
-    config = genai_types.GenerateContentConfig(temperature=0.2, max_output_tokens=1536)
+    config = genai_types.GenerateContentConfig(temperature=0.2, max_output_tokens=2816)
     try:
         response = client.models.generate_content(
             model=model_name,
@@ -228,6 +284,25 @@ def _normalize_success(
         "better_expression": _coerce_str(parsed.get("better_expression")),
         "strengths": _coerce_str_list(parsed.get("strengths")),
         "weaknesses": _coerce_str_list(parsed.get("weaknesses")),
+        "grammar_corrections": [
+            g
+            for g in (
+                _normalize_grammar_row(r)
+                for r in (parsed.get("grammar_corrections") or [])
+            )
+            if g
+        ][:4],
+        "expression_upgrades": [
+            e
+            for e in (
+                _normalize_expression_row(r)
+                for r in (parsed.get("expression_upgrades") or [])
+            )
+            if e
+        ][:4],
+        "structure_feedback": _normalize_structure_feedback(parsed.get("structure_feedback")),
+        "improved_sentences": _normalize_improved_sentences(parsed.get("improved_sentences")),
+        "missions": _coerce_str_list(parsed.get("missions"), limit=3),
         "error_category": "",
         "error_message": "",
     }

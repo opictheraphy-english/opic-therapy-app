@@ -9,6 +9,10 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
+from components.smart_feedback import (
+    render_alternative_expressions,
+    render_grammar_corrections,
+)
 from components.topbar import render_top_bar
 
 logger = logging.getLogger(__name__)
@@ -216,42 +220,30 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
     wc = int(report.get("word_count") or 0)
     st.markdown(
         f"""
-        <section class="continue-card continue-card--start mx-landing-card" role="region">
-          <div class="cc-eyebrow">스크립트 첨삭</div>
-          <div class="cc-title">스크립트 진단 결과</div>
-          <div class="cc-meta">예상 등급: <strong>{level}</strong> · 단어 수: <strong>{wc}</strong></div>
+        <section class="mx-mode-intro" role="region" aria-label="스크립트 진단 리포트">
+          <h2 class="mx-mode-title">스크립트 진단 리포트</h2>
+          <p class="mx-mode-subtitle">입력한 답변 스크립트를 바탕으로 AI가 정리했어요.</p>
+          <p class="tp-mini-topic">예상 등급 · {level} · 단어 수 {wc}</p>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    summary = html.escape(str(report.get("summary") or "").strip())
-    if summary:
-        st.markdown(
-            f"""
-            <section class="continue-card" role="region">
-              <div class="cc-eyebrow">요약</div>
-              <div class="cc-meta">{summary}</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
+    question = str(st.session_state.get(_KEY_QUESTION_EN) or "").strip()
+    script_text = str(st.session_state.get(_KEY_SCRIPT_TEXT) or "").strip()
+    if question or script_text:
+        st.markdown("##### 내가 작성한 스크립트")
+        if question:
+            st.markdown(f"**Q.** {html.escape(question)}")
+        if script_text:
+            st.markdown(
+                f'<p class="mx-tp-transcript">{html.escape(script_text)}</p>',
+                unsafe_allow_html=True,
+            )
 
-    conn = report.get("connector_summary")
-    if isinstance(conn, dict):
-        hits = int(conn.get("total_hits") or 0)
-        distinct = int(conn.get("distinct_count") or 0)
-        found = conn.get("found") or []
-        found_txt = ", ".join(html.escape(str(x)) for x in found if str(x).strip())
-        st.markdown(
-            f"""
-            <section class="continue-card" role="region">
-              <div class="cc-eyebrow">접속사</div>
-              <div class="cc-meta">총 {hits}회 · {distinct}종류{f" · {found_txt}" if found_txt else ""}</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
+    summary = str(report.get("summary") or "").strip()
+    st.markdown("##### 전체 총평")
+    st.markdown(html.escape(summary) if summary else "진단 결과를 아래에서 함께 확인해 주세요.")
 
     breakdown = report.get("score_breakdown")
     if isinstance(breakdown, dict) and breakdown:
@@ -264,29 +256,73 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
             st.progress(max(0, min(100, score)) / 100.0)
             st.caption(f"{label}: {score}/100")
 
-    feedback_blocks = (
-        ("접속사 피드백", "connector_feedback"),
-        ("어휘 피드백", "vocabulary_feedback"),
-        ("맥락 피드백", "context_feedback"),
-        ("문법 교정", "correction_focus"),
-        ("표현 개선", "better_expression"),
-    )
-    for title, key in feedback_blocks:
-        text = str(report.get(key) or "").strip()
-        if not text:
-            continue
+    st.markdown("##### 가장 좋았던 점")
+    strengths = report.get("strengths") or []
+    if strengths:
+        for bullet in strengths:
+            st.markdown(f"- {html.escape(str(bullet))}")
+    else:
         st.markdown(
-            f"""
-            <section class="continue-card" role="region">
-              <div class="cc-eyebrow">{html.escape(title)}</div>
-              <div class="cc-meta">{html.escape(text)}</div>
-            </section>
-            """,
+            '<p class="mx-coach-empty-note">이번 답변에서 강점을 더 끌어올릴 여지가 있어요.</p>',
             unsafe_allow_html=True,
         )
 
-    _render_bullet_list("강점", report.get("strengths") or [])
-    _render_bullet_list("보완점", report.get("weaknesses") or [])
+    st.markdown("##### 바로 고치면 좋은 문법")
+    render_grammar_corrections(
+        "",
+        hits=report.get("grammar_corrections") or [],
+        show_heading=False,
+        empty_message="이번 스크립트에서 눈에 띄는 문법 슬립은 많지 않았어요.",
+    )
+
+    st.markdown("##### 표현 업그레이드")
+    render_alternative_expressions(
+        "",
+        hits=report.get("expression_upgrades") or [],
+        show_heading=False,
+        empty_message="표현을 한 단계 올릴 만한 포인트를 찾지 못했어요.",
+    )
+
+    st.markdown("##### 답변 구조 피드백")
+    structure_fb = report.get("structure_feedback")
+    if isinstance(structure_fb, dict) and (
+        structure_fb.get("good") or structure_fb.get("missing") or structure_fb.get("next")
+    ):
+        for g in structure_fb.get("good") or []:
+            st.markdown(f"- 잘한 점: {html.escape(str(g))}")
+        for m in structure_fb.get("missing") or []:
+            st.markdown(f"- 보완: {html.escape(str(m))}")
+        nxt = str(structure_fb.get("next") or "").strip()
+        if nxt:
+            st.markdown(f"- 다음: {html.escape(nxt)}")
+    else:
+        st.markdown(
+            '<p class="mx-coach-empty-note">도입 → 뒷받침 2~3개 → 마무리 흐름을 의식해 보세요.</p>',
+            unsafe_allow_html=True,
+        )
+
+    improved = report.get("improved_sentences") or []
+    if improved:
+        st.markdown("##### 다시 말하기 추천 문장")
+        for item in improved:
+            if isinstance(item, dict):
+                sent = str(item.get("sentence") or "").strip()
+            else:
+                sent = str(item or "").strip()
+            if sent:
+                st.markdown(f"- {html.escape(sent)}")
+
+    missions = report.get("missions") or []
+    if missions:
+        st.markdown("##### 다음 연습 미션")
+        for mission in missions:
+            st.markdown(f"- {html.escape(str(mission))}")
+
+    weaknesses = report.get("weaknesses") or []
+    if weaknesses:
+        st.markdown("##### 보완점")
+        for bullet in weaknesses:
+            st.markdown(f"- {html.escape(str(bullet))}")
 
     _render_upgrade_section(report)
 
