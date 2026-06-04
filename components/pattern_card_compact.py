@@ -238,7 +238,6 @@ def render_compact_pattern_card(
         key=f"pat_row_toggle_{row_key}",
         use_container_width=True,
         help="패턴 펼치기/접기",
-        label_visibility="collapsed",
     ):
         if detail_open:
             st.session_state["open_pattern_key"] = None

@@ -90,7 +90,6 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
         key=f"pat_sec_toggle_{wid}",
         use_container_width=True,
         help="섹션 펼치기/접기",
-        label_visibility="collapsed",
     ):
         st.session_state[open_key] = not is_open
         st.rerun()

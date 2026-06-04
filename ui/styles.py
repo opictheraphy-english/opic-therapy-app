@@ -2048,6 +2048,8 @@ GLOBAL_CSS = """
       border: none !important;
       background: transparent !important;
       color: transparent !important;
+      font-size: 0 !important;
+      line-height: 0 !important;
       box-shadow: none !important;
       cursor: pointer !important;
     }
