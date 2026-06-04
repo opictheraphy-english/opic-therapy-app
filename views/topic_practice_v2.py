@@ -1761,10 +1761,6 @@ def _render_roleplay_practice_card(ent: Dict[str, Any], *, key_prefix: str) -> N
     topic_id = str(ent.get("topic_id") or "").strip()
     visual = _topic_visual_for_id(topic_id)
     title_en = str(visual.get("title_en") or "").strip()
-    if title_en:
-        title_en = f"{title_en} · Q6–Q8"
-    else:
-        title_en = "Roleplay · Q6–Q8"
     _render_tp_card_html(
         title_ko=title_ko,
         title_en=title_en,
