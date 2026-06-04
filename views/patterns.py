@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
-from components.pattern_card_compact import render_compact_pattern_card
+from components.pattern_card_compact import pat_chevron_markup, render_compact_pattern_card
 from config.pattern_ui_mapping import TAB_DEFINITIONS, build_pattern_tabs_model
 from utils.local_profile import touch_pattern_visit
 from utils.session_state import ensure_pattern, sync_settings_to_legacy
@@ -75,27 +75,25 @@ def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[s
         st.session_state[open_key] = False
     is_open = bool(st.session_state[open_key])
     open_cls = " pat-sec-head--open" if is_open else ""
-    chevron = "▼" if is_open else "▶"
 
-    head_col, btn_col = st.columns([8, 1], gap="small")
-    with head_col:
-        st.markdown(
-            f'<div class="pat-sec-head pat-sec-head--inline{open_cls}">'
-            f'<span class="pat-sec-title">{title_h}</span>'
-            f'<span class="pat-sec-count">{len(patterns)}</span>'
-            f'<span class="pat-sec-chevron" aria-hidden="true">{chevron}</span>'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    with btn_col:
-        if st.button(
-            chevron,
-            key=f"pat_sec_toggle_{wid}",
-            use_container_width=True,
-            help="섹션 펼치기/접기",
-        ):
-            st.session_state[open_key] = not is_open
-            st.rerun()
+    st.markdown(
+        f'<div class="pat-sec-stack">'
+        f'<div class="pat-sec-head pat-sec-head--inline{open_cls}">'
+        f'<span class="pat-sec-title">{title_h}</span>'
+        f'<span class="pat-sec-count">{len(patterns)}</span>'
+        f"{pat_chevron_markup()}"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+    if st.button(
+        " ",
+        key=f"pat_sec_toggle_{wid}",
+        use_container_width=True,
+        help="섹션 펼치기/접기",
+        label_visibility="collapsed",
+    ):
+        st.session_state[open_key] = not is_open
+        st.rerun()
 
     if not is_open:
         return

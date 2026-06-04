@@ -137,6 +137,17 @@ def _try_play_example_audio(filename: str) -> None:
 
 _EXAMPLE_LABELS = ("짧은 예문", "실전 OPIc", "IH 업그레이드")
 
+_PAT_CHEVRON_SVG = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    '<polyline points="9 6 15 12 9 18"></polyline></svg>'
+)
+
+
+def pat_chevron_markup() -> str:
+    """Small right chevron (one per row/section — no duplicate Streamlit arrow)."""
+    return f'<span class="pat-chevron" aria-hidden="true">{_PAT_CHEVRON_SVG}</span>'
+
 
 def _pat_row_html(*, tpl_h: str, meaning_h: str, open: bool) -> str:
     open_cls = " pat-row--open" if open else ""
@@ -146,11 +157,7 @@ def _pat_row_html(*, tpl_h: str, meaning_h: str, open: bool) -> str:
         f'<div class="pat-en">{tpl_h}</div>'
         f'<div class="pat-ko">{meaning_h}</div>'
         "</div>"
-        '<span class="pat-row-chevron" aria-hidden="true">'
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-        'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
-        '<polyline points="9 6 15 12 9 18"></polyline></svg>'
-        "</span>"
+        f"{pat_chevron_markup()}"
         "</div>"
     )
 
@@ -231,6 +238,7 @@ def render_compact_pattern_card(
         key=f"pat_row_toggle_{row_key}",
         use_container_width=True,
         help="패턴 펼치기/접기",
+        label_visibility="collapsed",
     ):
         if detail_open:
             st.session_state["open_pattern_key"] = None

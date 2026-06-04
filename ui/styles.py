@@ -1976,24 +1976,80 @@ GLOBAL_CSS = """
       border-radius: 0 0 var(--radius-md) var(--radius-md);
       box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
-    .pat-screen .pat-sec-head--inline .pat-sec-chevron {
-      font-size: 0.72rem;
+    .pat-screen .pat-sec-head--inline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pat-screen .pat-sec-head--inline .pat-sec-title {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    /* Shared small chevron (section + pattern row) — one icon only. */
+    .pat-screen .pat-chevron {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
       color: #0f766e;
-      margin-left: 4px;
+      background: rgba(13, 148, 136, 0.12);
+      transition: transform 0.16s var(--ease-out);
     }
-    .pat-screen .pat-sec-head--inline.pat-sec-head--open .pat-sec-chevron {
-      color: var(--mint);
+    .pat-screen .pat-chevron svg {
+      width: 16px;
+      height: 16px;
     }
-    .pat-screen div[data-testid="stColumn"]:has(.pat-sec-head--inline)
-      + div[data-testid="stColumn"]
-      div[data-testid="stButton"] > button {
-      min-height: 2.5rem !important;
+    .pat-screen .pat-sec-head--open .pat-chevron,
+    .pat-screen .pat-row--open .pat-chevron {
+      transform: rotate(90deg);
+    }
+
+    /* Section header: tappable stack (invisible button — no second arrow). */
+    .pat-screen .pat-sec-stack {
+      display: block;
+      margin-bottom: 8px;
+    }
+    .pat-screen div[data-testid="stVerticalBlock"]:has(.pat-sec-stack) {
+      position: relative !important;
+    }
+    .pat-screen div[data-testid="stVerticalBlock"]:has(.pat-sec-stack)
+      > div[data-testid="stElementContainer"]:has(.pat-sec-stack),
+    .pat-screen div[data-testid="stVerticalBlock"]:has(.pat-sec-stack)
+      .pat-sec-head,
+    .pat-screen div[data-testid="stVerticalBlock"]:has(.pat-sec-stack)
+      .pat-sec-head * {
+      pointer-events: none !important;
+    }
+    .pat-screen div[data-testid="stVerticalBlock"]:has(.pat-sec-stack)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"]) {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      height: 48px !important;
+      z-index: 3 !important;
+      margin: 0 !important;
       padding: 0 !important;
-      font-size: 0.75rem !important;
-      color: #0f766e !important;
-      background: rgba(240, 253, 250, 0.95) !important;
-      border: 1px solid rgba(13, 148, 136, 0.2) !important;
-      border-radius: 10px !important;
+      pointer-events: auto !important;
+    }
+    .pat-screen div[data-testid="stVerticalBlock"]:has(.pat-sec-stack)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"])
+      > div[data-testid="stButton"]
+      > button {
+      width: 100% !important;
+      height: 48px !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      color: transparent !important;
+      box-shadow: none !important;
+      cursor: pointer !important;
     }
 
     /* --- Pattern row (tappable list item, topic-practice card tone) --- */
@@ -2031,25 +2087,6 @@ GLOBAL_CSS = """
     .pat-screen .pat-row-body {
       flex: 1 1 auto;
       min-width: 0;
-    }
-    .pat-screen .pat-row-chevron {
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      color: #0f766e;
-      background: rgba(13, 148, 136, 0.12);
-      transition: transform 0.16s var(--ease-out);
-    }
-    .pat-screen .pat-row--open .pat-row-chevron {
-      transform: rotate(90deg);
-    }
-    .pat-screen .pat-row-chevron svg {
-      width: 18px;
-      height: 18px;
     }
     .pat-screen .pat-detail-panel {
       margin: 0 0 10px 0;
@@ -2147,7 +2184,10 @@ GLOBAL_CSS = """
       top: 0 !important;
       left: 0 !important;
       right: 0 !important;
-      height: 72px !important;
+      height: 64px !important;
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
       z-index: 3 !important;
       margin: 0 !important;
       padding: 0 !important;
