@@ -1976,16 +1976,204 @@ GLOBAL_CSS = """
       border-radius: 0 0 var(--radius-md) var(--radius-md);
       box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     }
-    .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] {
-      margin: -2px 0 10px 0 !important;
+    .pat-screen .pat-sec-head--inline .pat-sec-chevron {
+      font-size: 0.72rem;
+      color: #0f766e;
+      margin-left: 4px;
     }
-    .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] > button {
-      min-height: 2.4rem !important;
-      font-size: 0.82rem !important;
-      border-radius: 12px !important;
+    .pat-screen .pat-sec-head--inline.pat-sec-head--open .pat-sec-chevron {
+      color: var(--mint);
+    }
+    .pat-screen div[data-testid="stColumn"]:has(.pat-sec-head--inline)
+      + div[data-testid="stColumn"]
+      div[data-testid="stButton"] > button {
+      min-height: 2.5rem !important;
+      padding: 0 !important;
+      font-size: 0.75rem !important;
       color: #0f766e !important;
-      background: rgba(240, 253, 250, 0.9) !important;
-      border: 1px solid rgba(13, 148, 136, 0.22) !important;
+      background: rgba(240, 253, 250, 0.95) !important;
+      border: 1px solid rgba(13, 148, 136, 0.2) !important;
+      border-radius: 10px !important;
+    }
+
+    /* --- Pattern row (tappable list item, topic-practice card tone) --- */
+    .pat-screen .pat-row-stack {
+      display: block;
+    }
+    .pat-screen .pat-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px 12px 18px;
+      margin: 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: box-shadow 0.18s var(--ease-out), border-color 0.18s var(--ease-out);
+      position: relative;
+    }
+    .pat-screen .pat-row::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 3px;
+      border-radius: 3px;
+      background: linear-gradient(180deg, var(--mint) 0%, rgba(13, 148, 136, 0.4) 100%);
+    }
+    .pat-screen .pat-row--open {
+      border-color: rgba(13, 148, 136, 0.28);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .pat-screen .pat-row-body {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .pat-screen .pat-row-chevron {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: #0f766e;
+      background: rgba(13, 148, 136, 0.12);
+      transition: transform 0.16s var(--ease-out);
+    }
+    .pat-screen .pat-row--open .pat-row-chevron {
+      transform: rotate(90deg);
+    }
+    .pat-screen .pat-row-chevron svg {
+      width: 18px;
+      height: 18px;
+    }
+    .pat-screen .pat-detail-panel {
+      margin: 0 0 10px 0;
+      padding: 12px 14px 14px 14px;
+      background: rgba(255, 255, 255, 0.98);
+      border: 1px solid rgba(13, 148, 136, 0.22);
+      border-top: none;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+    .pat-screen .pat-detail-usage {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin: 0 0 10px 0;
+    }
+    .pat-screen .pat-detail-block {
+      margin: 0 0 10px 0;
+      padding: 12px 14px;
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      border-radius: var(--radius-sm);
+    }
+    .pat-screen .pat-detail-block-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--mint);
+      margin: 0 0 8px 0;
+    }
+    .pat-screen .pat-ex-line {
+      padding: 8px 0;
+      border-top: 1px solid rgba(15, 23, 42, 0.05);
+    }
+    .pat-screen .pat-ex-line:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+    .pat-screen .pat-ex-line-label {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #0f766e;
+      margin-bottom: 4px;
+    }
+    .pat-screen .pat-ex-line-en {
+      font-size: 0.86rem;
+      line-height: 1.55;
+      color: var(--navy);
+      margin: 0;
+    }
+    .pat-screen .pat-ex-line-ko {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin: 4px 0 0 0;
+    }
+    .pat-screen .pat-detail-tip {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0 0 10px 0;
+      padding: 8px 10px;
+      background: rgba(254, 243, 199, 0.35);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(245, 158, 11, 0.15);
+    }
+    .pat-screen .pat-detail-tip-label {
+      font-weight: 700;
+      color: #92400e;
+      margin-right: 4px;
+    }
+    /* Transparent overlay toggle on each pattern row (pat-list-marker scope). */
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack) {
+      position: relative !important;
+      margin-bottom: 6px !important;
+    }
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack)
+      > div[data-testid="stElementContainer"]:has(.pat-row-stack),
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack)
+      .pat-row,
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack)
+      .pat-row * {
+      pointer-events: none !important;
+    }
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"]) {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      height: 72px !important;
+      z-index: 3 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"])
+      > div[data-testid="stButton"]
+      > button {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      color: transparent !important;
+      box-shadow: none !important;
+      cursor: pointer !important;
+    }
+    .pat-screen:has(.pat-list-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-row-stack):has(
+        div[data-testid="stButton"] > button:hover
+      )
+      .pat-row {
+      border-color: rgba(13, 148, 136, 0.35) !important;
+      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.12) !important;
     }
     /* Shared collapsible sections (mock survey / report / patterns) */
     .mx-survey-head,

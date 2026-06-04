@@ -1,17 +1,15 @@
-"""Patterns — premium mobile drill screen (step 3 shell + step 5 detail flow).
+"""Patterns — mobile drill screen (phase-1 UI: compact hero, tappable rows, merged detail).
 
-Tab / accordion layout unchanged. Each pattern is a guided stack (hero →
-examples → IH → tip → practice); visuals live in ``ui/styles.py`` under
-``.pat-screen``.
+Tab → section (inline header toggle) → pattern row (card tap) → merged 예문 block.
 """
 
 from __future__ import annotations
 
+import html as html_mod
 from typing import Any, Dict, List
 
 import streamlit as st
 
-from components.collapsible_section import render_collapsible_section
 from components.pattern_card_compact import render_compact_pattern_card
 from config.pattern_ui_mapping import TAB_DEFINITIONS, build_pattern_tabs_model
 from utils.local_profile import touch_pattern_visit
@@ -30,8 +28,7 @@ def _render_hero() -> None:
         '<div class="pat-hero">'
         '<p class="pat-eyebrow">Patterns</p>'
         '<p class="pat-title">패턴 드릴</p>'
-        "<p class=\"pat-sub\">탭으로 유형을 고르고, 섹션을 펼치면 <b>히어로 → 예문 → IH → 팁 → 직접 말하기</b> 순서로 "
-        "안내됩니다. 예문이 많은 패턴은 맨 아래 <b>나머지 예문 더보기</b>로 추가 문장을 볼 수 있어요.</p>"
+        '<p class="pat-sub">탭에서 유형을 고르고, 패턴 카드를 눌러 예문과 연습을 확인하세요.</p>'
         "</div>",
         unsafe_allow_html=True,
     )
@@ -66,27 +63,52 @@ def _render_pattern_tab_bar(tabs_model: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _render_section(tab_id: str, sec_uid: str, title: str, patterns: List[Dict[str, Any]]) -> None:
-    """Section accordion — no ``st.expander`` (Korean labels leak as key…_arrow_*)."""
+    """Section with title + count + toggle on one row (no separate full-width button)."""
     if not patterns:
         return
 
-    def _body() -> None:
-        for i, pat in enumerate(patterns):
-            ex_kw: Dict[str, Any] = {}
-            if tab_id in ("experience", "comparison"):
-                ex_kw["additional_example_count"] = 2
-            render_compact_pattern_card(
-                pat, tab_id=tab_id, sec_uid=sec_uid, idx=i, **ex_kw
-            )
+    safe_title = clean_visible_label((title or "").strip(), "섹션")
+    title_h = html_mod.escape(safe_title)
+    wid = ascii_widget_key("patsec", tab_id, sec_uid)
+    open_key = f"pat_sec_open_{wid}"
+    if open_key not in st.session_state:
+        st.session_state[open_key] = False
+    is_open = bool(st.session_state[open_key])
+    open_cls = " pat-sec-head--open" if is_open else ""
+    chevron = "▼" if is_open else "▶"
 
-    st.markdown('<div class="pat-sec-toggle-wrap">', unsafe_allow_html=True)
-    render_collapsible_section(
-        title or "섹션",
-        sec_uid,
-        _body,
-        count=len(patterns),
-        css_scope="pat-sec",
-    )
+    head_col, btn_col = st.columns([8, 1], gap="small")
+    with head_col:
+        st.markdown(
+            f'<div class="pat-sec-head pat-sec-head--inline{open_cls}">'
+            f'<span class="pat-sec-title">{title_h}</span>'
+            f'<span class="pat-sec-count">{len(patterns)}</span>'
+            f'<span class="pat-sec-chevron" aria-hidden="true">{chevron}</span>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    with btn_col:
+        if st.button(
+            chevron,
+            key=f"pat_sec_toggle_{wid}",
+            use_container_width=True,
+            help="섹션 펼치기/접기",
+        ):
+            st.session_state[open_key] = not is_open
+            st.rerun()
+
+    if not is_open:
+        return
+
+    st.markdown('<div class="pat-sec-body">', unsafe_allow_html=True)
+    st.markdown('<div class="pat-list-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    for i, pat in enumerate(patterns):
+        ex_kw: Dict[str, Any] = {}
+        if tab_id in ("experience", "comparison"):
+            ex_kw["additional_example_count"] = 2
+        render_compact_pattern_card(
+            pat, tab_id=tab_id, sec_uid=sec_uid, idx=i, **ex_kw
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
