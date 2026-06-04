@@ -1,7 +1,7 @@
-"""Pattern drill cards — phase-1 compact UI.
+"""Pattern detail — guided speaking-learning stack (UI redesign step 5).
 
-Collapsed: single tappable row (``.pat-row``). Expanded: merged 예문 block, inline tip,
-optional practice note (collapsed by default). No duplicate hero or Step 1–5 card stack.
+Layered cards: hero → short example → real OPIc → IH upgrade → tip → practice.
+Optional example audio from ``assets/pattern_audio`` when files exist.
 """
 
 from __future__ import annotations
@@ -135,67 +135,27 @@ def _try_play_example_audio(filename: str) -> None:
         return
 
 
-_EXAMPLE_LABELS = ("짧은 예문", "실전 OPIc", "IH 업그레이드")
-
-_PAT_CHEVRON_SVG = (
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-    'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
-    '<polyline points="9 6 15 12 9 18"></polyline></svg>'
-)
-
-
-def pat_chevron_markup() -> str:
-    """Small right chevron (one per row/section — no duplicate Streamlit arrow)."""
-    return f'<span class="pat-chevron" aria-hidden="true">{_PAT_CHEVRON_SVG}</span>'
-
-
-def _pat_row_html(*, tpl_h: str, meaning_h: str, open: bool) -> str:
-    open_cls = " pat-row--open" if open else ""
-    return (
-        f'<div class="pat-row{open_cls}" aria-expanded="{"true" if open else "false"}">'
-        f'<div class="pat-row-body">'
-        f'<div class="pat-en">{tpl_h}</div>'
-        f'<div class="pat-ko">{meaning_h}</div>'
-        "</div>"
-        f"{pat_chevron_markup()}"
-        "</div>"
-    )
-
-
-def _render_merged_examples(ex_rows: List[Dict[str, Any]], tpl_h: str) -> None:
-    """Steps 1–3 in one card."""
-    lines: List[str] = []
-    for i, label in enumerate(_EXAMPLE_LABELS):
-        if i < len(ex_rows):
-            row = ex_rows[i]
-            en = html.escape(row["en"])
-            ko = html.escape(row["ko"]) if row.get("ko") else ""
-            ko_block = f'<p class="pat-ex-line-ko">{ko}</p>' if ko else ""
-            lines.append(
-                f'<div class="pat-ex-line">'
-                f'<span class="pat-ex-line-label">{html.escape(label)}</span>'
-                f'<p class="pat-ex-line-en">{en}</p>{ko_block}'
-                f"</div>"
-            )
-        elif i == 2:
-            lines.append(
-                f'<div class="pat-ex-line pat-ex-line--hint">'
-                f'<span class="pat-ex-line-label">{html.escape(label)}</span>'
-                f'<p class="pat-ex-line-en">{tpl_h}</p>'
-                f'<p class="pat-learn-ih-hint">{_IH_CONNECTOR_HINT}</p>'
-                f"</div>"
-            )
-    if not lines:
-        return
+def _learn_card(
+    *,
+    kind: str,
+    eyebrow: str,
+    title: str,
+    body_html: str,
+    extra_class: str = "",
+) -> None:
+    cls = f"pat-learn-card pat-learn-card--{kind}"
+    if extra_class:
+        cls += f" {extra_class}"
+    eb = html.escape(eyebrow)
+    tt = html.escape(title)
     st.markdown(
-        '<section class="pat-detail-block" aria-label="예문">'
-        '<p class="pat-detail-block-title">예문</p>'
-        f'{"".join(lines)}'
+        f'<section class="{cls}">'
+        f'<p class="pat-learn-eyebrow">{eb}</p>'
+        f'<h3 class="pat-learn-title">{tt}</h3>'
+        f'<div class="pat-learn-body">{body_html}</div>'
         "</section>",
         unsafe_allow_html=True,
     )
-    for i, row in enumerate(ex_rows[:3]):
-        _try_play_example_audio(row.get("audio_file") or "")
 
 
 def render_compact_pattern_card(
@@ -208,7 +168,7 @@ def render_compact_pattern_card(
     collapse_label: str = "접기",
     additional_example_count: int | None = None,
 ) -> None:
-    """Tappable row; expanded body is one 예문 block + tip + optional practice."""
+    """Guided stack: hero → examples → IH → tip → lightweight practice."""
     add_n = (
         additional_example_count
         if additional_example_count is not None
@@ -217,7 +177,6 @@ def render_compact_pattern_card(
     pid = (pat.get("pattern_id") or "").strip() or f"p{idx}"
     row_key = ascii_widget_key("pat", tab_id, sec_uid, pid, idx)
     expand_key = f"pat_ex_expand_{row_key}"
-    practice_key = f"pat_practice_open_{row_key}"
 
     tpl = _pattern_line(pat)
     meaning = _meaning_line(pat)
@@ -225,68 +184,144 @@ def render_compact_pattern_card(
     meaning_h = html.escape(meaning)
     usage_inner = _usage_blurb(pat, tab_id)
 
+    # Only one expanded pattern detail per page (controller in session state).
     st.session_state.setdefault("open_pattern_key", None)
     this_open_key = row_key
     detail_open = st.session_state.get("open_pattern_key") == this_open_key
 
-    st.markdown(
-        f'<div class="pat-row-stack">{_pat_row_html(tpl_h=tpl_h, meaning_h=meaning_h, open=detail_open)}</div>',
-        unsafe_allow_html=True,
-    )
-    if st.button(
-        " ",
-        key=f"pat_row_toggle_{row_key}",
-        use_container_width=True,
-        help="패턴 펼치기/접기",
-    ):
-        if detail_open:
-            st.session_state["open_pattern_key"] = None
-            st.session_state.pop(expand_key, None)
-            st.session_state.pop(practice_key, None)
-        else:
-            st.session_state["open_pattern_key"] = this_open_key
-        st.rerun()
+    # Collapsed header (short): stays in-place and prevents scroll hell.
+    col_left, col_btn = st.columns([8, 2], gap="small")
+    with col_left:
+        st.markdown(
+            f"""
+            <div class="pat-card" style="margin: 0 0 8px 0;">
+              <div class="pat-en">{tpl_h}</div>
+              <div class="pat-ko">{meaning_h}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_btn:
+        btn_label = "접기 ▲" if detail_open else "열기"
+        if st.button(
+            btn_label,
+            key=f"pat_detail_toggle_{row_key}",
+            type="secondary",
+            use_container_width=True,
+        ):
+            if detail_open:
+                st.session_state["open_pattern_key"] = None
+                st.session_state.pop(expand_key, None)
+            else:
+                st.session_state["open_pattern_key"] = this_open_key
+            st.rerun()
 
     if not detail_open:
         return
 
+    # --- 1) Hero ---------------------------------------------------------
     st.markdown(
-        f'<div class="pat-detail-panel" aria-label="패턴 상세">'
-        f'<p class="pat-detail-usage">{usage_inner}</p>',
+        f"""
+        <article class="pat-detail-hero" aria-label="패턴 히어로">
+          <p class="pat-detail-eyebrow">패턴</p>
+          <p class="pat-detail-pattern">{tpl_h}</p>
+          <p class="pat-detail-meaning">{meaning_h}</p>
+          <p class="pat-detail-usage">{usage_inner}</p>
+        </article>
+        """,
         unsafe_allow_html=True,
     )
 
     ex_rows = _examples_dicts(pat)
     first_ko = (ex_rows[0].get("ko") or "") if ex_rows else ""
-    _render_merged_examples(ex_rows, tpl_h)
 
-    tip_html = _speaking_tip_body(pat, first_ko)
-    st.markdown(
-        f'<p class="pat-detail-tip"><span class="pat-detail-tip-label">스피킹 팁</span> {tip_html}</p>',
-        unsafe_allow_html=True,
-    )
+    # --- 2) Short example -------------------------------------------------
+    if ex_rows:
+        short = ex_rows[0]
+        en0 = html.escape(short["en"])
+        ko0 = html.escape(short["ko"]) if short.get("ko") else ""
+        ko_block = f'<p class="pat-learn-ko">{ko0}</p>' if ko0 else ""
+        _learn_card(
+            kind="short",
+            eyebrow="Step 1",
+            title="짧은 예문 · 바로 이해",
+            body_html=f'<p class="pat-learn-en">{en0}</p>{ko_block}',
+        )
+        _try_play_example_audio(short.get("audio_file") or "")
 
-    practice_seed = ex_rows[0]["en"] if ex_rows else tpl
-    prompt = f"위 패턴으로 한 문장을 직접 말해 보세요. 예: {practice_seed}"
-    if not st.session_state.get(practice_key):
-        if st.button(
-            "연습 노트 열기",
-            key=f"pat_practice_open_{row_key}",
-            type="secondary",
-            use_container_width=True,
-        ):
-            st.session_state[practice_key] = True
-            st.rerun()
+    # --- 3) Real OPIc example --------------------------------------------
+    if len(ex_rows) >= 2:
+        real = ex_rows[1]
+        en1 = html.escape(real["en"])
+        ko1 = html.escape(real["ko"]) if real.get("ko") else ""
+        ko_block = f'<p class="pat-learn-ko">{ko1}</p>' if ko1 else ""
+        _learn_card(
+            kind="opic",
+            eyebrow="Step 2",
+            title="실전 OPIc 예문",
+            body_html=f'<p class="pat-learn-en pat-learn-en--long">{en1}</p>{ko_block}',
+        )
+        _try_play_example_audio(real.get("audio_file") or "")
+
+    # --- 4) IH upgrade ----------------------------------------------------
+    if len(ex_rows) >= 3:
+        ih = ex_rows[2]
+        en2 = html.escape(ih["en"])
+        ko2 = html.escape(ih["ko"]) if ih.get("ko") else ""
+        ko_block = f'<p class="pat-learn-ko">{ko2}</p>' if ko2 else ""
+        _learn_card(
+            kind="ih",
+            eyebrow="Step 3",
+            title="IH 업그레이드 예시",
+            body_html=f'<p class="pat-learn-en pat-learn-en--long">{en2}</p>{ko_block}',
+        )
+        _try_play_example_audio(ih.get("audio_file") or "")
     else:
-        st.text_area(
-            "연습 노트",
-            value="",
-            height=72,
-            key=f"pat_practice_{row_key}",
-            placeholder=prompt[:220],
-            label_visibility="collapsed",
+        body = (
+            f'<p class="pat-learn-en">{tpl_h}</p>'
+            f'<p class="pat-learn-ih-hint">{_IH_CONNECTOR_HINT}</p>'
+        )
+        _learn_card(
+            kind="ih",
+            eyebrow="Step 3",
+            title="IH 업그레이드 · 연결어",
+            body_html=body,
         )
 
+    # --- 5) Speaking tip --------------------------------------------------
+    tip_html = _speaking_tip_body(pat, first_ko)
+    _learn_card(
+        kind="tip",
+        eyebrow="Step 4",
+        title="스피킹 팁",
+        body_html=f'<p class="pat-learn-tip">{tip_html}</p>',
+    )
+
+    # --- 6) Try speaking (lightweight) ------------------------------------
+    practice_seed = ex_rows[0]["en"] if ex_rows else tpl
+    prompt = (
+        f"위 패턴으로 한 문장을 직접 말해 보세요. "
+        f"아래에 적어도 되고, 소리 내어 연습해도 좋아요.\n"
+        f"예: {practice_seed}"
+    )
+    st.markdown(
+        '<section class="pat-practice-shell" aria-label="직접 말해보기">'
+        '<p class="pat-practice-eyebrow">Step 5</p>'
+        '<h3 class="pat-practice-title">직접 말해보기</h3>'
+        "</section>",
+        unsafe_allow_html=True,
+    )
+    st.caption("마이크 녹음은 아직 가볍게만 — 문장을 적거나 소리 내어 따라 해 보세요.")
+    st.text_area(
+        "연습 노트",
+        value="",
+        height=88,
+        key=f"pat_practice_{row_key}",
+        placeholder=prompt[:220],
+        label_visibility="collapsed",
+    )
+
+    # --- Extra examples (beyond first 3) ---------------------------------
     show_tail = len(ex_rows) > STACK_HEAD + 1
     if show_tail:
         tail = ex_rows[STACK_HEAD + 1 :]
@@ -309,4 +344,13 @@ def render_compact_pattern_card(
                 )
                 _try_play_example_audio(row.get("audio_file") or "")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Bottom 접기 (also collapses the long detail stack).
+    if st.button(
+        "접기",
+        key=f"pat_detail_close_bottom_{row_key}",
+        type="secondary",
+        use_container_width=True,
+    ):
+        st.session_state["open_pattern_key"] = None
+        st.session_state.pop(expand_key, None)
+        st.rerun()
