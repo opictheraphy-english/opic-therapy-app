@@ -1848,7 +1848,6 @@ def _render_select_topic() -> None:
 
     st.divider()
     st.markdown("#### 롤플레이 연습")
-    st.caption("OPIc Q6–Q8 세트 · 질문·문제·경험 3문항 (주제별 연습과 동일한 화면)")
     if not st.session_state.get(_KEY_ROLEPLAY_EXPAND):
         if st.button(
             "롤플레이 세트 보기",
