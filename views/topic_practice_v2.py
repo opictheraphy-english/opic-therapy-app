@@ -732,6 +732,27 @@ def _roleplay_set_title() -> str:
     return ""
 
 
+def _practice_chip_title(topic_id: str) -> str:
+    """Header chip label — roleplay shows the set name, topic shows catalog title."""
+    if _is_roleplay_mode():
+        return _roleplay_set_title() or _topic_display_title(topic_id)
+    return _topic_display_title(topic_id)
+
+
+def _practice_eyebrow(suffix: str) -> str:
+    tid = str(st.session_state.get(_KEY_TOPIC) or "").strip()
+    name = _practice_chip_title(tid)
+    return f"{name} · {suffix}" if name else suffix
+
+
+def _back_to_select_label() -> str:
+    return "롤플레이·주제 선택" if _is_roleplay_mode() else "주제 선택으로 돌아가기"
+
+
+def _other_practice_label() -> str:
+    return "다른 롤플레이 선택" if _is_roleplay_mode() else "다른 주제 선택"
+
+
 def _practice_screen_title() -> str:
     if _is_roleplay_mode():
         rp_title = _roleplay_set_title()
@@ -1659,14 +1680,14 @@ def _render_topic_v2_empty_state() -> None:
     st.info("해당 주제를 찾을 수 없어요.\n다른 검색어를 입력해 주세요.")
 
 
-def _render_topic_practice_card(row: Dict[str, Any], *, key_prefix: str) -> None:
-    topic_id = str(row.get("topic_id") or "").strip()
-    if not topic_id:
-        return
-    title_ko = str(row.get("title_ko") or topic_id).strip()
-    title_en = str(row.get("title_en") or "").strip()
-    icon = str(row.get("icon") or "circle").strip()
-    accent = str(row.get("accent") or "teal").strip()
+def _render_tp_card_html(
+    *,
+    title_ko: str,
+    title_en: str,
+    icon: str,
+    accent: str,
+) -> None:
+    """Shared topic-practice card surface (``.tp-card``) for topic + roleplay grids."""
     svg = TOPIC_ICONS.get(icon, TOPIC_ICONS["circle"])
     sub_html = (
         f'<span class="tp-card-sub">{html.escape(title_en)}</span>'
@@ -1688,6 +1709,22 @@ def _render_topic_practice_card(row: Dict[str, Any], *, key_prefix: str) -> None
         "</span>"
         "</div>",
         unsafe_allow_html=True,
+    )
+
+
+def _render_topic_practice_card(row: Dict[str, Any], *, key_prefix: str) -> None:
+    topic_id = str(row.get("topic_id") or "").strip()
+    if not topic_id:
+        return
+    title_ko = str(row.get("title_ko") or topic_id).strip()
+    title_en = str(row.get("title_en") or "").strip()
+    icon = str(row.get("icon") or "circle").strip()
+    accent = str(row.get("accent") or "teal").strip()
+    _render_tp_card_html(
+        title_ko=title_ko,
+        title_en=title_en,
+        icon=icon,
+        accent=accent,
     )
     if st.button(
         f"{title_ko} 연습 시작",
@@ -1716,24 +1753,31 @@ def _render_topic_card_grid(
                 _render_topic_practice_card(row, key_prefix=key_prefix)
 
 
-def _render_roleplay_practice_card(ent: Dict[str, Any]) -> None:
+def _render_roleplay_practice_card(ent: Dict[str, Any], *, key_prefix: str) -> None:
     set_id = str(ent.get("set_id") or "").strip()
     if not set_id:
         return
     title_ko = str(ent.get("title_ko") or set_id).strip()
     topic_id = str(ent.get("topic_id") or "").strip()
-    topic_label = get_topic_title(topic_id) if topic_id else ""
-    with st.container(border=True):
-        st.markdown(f"**{title_ko}**")
-        if topic_label and topic_label not in title_ko:
-            st.caption(topic_label)
-        if st.button(
-            "연습 시작",
-            use_container_width=True,
-            key=f"topic_v2_roleplay_card_{set_id}",
-        ):
-            _start_roleplay_practice(set_id)
-            st.rerun()
+    visual = _topic_visual_for_id(topic_id)
+    title_en = str(visual.get("title_en") or "").strip()
+    if title_en:
+        title_en = f"{title_en} · Q6–Q8"
+    else:
+        title_en = "Roleplay · Q6–Q8"
+    _render_tp_card_html(
+        title_ko=title_ko,
+        title_en=title_en,
+        icon=str(visual.get("icon") or "circle"),
+        accent=str(visual.get("accent") or "teal"),
+    )
+    if st.button(
+        f"{title_ko} 연습 시작",
+        use_container_width=True,
+        key=f"{key_prefix}_{set_id}",
+    ):
+        _start_roleplay_practice(set_id)
+        st.rerun()
 
 
 def _render_roleplay_card_grid() -> None:
@@ -1741,12 +1785,16 @@ def _render_roleplay_card_grid() -> None:
     if not sets:
         _render_topic_v2_empty_state()
         return
+    st.markdown(
+        '<div class="tp-cards-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
     for i in range(0, len(sets), 2):
         col_left, col_right = st.columns(2)
         pair = sets[i : i + 2]
         for col, ent in zip((col_left, col_right), pair):
             with col:
-                _render_roleplay_practice_card(ent)
+                _render_roleplay_practice_card(ent, key_prefix="topic_v2_roleplay")
 
 
 def _render_insufficient_questions() -> None:
@@ -1800,6 +1848,7 @@ def _render_select_topic() -> None:
 
     st.divider()
     st.markdown("#### 롤플레이 연습")
+    st.caption("OPIc Q6–Q8 세트 · 질문·문제·경험 3문항 (주제별 연습과 동일한 화면)")
     if not st.session_state.get(_KEY_ROLEPLAY_EXPAND):
         if st.button(
             "롤플레이 세트 보기",
@@ -1827,6 +1876,7 @@ def build_topic_practice_header_html(
     *,
     total_questions: int = 3,
     include_screen_marker: bool = False,
+    chip_title: Optional[str] = None,
 ) -> str:
     """Topic chip + Q progress row (``.tq-header``) — question and saved screens."""
     from components.exam_question_screen import build_progress_segments_html
@@ -1835,7 +1885,7 @@ def build_topic_practice_header_html(
     accent = html.escape(visual["accent"])
     icon_name = visual["icon"]
     svg = TOPIC_ICONS.get(icon_name, TOPIC_ICONS["circle"])
-    title_ko = html.escape(visual["title_ko"])
+    title_ko = html.escape((chip_title or visual["title_ko"]).strip() or visual["title_ko"])
     total = max(int(total_questions), 1)
     current = min(int(q_idx) + 1, total)
     progress_html = build_progress_segments_html(current, total)
@@ -1876,6 +1926,7 @@ def _render_topic_question_shell_html(
         q_idx,
         total_questions=total_questions,
         include_screen_marker=True,
+        chip_title=_practice_chip_title(topic_id),
     )
     return (
         header
@@ -2024,13 +2075,11 @@ def _render_question() -> None:
         st.rerun()
         return
 
-    eyebrow_tail = "롤플레이" if _is_roleplay_mode() else _topic_display_title(topic_id)
-
     render_top_bar(
         "주제별 연습",
         on_back=_goto_topic_select,
         back_key="topic_v2_question",
-        eyebrow=f"{eyebrow_tail} · 질문",
+        eyebrow=_practice_eyebrow("질문"),
     )
     st.markdown(
         _render_topic_question_shell_html(
@@ -2109,19 +2158,18 @@ def _render_question() -> None:
 
 
 def _render_saved_normal(topic: str, q_idx: int) -> None:
-    if _is_roleplay_mode():
-        title = _roleplay_set_title() or _topic_display_title(topic)
-        eyebrow = f"{title} · 저장"
-    else:
-        title = _topic_display_title(topic)
-        eyebrow = f"{title} · 저장"
-    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=eyebrow)
+    render_top_bar(
+        "주제별 연습",
+        back_href="?nav=MOCK",
+        eyebrow=_practice_eyebrow("저장"),
+    )
     st.markdown(
         build_topic_practice_header_html(
             topic,
             q_idx,
             total_questions=3,
             include_screen_marker=False,
+            chip_title=_practice_chip_title(topic),
         ),
         unsafe_allow_html=True,
     )
@@ -2198,7 +2246,7 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
                 st.rerun()
         with c2:
             if st.button(
-                "주제 선택으로 돌아가기",
+                _back_to_select_label(),
                 type="secondary",
                 use_container_width=True,
                 key="topic_v2_back_select",
@@ -2248,7 +2296,7 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
             st.rerun()
     with c3:
         if st.button(
-            "주제 선택으로 돌아가기",
+            _back_to_select_label(),
             type="secondary",
             use_container_width=True,
             key="topic_v2_back_select",
@@ -2325,7 +2373,7 @@ def _render_saved_complete(topic: str) -> None:
     if st.button("같은 주제 다시 연습", type="primary", use_container_width=True, key="topic_v2_restart_same_topic"):
         _start_topic_practice(topic)
         st.rerun()
-    if st.button("다른 주제 선택", use_container_width=True, key="topic_v2_pick_other_topic"):
+    if st.button(_other_practice_label(), use_container_width=True, key="topic_v2_pick_other_topic"):
         _goto_topic_select()
         st.rerun()
     if st.button("학습하기로 돌아가기", use_container_width=True, key="topic_v2_back_to_learning"):
@@ -2367,9 +2415,14 @@ def _render_saved() -> None:
 
 
 def _render_roleplay_complete() -> None:
+    topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     title = _roleplay_set_title() or "롤플레이"
-    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 완료")
+    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=_practice_eyebrow("완료"))
+    _render_topic_v2_accent_scope(
+        str(_topic_visual_for_id(topic).get("accent") or "teal")
+    )
     st.markdown("### 롤플레이 세트를 완료했어요.")
+    st.caption("Q6–Q8 세트 3문항을 모두 마쳤어요.")
     set_id = str(st.session_state.get(_KEY_ROLEPLAY_SET_ID) or "").strip()
     if st.button("같은 롤플레이 다시 하기", type="primary", use_container_width=True, key="topic_v2_restart_same_roleplay"):
         if set_id:
@@ -2386,7 +2439,7 @@ def _render_roleplay_complete() -> None:
 def _render_feedback_ui() -> None:
     topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
-    if not topic:
+    if not _session_valid_for_practice():
         _goto_topic_select()
         st.rerun()
         return
@@ -2396,8 +2449,11 @@ def _render_feedback_ui() -> None:
         st.rerun()
         return
 
-    title = _topic_display_title(topic)
-    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 피드백")
+    render_top_bar(
+        "주제별 연습",
+        back_href="?nav=MOCK",
+        eyebrow=_practice_eyebrow("피드백"),
+    )
     accent = str(_topic_visual_for_id(topic).get("accent") or "teal")
     _render_topic_v2_accent_scope(accent)
     st.markdown(
@@ -2406,6 +2462,7 @@ def _render_feedback_ui() -> None:
             q_idx,
             total_questions=3,
             include_screen_marker=True,
+            chip_title=_practice_chip_title(topic),
         ),
         unsafe_allow_html=True,
     )
@@ -2460,7 +2517,7 @@ def _render_feedback_ui() -> None:
                 st.rerun()
         with c2:
             if st.button(
-                "주제 선택으로 돌아가기",
+                _back_to_select_label(),
                 use_container_width=True,
                 key="topic_v2_fb_other_topic",
             ):
@@ -2501,7 +2558,7 @@ def _render_feedback_ui() -> None:
             st.rerun()
     with c3:
         if st.button(
-            "다른 주제 선택",
+            _other_practice_label(),
             use_container_width=True,
             key="topic_v2_fb_other_topic",
         ):
@@ -2513,7 +2570,7 @@ def _render_feedback_ui() -> None:
 def _render_pending_ui() -> None:
     topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
-    if not topic:
+    if not _session_valid_for_practice():
         _goto_topic_select()
         st.rerun()
         return
@@ -2527,13 +2584,24 @@ def _render_pending_ui() -> None:
         if cat in ("api_key", "insufficient_text") and em:
             msg = em
 
-    title = _topic_display_title(topic)
-    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 피드백")
-    _render_topic_v2_accent_scope(
-        str(_topic_visual_for_id(topic).get("accent") or "teal")
+    render_top_bar(
+        "주제별 연습",
+        back_href="?nav=MOCK",
+        eyebrow=_practice_eyebrow("피드백"),
     )
-    _render_topic_v2_attempt_caption(topic=topic, q_idx=q_idx)
-    st.markdown("### AI 피드백")
+    accent = str(_topic_visual_for_id(topic).get("accent") or "teal")
+    _render_topic_v2_accent_scope(accent)
+    st.markdown(
+        build_topic_practice_header_html(
+            topic,
+            q_idx,
+            total_questions=3,
+            include_screen_marker=True,
+            chip_title=_practice_chip_title(topic),
+        ),
+        unsafe_allow_html=True,
+    )
+    render_feedback_label(accent=accent)
     st.info(msg)
     _render_feedback_guard_notice()
     retry_disabled, retry_label = _feedback_request_button_state(aid)
@@ -2567,7 +2635,11 @@ def _render_pending_ui() -> None:
                 st.session_state.pop(_KEY_FB_NOTICE, None)
                 st.session_state[_KEY_STEP] = "question"
                 st.rerun()
-        if st.button("주제 선택으로 돌아가기", use_container_width=True, key="topic_v2_pending_back_select"):
+        if st.button(
+            _back_to_select_label(),
+            use_container_width=True,
+            key="topic_v2_pending_back_select",
+        ):
             st.session_state[_KEY_FEEDBACK] = None
             _goto_topic_select()
             st.rerun()
