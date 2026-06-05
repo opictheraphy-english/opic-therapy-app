@@ -156,6 +156,9 @@ def is_mini_mock_v2_active() -> bool:
 
 def reset_mini_mock_v2() -> None:
     """Clear only V2 session keys."""
+    from utils.v2_flow_persistence import clear_mini_v2_disk_snapshot
+
+    clear_mini_v2_disk_snapshot(st.session_state)
     st.session_state.pop(_KEY_STEP, None)
     st.session_state.pop(_KEY_INDEX, None)
     st.session_state.pop(_KEY_ANSWERS, None)
@@ -473,7 +476,8 @@ def _save_v2_audio_blob(q_idx: int, audio_bytes: bytes, mime_type: str) -> None:
         "mime_type": resolved_mime,
         "created_at": iso_now(),
     }
-    _v2_recordings()[_mini_v2_audio_storage_key(idx)] = blob
+    # Single storage location — duplicate mini_v2_recordings copy removed to cut
+    # session memory (~2× per question) and speed reruns on Render.
 
 
 def _get_v2_audio_blob(q_idx: int) -> tuple[bytes, str]:
@@ -882,6 +886,28 @@ def _commit_mini_v2_recording_answer(
     mic_result: Any = None,
 ) -> bool:
     """STT + persist row after mic returns audio; then route to saved."""
+    if st.session_state.get("_mini_v2_stt_in_flight"):
+        try:
+            logger.info("[MINI_V2_STT_SKIP] reason=already_in_flight q=%s", int(q_idx) + 1)
+        except Exception:
+            pass
+        return False
+    st.session_state["_mini_v2_stt_in_flight"] = True
+    try:
+        return _commit_mini_v2_recording_answer_impl(
+            q_idx, audio_bytes, mime_type, mic_result=mic_result
+        )
+    finally:
+        st.session_state.pop("_mini_v2_stt_in_flight", None)
+
+
+def _commit_mini_v2_recording_answer_impl(
+    q_idx: int,
+    audio_bytes: bytes,
+    mime_type: str,
+    mic_result: Any = None,
+) -> bool:
+    """STT + persist row after mic returns audio; then route to saved."""
     idx = max(0, min(_QUESTION_COUNT - 1, int(q_idx)))
     blob = bytes(audio_bytes) if audio_bytes else b""
     audio_len = len(blob)
@@ -952,6 +978,9 @@ def _upsert_v2_answer_row(row: Dict[str, Any]) -> Dict[str, Any]:
         )
     except Exception:
         pass
+    from utils.v2_flow_persistence import persist_v2_flows_now
+
+    persist_v2_flows_now(st.session_state)
     return row
 
 
@@ -1694,11 +1723,25 @@ def _exit_to_portal() -> None:
 def render_mini_mock_v2() -> None:
     """Main V2 router — question (mic+STT) → saved → analyzing → report | pending."""
     if not is_mini_mock_v2_active():
-        mx = st.session_state.get("mock")
-        begin_mini_mock_v2_session(mx if isinstance(mx, dict) else {})
+        has_saved = bool(st.session_state.get(_KEY_ANSWERS))
+        has_step = bool(str(st.session_state.get(_KEY_STEP) or "").strip())
+        if has_saved or has_step:
+            st.session_state[_MINI_MOCK_V2_ACTIVE_KEY] = True
+            st.session_state[ACTIVE_LEARNING_MODE_KEY] = ACTIVE_LEARNING_MODE_MINI_V2
+            st.session_state.setdefault("mock_mode", "mini_mock")
+            st.session_state.setdefault("practice_portal_selected", True)
+            mx = st.session_state.get("mock")
+            if isinstance(mx, dict):
+                mx.setdefault("mock_mode", "mini_mock")
+                mx.setdefault("mock_page", "MINI_MOCK")
+        else:
+            mx = st.session_state.get("mock")
+            begin_mini_mock_v2_session(mx if isinstance(mx, dict) else {})
 
     _normalize_v2_state()
 
+    if st.session_state.pop("_v2_flow_restored_notice", None):
+        st.info("연결이 잠시 끊겼지만 저장된 답변을 복구했어요. 이어서 진행해 주세요.")
     step = str(st.session_state.get(_KEY_STEP) or "question")
     try:
         q_idx = int(st.session_state.get(_KEY_INDEX) or 0)

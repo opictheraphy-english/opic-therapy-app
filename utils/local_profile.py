@@ -262,6 +262,8 @@ def _progress_signature(ss: MutableMapping[str, Any]) -> str:
     from utils.exam_state import count_completed_exam_prefix
 
     answered_prefix = count_completed_exam_prefix(mx) if isinstance(mx, dict) else 0
+    from utils.v2_flow_persistence import v2_flow_signature_part
+
     return "|".join(
         str(part)
         for part in (
@@ -278,6 +280,7 @@ def _progress_signature(ss: MutableMapping[str, Any]) -> str:
             str(len(mx.get("completed_attempts") or [])),
             mx.get("exam_started_at") or "",
             (pd or {}).get("_pattern_last_visit_at") or "",
+            v2_flow_signature_part(ss),
         )
     )
 
@@ -363,9 +366,17 @@ def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
     # the in-memory state has not yet been hydrated. Skip this write so the
     # snapshot survives until ``maybe_restore_mock_from_disk`` populates mx.
     # The next rerun (after restore) will write a faithful signature.
-    if _mx_is_default_empty(mx):
+    from utils.v2_flow_persistence import (
+        attach_v2_snapshots_to_progress_payload,
+        disk_has_meaningful_v2_snapshot,
+        v2_flows_empty_in_memory,
+    )
+
+    if _mx_is_default_empty(mx) and v2_flows_empty_in_memory(ss):
         disk = load_user_progress()
-        if _snapshot_is_meaningful(disk.get("mock_snapshot") or {}):
+        if _snapshot_is_meaningful(disk.get("mock_snapshot") or {}) or disk_has_meaningful_v2_snapshot(
+            disk
+        ):
             logger.info(
                 "sync_user_progress: skip write (mx empty, disk has live snapshot) "
                 "(idx=%s results=%s exam=%s audio=%s)",
@@ -387,6 +398,7 @@ def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
         "mock_snapshot": _serialize_mock(mx),
         "pattern_progress": pattern_meta,
     }
+    attach_v2_snapshots_to_progress_payload(ss, payload)
 
     last_at = payload["updated_at"]
     results = mx.get("results") or []
@@ -432,6 +444,20 @@ def load_user_progress() -> Dict[str, Any]:
     except Exception as e:
         logger.warning("user_progress read failed: %s", e)
         return {}
+
+
+def save_user_progress(data: Dict[str, Any]) -> None:
+    """Write the full per-device progress JSON (caller merges updates first)."""
+    ensure_local_dir()
+    payload = dict(data)
+    payload["updated_at"] = _iso_now()
+    try:
+        _user_progress_file().write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        logger.warning("user_progress write failed: %s", e)
 
 
 def _apply_snapshot(mx: Dict[str, Any], snap: Dict[str, Any], *, preserve_mock_page: bool) -> None:

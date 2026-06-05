@@ -10,8 +10,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from services.api_retry_policy import (
     STT_MAX_ATTEMPTS,
+    STT_QUOTA_ERRORS,
     STT_RETRY_DELAYS_SEC,
     is_retryable_error,
+    is_stt_retryable_error,
     log_api_call_result,
     should_try_next_model,
     sleep_before_retry,
@@ -495,7 +497,20 @@ def _transcribe_answer_audio_impl(
             model_idx += 1
             continue
 
-        if not is_retryable_error(last_category):
+        if last_category in STT_QUOTA_ERRORS:
+            try:
+                logger.warning(
+                    "[STT_QUOTA_STOP] attempt=%s model=%s error_category=%s "
+                    "(no retry / no model fallback)",
+                    attempt_num,
+                    model_name,
+                    last_category,
+                )
+            except Exception:
+                pass
+            break
+
+        if not is_stt_retryable_error(last_category):
             break
 
         if should_try_next_model(last_category) and model_idx + 1 < len(models):
@@ -506,7 +521,7 @@ def _transcribe_answer_audio_impl(
             break
 
     elapsed = time.perf_counter() - t0
-    retry_exhausted = is_retryable_error(last_category)
+    retry_exhausted = is_stt_retryable_error(last_category)
 
     try:
         logger.warning(

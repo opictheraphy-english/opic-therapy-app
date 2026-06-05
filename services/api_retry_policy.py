@@ -31,6 +31,15 @@ MODEL_FALLBACK_ERRORS: FrozenSet[str] = frozenset(
     }
 )
 
+# STT only — quota / rate-limit (429). Retrying or falling back to another model
+# cannot succeed on the same API key and only multiplies billed error calls.
+STT_QUOTA_ERRORS: FrozenSet[str] = frozenset(
+    {
+        "quota_or_rate_limit",
+        "rate_limit",
+    }
+)
+
 # --- STT retry policy --------------------------------------------------------
 # STT runs on the Streamlit main thread (single-threaded). Long retry loops
 # block the event loop, which kills the browser websocket via keepalive ping
@@ -48,6 +57,8 @@ MODEL_FALLBACK_ERRORS: FrozenSet[str] = frozenset(
 # wrapper timeout. This turns a 2-strikes-and-out flow into one that rides out
 # a transient spike. (If all attempts still 503, the answer is saved as
 # stt_pending and the student re-runs from the saved-answer screen.)
+# 429 / quota (STT_QUOTA_ERRORS): fail immediately — same key, no point retrying
+# or falling back to another model; student uses "음성 인식 다시 시도" after quota resets.
 STT_MAX_ATTEMPTS = 4
 STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (1, 2, 3)
 
@@ -59,6 +70,14 @@ REPORT_RETRY_DELAYS_SEC: Tuple[int, ...] = (3, 8)
 
 def is_retryable_error(category: str) -> bool:
     return str(category or "").strip().lower() in RETRYABLE_ERRORS
+
+
+def is_stt_retryable_error(category: str) -> bool:
+    """Whether the STT loop should retry or try the next model candidate."""
+    cat = str(category or "").strip().lower()
+    if cat in STT_QUOTA_ERRORS:
+        return False
+    return is_retryable_error(cat)
 
 
 def should_try_next_model(category: str) -> bool:

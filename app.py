@@ -66,6 +66,10 @@ if not st.session_state.get("_mock_restored_from_disk"):
 
     maybe_restore_mock_from_disk(st.session_state)
 
+from utils.v2_flow_persistence import maybe_restore_v2_flows_from_disk
+
+maybe_restore_v2_flows_from_disk(st.session_state)
+
 if not st.session_state.get("entry_gate_completed"):
     from views.entry_gate import render_entry_gate
 
