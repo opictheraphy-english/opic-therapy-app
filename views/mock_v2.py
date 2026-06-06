@@ -1126,8 +1126,8 @@ def render_mock_v2() -> None:
     if _KEY_STEP not in st.session_state:
         begin_mock_v2_session()
 
-    if st.session_state.pop("_v2_flow_restored_notice", None):
-        st.info("연결이 잠시 끊겼지만 저장된 답변을 복구했어요. 이어서 진행해 주세요.")
+    if st.session_state.pop("_v2_user_resumed", None):
+        st.info("저장된 답변을 불러왔어요. 이어서 진행해 주세요.")
 
     step = _normalize_step()
     _log_mock_v2_route()

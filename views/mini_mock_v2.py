@@ -1740,8 +1740,8 @@ def render_mini_mock_v2() -> None:
 
     _normalize_v2_state()
 
-    if st.session_state.pop("_v2_flow_restored_notice", None):
-        st.info("연결이 잠시 끊겼지만 저장된 답변을 복구했어요. 이어서 진행해 주세요.")
+    if st.session_state.pop("_v2_user_resumed", None):
+        st.info("저장된 답변을 불러왔어요. 이어서 진행해 주세요.")
     step = str(st.session_state.get(_KEY_STEP) or "question")
     try:
         q_idx = int(st.session_state.get(_KEY_INDEX) or 0)

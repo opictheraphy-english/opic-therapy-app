@@ -50,8 +50,13 @@ def render_home() -> None:
     _render_greeting(gid, um)
 
     # 2) Continue Study — the visual focus of the screen.
-    snap = _detect_in_progress_snapshot(prog_disk, mx)
-    if snap is not None:
+    from utils.v2_flow_persistence import get_v2_resume_offer
+
+    v2_offer = get_v2_resume_offer(st.session_state, prog_disk)
+    snap = None if v2_offer else _detect_in_progress_snapshot(prog_disk, mx)
+    if v2_offer is not None:
+        _render_v2_resume_card(v2_offer)
+    elif snap is not None:
         _render_resume_card(snap)
     else:
         _render_start_card(prog_disk, sett)
@@ -138,6 +143,38 @@ def _detect_in_progress_snapshot(
             return dict(snap)
 
     return None
+
+
+def _render_v2_resume_card(offer: Dict[str, Any]) -> None:
+    """Home hero when a V2 mini / mock exam is saved but not forced open."""
+    flow = str(offer.get("flow") or "")
+    label = html.escape(str(offer.get("label") or "모의고사"))
+    completed = int(offer.get("completed") or 0)
+    total = int(offer.get("total") or 0)
+    q_label = html.escape(str(offer.get("question_label") or ""))
+
+    st.markdown(
+        f"""
+        <section class="continue-card continue-card--resume" role="region"
+                 aria-label="모의고사 이어하기">
+          <div class="cc-row-top">
+            <div class="cc-eyebrow">이어하기 가능</div>
+          </div>
+          <div class="cc-title">진행 중인 {label}이 있어요</div>
+          <div class="cc-meta">{q_label} · {completed}/{total}문항 저장됨</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("이어서 계속하기", type="primary", use_container_width=True, key=f"home_v2_resume_{flow}"):
+        from utils.v2_flow_persistence import resume_v2_flow
+
+        resume_v2_flow(st.session_state, flow=flow)
+        if flow == "mini_mock_v2":
+            navigate_to("MOCK", mock="MINI_MOCK")
+        else:
+            navigate_to("MOCK", mock="PICK")
+        st.rerun()
 
 
 def _render_resume_card(snap: Dict[str, Any]) -> None:

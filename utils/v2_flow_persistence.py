@@ -139,8 +139,8 @@ def _build_mini_v2_snapshot(ss: MutableMapping[str, Any]) -> Dict[str, Any]:
             snap[key] = _encode_value(ss[key])
         except Exception:
             logger.debug("skip mini_v2 snapshot key %s", key)
-    snap["_routing"] = {
-        "page": "MOCK",
+    snap["_resume_hint"] = {
+        "flow": "mini_mock_v2",
         "mock_mode": "mini_mock",
         "practice_portal_selected": True,
         "mock_page": "MINI_MOCK",
@@ -159,8 +159,8 @@ def _build_mock_v2_snapshot(ss: MutableMapping[str, Any]) -> Dict[str, Any]:
             snap[key] = _encode_value(ss[key])
         except Exception:
             logger.debug("skip mock_v2 snapshot key %s", key)
-    snap["_routing"] = {
-        "page": "MOCK",
+    snap["_resume_hint"] = {
+        "flow": "mock_v2",
         "mock_mode": "mock_v2",
         "practice_portal_selected": True,
         "mock_page": "PICK",
@@ -169,16 +169,18 @@ def _build_mock_v2_snapshot(ss: MutableMapping[str, Any]) -> Dict[str, Any]:
 
 
 def _apply_routing(ss: MutableMapping[str, Any], routing: Dict[str, Any]) -> None:
+    """Apply resume navigation — only call when the user explicitly taps 이어하기."""
     if not isinstance(routing, dict):
         return
-    page = str(routing.get("page") or "").strip()
-    if page:
-        ss["page"] = page
     if routing.get("practice_portal_selected"):
         ss["practice_portal_selected"] = True
     mock_mode = str(routing.get("mock_mode") or "").strip()
     if mock_mode:
         ss["mock_mode"] = mock_mode
+    flow = str(routing.get("flow") or "").strip()
+    if flow == "mini_mock_v2":
+        ss["mini_mock_v2_active"] = True
+        ss["active_learning_mode"] = "mini_mock_v2"
     mx = ss.get("mock")
     if isinstance(mx, dict):
         if mock_mode:
@@ -190,6 +192,7 @@ def _apply_routing(ss: MutableMapping[str, Any], routing: Dict[str, Any]) -> Non
 
 
 def _apply_snapshot(ss: MutableMapping[str, Any], snap: Dict[str, Any]) -> None:
+    """Restore exam payload only — never change ``page`` or URL routing."""
     for key, val in snap.items():
         if key.startswith("_"):
             continue
@@ -200,7 +203,6 @@ def _apply_snapshot(ss: MutableMapping[str, Any], snap: Dict[str, Any]) -> None:
             ss[key] = decoded
         except Exception:
             logger.debug("skip restore key %s", key)
-    _apply_routing(ss, snap.get("_routing") or {})
 
 
 def _coerce_int_dict_keys(raw: Dict[str, Any]) -> Dict[Any, Any]:
@@ -318,18 +320,74 @@ def maybe_restore_v2_flows_from_disk(ss: MutableMapping[str, Any]) -> bool:
         )
 
     if restored:
-        ss["_v2_flow_restored_notice"] = True
-        try:
-            import streamlit as st
-
-            st.query_params.clear()
-            st.query_params["nav"] = "MOCK"
-            flow = str(ss.get("mock_mode") or "").strip()
-            if flow == "mini_mock" or ss.get("mini_mock_v2_active"):
-                st.query_params["mock"] = "MINI_MOCK"
-        except Exception:
-            pass
+        logger.info("[V2_FLOW_RESTORE] data_only=True (no forced nav)")
     return restored
+
+
+def get_v2_resume_offer(
+    ss: MutableMapping[str, Any],
+    prog_disk: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return resume metadata for the home card, or ``None`` if nothing to offer."""
+    data = prog_disk if isinstance(prog_disk, dict) else {}
+    mini_snap = data.get("mini_v2_snapshot") or {}
+    mock_snap = data.get("mock_v2_snapshot") or {}
+
+    if _mini_v2_in_memory(ss) or _snapshot_meaningful_mini(mini_snap):
+        answers = ss.get("mini_v2_answers") if _mini_v2_in_memory(ss) else mini_snap.get("mini_v2_answers")
+        if not isinstance(answers, list):
+            answers = []
+        try:
+            idx = int(ss.get("mini_v2_index") if _mini_v2_in_memory(ss) else mini_snap.get("mini_v2_index") or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        return {
+            "flow": "mini_mock_v2",
+            "label": "5분 진단 모의고사",
+            "completed": len(answers),
+            "total": 3,
+            "question_label": f"Q{min(idx + 1, 3)}",
+        }
+
+    if _mock_v2_in_memory(ss) or _snapshot_meaningful_mock(mock_snap):
+        answers = ss.get("mock_v2_answers") if _mock_v2_in_memory(ss) else mock_snap.get("mock_v2_answers")
+        if not isinstance(answers, list):
+            answers = []
+        try:
+            idx = int(ss.get("mock_v2_index") if _mock_v2_in_memory(ss) else mock_snap.get("mock_v2_index") or 0)
+        except (TypeError, ValueError):
+            idx = 0
+        return {
+            "flow": "mock_v2",
+            "label": "실전 모의고사",
+            "completed": len(answers),
+            "total": 15,
+            "question_label": f"Q{min(idx + 1, 15)}",
+        }
+    return None
+
+
+def resume_v2_flow(ss: MutableMapping[str, Any], *, flow: str) -> None:
+    """User tapped 이어하기 — apply routing hints then caller should ``navigate_to``."""
+    hint: Dict[str, Any]
+    if flow == "mini_mock_v2":
+        hint = {
+            "flow": "mini_mock_v2",
+            "mock_mode": "mini_mock",
+            "practice_portal_selected": True,
+            "mock_page": "MINI_MOCK",
+        }
+    elif flow == "mock_v2":
+        hint = {
+            "flow": "mock_v2",
+            "mock_mode": "mock_v2",
+            "practice_portal_selected": True,
+            "mock_page": "PICK",
+        }
+    else:
+        return
+    _apply_routing(ss, hint)
+    ss["_v2_user_resumed"] = True
 
 
 def attach_v2_snapshots_to_progress_payload(
