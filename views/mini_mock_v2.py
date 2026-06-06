@@ -13,6 +13,13 @@ import streamlit as st
 
 import re
 
+from components.answer_countdown_timer import (
+    DEFAULT_DURATION_SEC,
+    build_answer_timer_id,
+    dismiss_answer_timer_signal,
+    handle_answer_timer_expiry,
+    render_answer_countdown_timer,
+)
 from components.exam_question_screen import (
     build_progress_segments_html,
     render_exam_answer_card_top,
@@ -958,6 +965,31 @@ def _commit_mini_v2_recording_answer_impl(
     return True
 
 
+def _commit_mini_v2_timer_expired(q_idx: int) -> bool:
+    """Fallback when the answer timer expires without usable mic audio."""
+    idx = max(0, min(_QUESTION_COUNT - 1, int(q_idx)))
+    prior = _answer_for_index(idx)
+    stt_result = {
+        "ok": False,
+        "transcript": "",
+        "raw_transcript": "",
+        "error_category": "timer_expired",
+        "error_message": "answer_time_limit_reached",
+        "provider": "",
+    }
+    row = _build_mini_v2_row_from_stt(
+        idx,
+        audio_bytes=b"",
+        mime_type="audio/webm",
+        stt_result=stt_result,
+        prior_row=prior,
+    )
+    row["source"] = "timer_expired"
+    _upsert_v2_answer_row(row)
+    _set_v2_step_saved(idx)
+    return True
+
+
 def _upsert_v2_answer_row(row: Dict[str, Any]) -> Dict[str, Any]:
     index = int(row.get("question_index") or 0)
     answers = [r for r in _answers() if int(r.get("question_index", -1)) != index]
@@ -1246,6 +1278,12 @@ def _render_question_step(q_idx: int) -> None:
         accent="teal",
     )
     render_exam_answer_card_top(accent="teal")
+    timer_id = build_answer_timer_id("mini_v2", str(q_idx))
+    render_answer_countdown_timer(
+        timer_id=timer_id,
+        accent="teal",
+        duration_sec=DEFAULT_DURATION_SEC,
+    )
     render_exam_wave_mic_observer()
 
     from streamlit_mic_recorder import mic_recorder
@@ -1260,6 +1298,7 @@ def _render_question_step(q_idx: int) -> None:
     )
 
     if mic_result is not None:
+        dismiss_answer_timer_signal(timer_id)
         audio_bytes, mime_type, extraction_source = _extract_mini_v2_audio_bytes(
             mic_result, mic_key=mic_key
         )
@@ -1278,6 +1317,21 @@ def _render_question_step(q_idx: int) -> None:
             st.rerun()
         else:
             st.warning("음성이 저장되지 않았어요. 다시 녹음해 주세요.")
+
+    def _commit_from_timer(audio_bytes: bytes, mime_type: str, mic_payload: Any) -> None:
+        with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
+            _commit_mini_v2_recording_answer(
+                q_idx, audio_bytes, mime_type, mic_result=mic_payload
+            )
+
+    if handle_answer_timer_expiry(
+        timer_id,
+        mic_result=mic_result,
+        extract_audio=lambda: _extract_mini_v2_audio_bytes(None, mic_key=mic_key),
+        commit_audio=_commit_from_timer,
+        commit_empty=lambda: _commit_mini_v2_timer_expired(q_idx),
+    ):
+        st.rerun()
 
 
 def _render_v2_saved_status_card(

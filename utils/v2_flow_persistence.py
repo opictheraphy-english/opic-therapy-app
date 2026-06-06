@@ -238,7 +238,7 @@ def v2_flow_signature_part(ss: MutableMapping[str, Any]) -> str:
 
 def persist_v2_flows_now(ss: MutableMapping[str, Any]) -> None:
     """Force-write V2 snapshots (e.g. right after each saved answer)."""
-    from utils.local_profile import load_user_progress, save_user_progress
+    from utils.user_progress_store import load_user_progress, save_user_progress
 
     if not ss.get("entry_gate_completed"):
         return
@@ -274,7 +274,7 @@ def clear_mock_v2_disk_snapshot(ss: MutableMapping[str, Any]) -> None:
 
 
 def _clear_disk_key(ss: MutableMapping[str, Any], key: str) -> None:
-    from utils.local_profile import load_user_progress, save_user_progress
+    from utils.user_progress_store import load_user_progress, save_user_progress
 
     data = load_user_progress()
     if key not in data:
@@ -290,7 +290,7 @@ def maybe_restore_v2_flows_from_disk(ss: MutableMapping[str, Any]) -> bool:
         return False
     ss["_v2_flow_restored_from_disk"] = True
 
-    from utils.local_profile import load_user_progress
+    from utils.user_progress_store import load_user_progress
 
     data = load_user_progress()
     mini_snap = data.get("mini_v2_snapshot") or {}

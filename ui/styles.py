@@ -2945,6 +2945,92 @@ GLOBAL_CSS = """
       color: #b91c1c !important;
       font-weight: 600;
     }
+    /* V2 exam screens — client-side answer countdown (topic / mini / real mock) */
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer {
+      margin: 0 0 14px 0;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.98);
+      border: 1px solid rgba(13, 148, 136, 0.2);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      text-align: center;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer .mx-rec-timer-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      margin: 0 0 8px 0;
+      line-height: 1.1;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer .mx-rec-timer-progress {
+      height: 6px;
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--warn {
+      border-color: rgba(234, 88, 12, 0.45);
+      animation: opic-answer-timer-pulse 1.1s ease-in-out infinite;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--warn .mx-rec-timer-value,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--warn .mx-rec-timer-progress-fill {
+      color: #c2410c !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--warn .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #fb923c 0%, #ea580c 100%);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--up {
+      border-color: rgba(220, 38, 38, 0.45);
+      animation: opic-answer-timer-pulse 0.85s ease-in-out infinite;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--up .mx-rec-timer-value {
+      color: #b91c1c !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-teal .mx-rec-timer-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-teal.mx-rec-timer--normal .mx-rec-timer-value {
+      color: #0f766e !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-teal .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #14b8a6 0%, #0d9488 100%);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-blue .mx-rec-timer-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-blue.mx-rec-timer--normal .mx-rec-timer-value {
+      color: #185FA5 !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-blue .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #378ADD 0%, #185FA5 100%);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-purple .mx-rec-timer-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-purple.mx-rec-timer--normal .mx-rec-timer-value {
+      color: #534AB7 !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-purple .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #7B6CF0 0%, #534AB7 100%);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-pink .mx-rec-timer-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-pink.mx-rec-timer--normal .mx-rec-timer-value {
+      color: #993556 !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-pink .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #E85A8A 0%, #993556 100%);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-amber .mx-rec-timer-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-amber.mx-rec-timer--normal .mx-rec-timer-value {
+      color: #854F0B !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-amber .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #D4A017 0%, #854F0B 100%);
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-coral .mx-rec-timer-label,
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-coral.mx-rec-timer--normal .mx-rec-timer-value {
+      color: #993C1D !important;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-coral .mx-rec-timer-progress-fill {
+      background: linear-gradient(90deg, #E86A45 0%, #993C1D 100%);
+    }
+    @keyframes opic-answer-timer-pulse {
+      0%, 100% { box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08); }
+      50% { box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.22), 0 8px 22px rgba(234, 88, 12, 0.14); }
+    }
     .mx-daily-usage {
       margin: 8px 0 12px 0;
       font-size: 0.85rem;

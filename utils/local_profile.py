@@ -435,29 +435,16 @@ def sync_user_progress(ss: MutableMapping[str, Any]) -> None:
 
 
 def load_user_progress() -> Dict[str, Any]:
-    ensure_local_dir()
-    path = _user_progress_file()
-    if not path.is_file():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.warning("user_progress read failed: %s", e)
-        return {}
+    from utils.user_progress_store import load_user_progress as _load
+
+    return _load()
 
 
 def save_user_progress(data: Dict[str, Any]) -> None:
     """Write the full per-device progress JSON (caller merges updates first)."""
-    ensure_local_dir()
-    payload = dict(data)
-    payload["updated_at"] = _iso_now()
-    try:
-        _user_progress_file().write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, default=str),
-            encoding="utf-8",
-        )
-    except Exception as e:
-        logger.warning("user_progress write failed: %s", e)
+    from utils.user_progress_store import save_user_progress as _save
+
+    _save(data)
 
 
 def _apply_snapshot(mx: Dict[str, Any], snap: Dict[str, Any], *, preserve_mock_page: bool) -> None:

@@ -15,6 +15,13 @@ from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
 import streamlit.components.v1 as components
 
+from components.answer_countdown_timer import (
+    DEFAULT_DURATION_SEC,
+    build_answer_timer_id,
+    dismiss_answer_timer_signal,
+    handle_answer_timer_expiry,
+    render_answer_countdown_timer,
+)
 from components.audio_player import (
     render_exam_question_audio_player,
     render_recording_playback_player,
@@ -1371,6 +1378,38 @@ def _commit_topic_v2_recording(
     st.session_state[_KEY_STEP] = "saved"
 
 
+def _commit_topic_v2_timer_expired(
+    topic: str,
+    q_idx: int,
+    q_en: str,
+    q_ko: str,
+) -> None:
+    """Fallback when the 2-minute timer expires but mic audio is unavailable."""
+    stt_result = {
+        "ok": False,
+        "transcript": "",
+        "raw_transcript": "",
+        "error_category": "timer_expired",
+        "error_message": "answer_time_limit_reached",
+    }
+    cur_q = st.session_state.get(_KEY_CURRENT_Q)
+    opic = str(cur_q.get("opic_type") or "") if isinstance(cur_q, dict) else ""
+    row = _build_topic_v2_row_from_mic(
+        topic,
+        q_idx,
+        q_en,
+        q_ko,
+        b"",
+        "audio/webm",
+        stt_result,
+        opic_type=opic,
+        duration_seconds=float(DEFAULT_DURATION_SEC),
+    )
+    row["source"] = "timer_expired"
+    _persist_topic_v2_answer(row)
+    st.session_state[_KEY_STEP] = "saved"
+
+
 def _commit_topic_v2_manual_text_draft(topic: str, q_idx: int, q: Dict[str, Any], draft: str) -> None:
     """Save text-only answer (optional expander UI; keep logic here for restore)."""
     wc = int(count_english_words(draft))
@@ -2107,6 +2146,13 @@ def _render_question() -> None:
                 )
 
     st.markdown(_render_topic_answer_card_top_html(topic_id), unsafe_allow_html=True)
+    topic_accent = str(_topic_visual_for_id(topic_id).get("accent") or "teal")
+    timer_id = build_answer_timer_id("topic_v2", topic_id, str(q_idx))
+    render_answer_countdown_timer(
+        timer_id=timer_id,
+        accent=topic_accent,
+        duration_sec=DEFAULT_DURATION_SEC,
+    )
     _render_topic_wave_mic_observer()
 
     from streamlit_mic_recorder import mic_recorder
@@ -2121,6 +2167,7 @@ def _render_question() -> None:
     )
 
     if mic_result is not None:
+        dismiss_answer_timer_signal(timer_id)
         audio_bytes, mime_type = _extract_topic_v2_audio_bytes(mic_result, mic_key="")
         try:
             logger.info(
@@ -2146,6 +2193,30 @@ def _render_question() -> None:
                     mic_result=mic_result,
                 )
             st.rerun()
+
+    q_en = str(q.get("en") or "")
+    q_ko = str(q.get("ko") or "")
+
+    def _commit_from_timer(audio_bytes: bytes, mime_type: str, mic_payload: Any) -> None:
+        with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
+            _commit_topic_v2_recording(
+                topic_id,
+                q_idx,
+                q_en,
+                q_ko,
+                audio_bytes,
+                mime_type or "audio/webm",
+                mic_result=mic_payload,
+            )
+
+    if handle_answer_timer_expiry(
+        timer_id,
+        mic_result=mic_result,
+        extract_audio=lambda: _extract_topic_v2_audio_bytes(None, mic_key=""),
+        commit_audio=_commit_from_timer,
+        commit_empty=lambda: _commit_topic_v2_timer_expired(topic_id, q_idx, q_en, q_ko),
+    ):
+        st.rerun()
 
     # Text fallback expander is hidden: st.text_area + this flow surfaced internal keys as "key..." for
     # some students. Re-enable with st.text_area("영어 답변을 입력해 주세요", key=text_draft_key, ...) and
