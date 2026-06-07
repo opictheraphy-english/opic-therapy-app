@@ -27,6 +27,16 @@ _TOPIC_META: List[Tuple[str, str, str]] = [
     ("music", "음악", "Music"),
     ("singing", "노래", "Singing"),
     ("instruments", "악기", "Instruments"),
+    ("gaming", "게임", "Gaming"),
+    ("figure_collecting", "피규어·모형", "Figure Collecting"),
+    ("writing", "글쓰기", "Writing"),
+    ("drawing", "그림·미술", "Drawing"),
+    ("museums", "박물관", "Museums"),
+    ("nightlife", "클럽·나이트", "Nightlife"),
+    ("camping", "캠핑", "Camping"),
+    ("cycling", "자전거", "Cycling"),
+    ("swimming", "수영", "Swimming"),
+    ("yoga", "요가", "Yoga"),
     ("cooking", "요리", "Cooking"),
     ("books", "독서", "Books"),
     ("walking", "걷기", "Walking"),
@@ -70,6 +80,16 @@ _TOPIC_VISUAL: Dict[str, Tuple[str, str]] = {
     "music": ("music", "pink"),
     "singing": ("microphone-2", "pink"),
     "instruments": ("guitar-pick", "purple"),
+    "gaming": ("device-gamepad-2", "purple"),
+    "figure_collecting": ("box", "pink"),
+    "writing": ("pencil", "amber"),
+    "drawing": ("palette", "pink"),
+    "museums": ("building-museum", "blue"),
+    "nightlife": ("moon-stars", "purple"),
+    "camping": ("tent", "teal"),
+    "cycling": ("bike", "amber"),
+    "swimming": ("swimming", "blue"),
+    "yoga": ("yoga", "coral"),
     "cooking": ("chef-hat", "coral"),
     "books": ("book", "amber"),
     "walking": ("walk", "teal"),
@@ -113,8 +133,19 @@ _TOPIC_RULES: List[Tuple[str, Tuple[str, ...]]] = [
     ("music", ("listen to music", "kind of music", "into music", "mp3", "electronics")),
     ("singing", ("singing", "sing often", "voice lesson")),
     ("instruments", ("instrument", "playing an instrument", "practice your instrument", "musical instrument")),
+    ("gaming", ("gaming", "play games", "playing a game", "video game", "games do you like")),
+    ("figure_collecting", ("figure", "figures or models", "collecting figures", "making or collecting figures")),
+    ("books", ("book", "reading", "author", "bookstore", "piece of writing", "reading habits", "interested in reading")),
+    ("writing", ("kind of writing", "when you write", "start writing", "piece you wrote", "struggled with your writing", "memorable piece you wrote")),
+    ("drawing", ("drawing", "when you draw", "materials you use", "kind of drawing", "art do you enjoy")),
+    ("museums", ("museum", "museums do you like", "visit a museum", "museum visit")),
+    ("nightlife", ("nightlife", "clubs or nightlife", "night out", "clubs do you like")),
+    ("camping", ("camping", "go camping", "camping trip", "while camping")),
+    ("recycling", ("recycling", "recycle", "garbage")),
+    ("cycling", ("go cycling", "get into cycling", "when you go cycling", "kind of cycling", "while cycling", "problem while cycling", "memorable ride")),
+    ("swimming", ("swimming", "go swimming", "learn to swim", "while swimming")),
+    ("yoga", ("yoga", "do yoga", "yoga do you practice", "yoga experience", "pose difficult")),
     ("cooking", ("cooking", "cook a meal", "meal you cooked", "dinner party", "dish you made", "nutritionist", "diet plan", "eating healthier")),
-    ("books", ("book", "reading", "author", "bookstore")),
     ("walking", ("for a walk", "walking shoes", "go for walks", "long-distance walking")),
     ("jogging", ("jogging",)),
     ("gym", ("gym", "fitness center", "working out", "workout")),
@@ -122,7 +153,6 @@ _TOPIC_RULES: List[Tuple[str, Tuple[str, ...]]] = [
     ("travel", ("travel agency", "trip abroad", "overseas trip", "airport", "flight has been canceled", "plane ticket", "rent a car", "rental company", "traveling abroad", "short trip", "prepare for a trip", "during a trip", "planning a vacation", "unforgettable travel", "places do you enjoy traveling")),
     ("neighborhood", ("neighborhood", "neighbor", "apartment building", "new resident", "area where you live", "real estate", "apartment in the city", "moved into a new apartment", "new apartment")),
     ("holidays", ("holiday",)),
-    ("recycling", ("recycling", "recycle", "garbage")),
     ("country_places", ("in your country", "famous place in your country", "famous company", "geography", "mountains or beaches", "traditional food", "mealtimes usually", "outdoor activities are popular", "korea")),
     ("free_time", ("free time", "time off from work")),
     ("gatherings", ("gathering", "celebration", "party after", "invite another family", "old friend invited you to a party")),
@@ -338,23 +368,61 @@ def build_questions(
 
 
 def build_roleplay_sets(roleplay_rows: Dict[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
-    q6 = roleplay_rows["q6"]
-    q7 = roleplay_rows["q7"]
-    q8 = roleplay_rows["q8"]
-    n = min(len(q6), len(q7), len(q8))
+    """Build roleplay combos by matching q6/q7/q8 on ``topic_id`` (not list index).
+
+    A set is emitted only when the topic has at least one question in each slot.
+    When a topic has multiple rows in a slot, triplets are paired 1:1:1 in order.
+    """
+    from collections import defaultdict
+
+    by_topic: Dict[str, Dict[str, List[Dict[str, Any]]]] = defaultdict(
+        lambda: {"q6": [], "q7": [], "q8": []}
+    )
+    for qkey in ("q6", "q7", "q8"):
+        for row in roleplay_rows.get(qkey) or []:
+            tid = str(row.get("topic_id") or "").strip()
+            if not tid:
+                continue
+            by_topic[tid][qkey].append(row)
+
     sets: List[Dict[str, Any]] = []
-    for i in range(n):
-        item6, item7, item8 = q6[i], q7[i], q8[i]
-        topic_id = item6.get("topic_id") or item7.get("topic_id") or "home"
-        title_ko = next((ko for tid, ko, _ in _TOPIC_META if tid == topic_id), topic_id)
-        sets.append(
-            {
-                "set_id": f"roleplay_{i + 1:03d}",
-                "topic_id": topic_id,
-                "title_ko": f"{title_ko} 롤플레이",
-                "questions": {"q6": item6, "q7": item7, "q8": item8},
-            }
-        )
+    set_num = 0
+    seen_topics: set[str] = set()
+
+    def _append_sets_for_topic(tid: str) -> None:
+        nonlocal set_num
+        buckets = by_topic.get(tid) or {}
+        q6_list = buckets.get("q6") or []
+        q7_list = buckets.get("q7") or []
+        q8_list = buckets.get("q8") or []
+        if not q6_list or not q7_list or not q8_list:
+            return
+        title_ko = next((ko for t, ko, _ in _TOPIC_META if t == tid), tid)
+        n = min(len(q6_list), len(q7_list), len(q8_list))
+        for i in range(n):
+            set_num += 1
+            sets.append(
+                {
+                    "set_id": f"roleplay_{set_num:03d}",
+                    "topic_id": tid,
+                    "title_ko": f"{title_ko} 롤플레이",
+                    "questions": {
+                        "q6": q6_list[i],
+                        "q7": q7_list[i],
+                        "q8": q8_list[i],
+                    },
+                }
+            )
+
+    for tid, _, _ in _TOPIC_META:
+        seen_topics.add(tid)
+        _append_sets_for_topic(tid)
+
+    for tid in sorted(by_topic.keys()):
+        if tid in seen_topics:
+            continue
+        _append_sets_for_topic(tid)
+
     return sets
 
 

@@ -12,6 +12,12 @@ Do you enjoy shopping? Tell me where you usually go and who you like shopping wi
 What TV shows or movies do you enjoy watching the most? Why do you like them?
 What kind of music do you usually listen to?
 What kinds of songs do you enjoy singing?
+>> sports
+Tell me about a sport you like to play. What is it, and how do you play it?
+>> auto
+>> instruments
+Tell me about an instrument you play. What is it, and how do you play it?
+>> auto
 Do you play any musical instruments? What kind of music do you like playing?
 What do you usually like cooking? Why do you enjoy making those dishes?
 What kinds of books do you enjoy reading?
@@ -42,6 +48,37 @@ What kinds of appointments do you usually make? It can be a dentist, teacher, co
 What’s the weather like in your country throughout the year?
 What kinds of clothes do people usually wear in your country?
 
+>> gaming
+What kind of games do you like to play, and what device do you play them on?
+>> auto
+>> figure_collecting
+What kind of figures or models do you like to make or collect?
+>> auto
+>> writing
+What kind of writing do you enjoy, and why do you like it?
+>> auto
+>> drawing
+What kind of drawing or art do you enjoy, and what do you usually draw?
+>> auto
+>> museums
+What kind of museums do you like to visit, and where are they?
+>> auto
+>> nightlife
+What kind of clubs or nightlife spots do you like to go to, and where are they?
+>> auto
+>> camping
+What kind of camping do you enjoy, and where do you usually go?
+>> auto
+>> cycling
+What kind of cycling do you enjoy, and where do you usually ride?
+>> auto
+>> swimming
+Where do you usually go swimming, and what kind of swimming do you do?
+>> auto
+>> yoga
+Where do you usually do yoga, and what kind of yoga do you practice?
+>> auto
+
 >> gatherings
 Tell me about a gathering or celebration you enjoy. What is it like?
 >> industry
@@ -66,7 +103,9 @@ When you go see a movie, what do you usually do before and after?
 What do you usually do when you go watch a play or musical?
 What do you normally do when you visit a park?
 What’s a typical beach day like for you?
-What sports do you enjoy watching on TV?
+>> sports
+Walk me through your typical routine when you play your sport, from start to finish — when, where, and who you play with.
+>> auto
 What do you usually do at a coffee shop?
 Walk me through a typical shopping day.
 Who’s your favorite movie or TV character? What do you like about them?
@@ -102,6 +141,37 @@ What do you usually do when making an appointment?
 What’s your favorite season? What do you usually do then?
 What are you wearing today? What kind of clothes do you usually like wearing?
 
+>> gaming
+Walk me through your typical routine when you play games — when, where, and how long you usually play.
+>> auto
+>> figure_collecting
+Walk me through your process from start to finish when you work on a figure — when, where, and what you use.
+>> auto
+>> writing
+Walk me through your routine when you write — when, where, and how you usually get started.
+>> auto
+>> drawing
+Walk me through your routine when you draw — when, where, and what materials you use.
+>> auto
+>> museums
+Walk me through what you usually do when you visit a museum — when you go, who you go with, and how you spend your time there.
+>> auto
+>> nightlife
+Walk me through a typical night out — when you go, who you go with, and what you usually do.
+>> auto
+>> camping
+Walk me through your routine when you go camping — what you pack, when you go, and who you go with.
+>> auto
+>> cycling
+Walk me through your routine when you go cycling — when, where, and how far you usually ride.
+>> auto
+>> swimming
+Walk me through your routine when you go swimming — when, where, and how long you usually swim.
+>> auto
+>> yoga
+Walk me through your routine when you do yoga — when, where, and how long you usually practice.
+>> auto
+
 >> gatherings
 How do you usually get ready for a gathering or celebration?
 >> industry
@@ -120,7 +190,9 @@ Tell me about the last movie you watched. What did you do that day before and af
 How did you first get interested in theater or live performances?
 Tell me about the last time you went to a park. Who did you go with and what did you do there?
 Tell me about the last time you went to the beach.
-What was the last sports game you watched on TV? Tell me about it.
+>> sports
+How did you first get into your sport? What made you start playing it?
+>> auto
 Tell me about the first time you went to your favorite coffee shop.
 Tell me about a memorable shopping experience you had.
 How did you first become interested in movies or TV shows?
@@ -156,6 +228,37 @@ Tell me about the last appointment you had.
 Tell me about a memorable experience related to weather.
 Tell me about a time you dressed up for a special event.
 
+>> gaming
+How did you first get into gaming? What made you start?
+>> auto
+>> figure_collecting
+How did you first get interested in making or collecting figures?
+>> auto
+>> writing
+How did you first start writing? What got you into it?
+>> auto
+>> drawing
+How did you first get into drawing? What made you start?
+>> auto
+>> museums
+How did you first become interested in visiting museums?
+>> auto
+>> nightlife
+How did you first start going out to clubs or nightlife spots?
+>> auto
+>> camping
+How did you first get into camping? What made you start?
+>> auto
+>> cycling
+How did you first get into cycling? What made you start?
+>> auto
+>> swimming
+How did you first learn to swim, or what got you into swimming?
+>> auto
+>> yoga
+How did you first get into yoga? What made you start?
+>> auto
+
 >> fashion
 Tell me about a time you bought clothes you really liked. What happened?
 >> walking
@@ -173,7 +276,9 @@ What was your house like when you first moved in? What changed afterward?
 Who’s your favorite actor or actress? Tell me about a memorable news story involving them.
 Tell me about an unforgettable experience you had at a park.
 Tell me about a memorable experience you had at the beach.
-Tell me about a time when it was difficult to watch a sports game you really wanted to see.
+>> sports
+Tell me about a memorable experience you had while playing your sport.
+>> auto
 Tell me about a memorable or surprising experience you had at a coffee shop.
 Tell me about a shopping experience you still remember clearly.
 Tell me about a movie or TV show that really stayed with you.
@@ -193,6 +298,38 @@ Tell me about a time technology stopped working and caused problems.
 Tell me about a problem you had with your phone.
 Tell me about a project where you used the Internet for research.
 Tell me about a transportation problem you experienced.
+
+>> gaming
+Tell me about the most memorable experience you've had while playing a game.
+>> auto
+>> figure_collecting
+Tell me about a memorable figure you made or a time you ran into a problem while making one.
+>> auto
+>> writing
+Tell me about a memorable piece you wrote or a time you struggled with your writing.
+>> auto
+>> drawing
+Tell me about a memorable drawing you made or a time you had trouble finishing one.
+>> auto
+>> museums
+Tell me about the most memorable museum visit you've had, or a time something unexpected happened.
+>> auto
+>> nightlife
+Tell me about the most memorable night out you've had, or a time something went wrong.
+>> auto
+>> camping
+Tell me about your most memorable camping trip, or a time you ran into a problem while camping.
+>> auto
+>> cycling
+Tell me about a memorable ride you've had, or a time you had a problem while cycling.
+>> auto
+>> swimming
+Tell me about a memorable experience you've had while swimming, or a time something went wrong.
+>> auto
+>> yoga
+Tell me about a memorable yoga experience, or a time you found a pose difficult.
+>> auto
+
 Q6 
 You recently moved into a new apartment and realized that your old furniture doesn’t really match the space anymore. You visit a furniture store and speak with a salesperson. Explain what kind of furniture you’re looking for and ask a few questions before deciding what to buy.
 You’re planning to invite another family over for lunch sometime next week, but you first need to figure out everyone’s schedule at home. Talk to your family members and ask a few questions to decide on the best day and time.
@@ -266,6 +403,7 @@ You try to rent a car overseas, but you only have your Korean driver’s license
 You get sick on the day of a performance and can’t go. Call your friend and suggest a few alternatives.
 You find out you have to work on the day of a family party. Leave a message explaining the situation and suggest ways to still help with the preparation.
 A new resident in your apartment building keeps throwing away garbage incorrectly. Call the resident, explain the issue, and suggest ways to solve the problem.
+Unfortunately, you can't meet your friend at the restaurant because you got into a car accident. Call your friend, explain the situation, and suggest two or three solutions to fix the problem.
 
 Q8 
 Have you ever had a problem with something you bought for your home? Tell me what happened and how you dealt with it.
