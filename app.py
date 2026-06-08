@@ -9,10 +9,10 @@ always reachable; tab switching is instant).
 Navigation: ``st.session_state.page`` + ``navigate_to()`` / bottom nav buttons.
 Optional ``?nav=`` query param syncs on load (same browser tab).
 
-First entry: after the guest/login entry gate, a short onboarding flow runs
-until ``onboarding_completed`` is set (local ``app_session.json``). Returning
-users see a one-time-per-session splash on Home only (``splash_seen_this_session``,
-not persisted).
+First entry: a single entry/onboarding screen (``views/onboarding.py``) runs until
+both ``entry_gate_completed`` and ``onboarding_completed`` are set (local
+``app_session.json``). Returning users see a one-time-per-session splash on Home
+only (``splash_seen_this_session``, not persisted).
 
 (``views/`` 패키지 사용 — Streamlit 예약 디렉터리명 ``pages/`` 는 쓰지 않습니다.)
 """
@@ -44,17 +44,18 @@ if "page" not in st.session_state:
 if "active_target_sentence" not in st.session_state:
     st.session_state.active_target_sentence = ""
 
+# OAuth must run before disk hydrate so a fresh ?code= return cannot reload
+# stale onboarding_completed=false from JSON over the flags we just set.
+from utils.auth import handle_oauth_callback, init_auth_state
+
+init_auth_state(st.session_state)
+handle_oauth_callback(st.session_state)
+
 hydrate_entry_session(st.session_state)
 ensure_settings(st.session_state)
 ensure_mock(st.session_state)
 ensure_pattern(st.session_state)
 sync_settings_to_legacy(st.session_state)
-
-# Auth: init state + process any Google OAuth redirect (?code=) before gates.
-from utils.auth import handle_oauth_callback, init_auth_state
-
-init_auth_state(st.session_state)
-handle_oauth_callback(st.session_state)
 
 if "mock_data" not in st.session_state:
     st.session_state.mock_data = {"recording_active": False}
@@ -70,13 +71,9 @@ from utils.v2_flow_persistence import maybe_restore_v2_flows_from_disk
 
 maybe_restore_v2_flows_from_disk(st.session_state)
 
-if not st.session_state.get("entry_gate_completed"):
-    from views.entry_gate import render_entry_gate
-
-    render_entry_gate()
-    st.stop()
-
-if not st.session_state.get("onboarding_completed"):
+if not st.session_state.get("entry_gate_completed") or not st.session_state.get(
+    "onboarding_completed"
+):
     from views.onboarding import render_onboarding
 
     render_onboarding()

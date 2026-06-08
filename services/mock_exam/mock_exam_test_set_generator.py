@@ -194,6 +194,136 @@ NEWS_ISSUE_POOL_AL = [
     },
 ]
 
+# Ask-the-interviewer (OPIc Q5): bank 밖 독립 풀 — 레벨 3·4 출제 연결은 별도 단계
+Q5_POOL = [
+    {
+        "topic_id": "home",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I currently reside in a house with my family. To gather more details about our home, "
+            "ask me three to four questions."
+        ),
+        "question_text": (
+            "I currently reside in a house with my family. To gather more details about our home, "
+            "ask me three to four questions."
+        ),
+    },
+    {
+        "topic_id": "movies_tv",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I also enjoy watching movies. Ask me three or four questions about the type of movies "
+            "I like to watch."
+        ),
+        "question_text": (
+            "I also enjoy watching movies. Ask me three or four questions about the type of movies "
+            "I like to watch."
+        ),
+    },
+    {
+        "topic_id": "movies_tv",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I'm a fan of a reality show on TV. Ask me three or four questions about the show, and "
+            "based on my answers, decide if it's something you'd be interested in watching too."
+        ),
+        "question_text": (
+            "I'm a fan of a reality show on TV. Ask me three or four questions about the show, and "
+            "based on my answers, decide if it's something you'd be interested in watching too."
+        ),
+    },
+    {
+        "topic_id": "park",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I also enjoy visiting parks. Ask me three or four questions to learn more about the park "
+            "I go to."
+        ),
+        "question_text": (
+            "I also enjoy visiting parks. Ask me three or four questions to learn more about the park "
+            "I go to."
+        ),
+    },
+    {
+        "topic_id": "cafe",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I like visiting coffee shops. Ask me three or four questions about my favorite coffee shop."
+        ),
+        "question_text": (
+            "I like visiting coffee shops. Ask me three or four questions about my favorite coffee shop."
+        ),
+    },
+    {
+        "topic_id": "travel",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I love traveling to new places. Ask me three or four questions about my favorite trip, "
+            "and decide if you'd want to go there too."
+        ),
+        "question_text": (
+            "I love traveling to new places. Ask me three or four questions about my favorite trip, "
+            "and decide if you'd want to go there too."
+        ),
+    },
+    {
+        "topic_id": "sports",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I enjoy playing sports in my free time. Ask me three or four questions about the sport "
+            "I play."
+        ),
+        "question_text": (
+            "I enjoy playing sports in my free time. Ask me three or four questions about the sport "
+            "I play."
+        ),
+    },
+    {
+        "topic_id": "music",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I really enjoy listening to music. Ask me three or four questions about the kind of music "
+            "I like."
+        ),
+        "question_text": (
+            "I really enjoy listening to music. Ask me three or four questions about the kind of music "
+            "I like."
+        ),
+    },
+    {
+        "topic_id": "shopping",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I like going shopping on weekends. Ask me three or four questions about where I usually shop "
+            "and what I buy."
+        ),
+        "question_text": (
+            "I like going shopping on weekends. Ask me three or four questions about where I usually shop "
+            "and what I buy."
+        ),
+    },
+    {
+        "topic_id": "food",
+        "topic": "Q5",
+        "opic_type": "Q5",
+        "question": (
+            "I love trying new food. Ask me three or four questions about my favorite food or restaurant."
+        ),
+        "question_text": (
+            "I love trying new food. Ask me three or four questions about my favorite food or restaurant."
+        ),
+    },
+]
+
 _FALLBACK_TOPICS = ["Country", "Home", "Travel", "Movies", "Music", "Exercise", "Park"]
 
 

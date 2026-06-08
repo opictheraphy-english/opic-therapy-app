@@ -21,6 +21,10 @@ GLOBAL_CSS = """
       --text-secondary: #4b5563;
       --text-muted: #6b7280;
       --text-soft: #9ca3af;
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f4f4f5;
+      --color-text-secondary: #4b5563;
+      --color-text-tertiary: #9ca3af;
       --danger-soft: #fecaca;
       --danger-text: #b91c1c;
       --radius-lg: 20px;
@@ -293,17 +297,227 @@ GLOBAL_CSS = """
       color: #111827 !important;
     }
     section.main:has(.onb-marker) div.block-container {
-      max-width: 520px !important;
+      max-width: 420px !important;
       margin: 0 auto !important;
       padding-top: 1rem !important;
       padding-bottom: 5rem !important;
       padding-left: 1rem !important;
       padding-right: 1rem !important;
     }
-    section.main:has(.onb-marker) .onb-shell {
-      width: 100%;
-      max-width: 520px;
+    section.main:has(.onb-marker) .onb-wrap,
+    [data-testid="stMain"]:has(.onb-marker) .onb-wrap {
+      max-width: 420px;
       margin: 0 auto;
+      box-sizing: border-box;
+    }
+    section.main:has(.onb-marker) .onb-card,
+    [data-testid="stMain"]:has(.onb-marker) .onb-card {
+      background: #ffffff;
+      border: 0.5px solid rgba(0, 0, 0, 0.12);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      box-sizing: border-box;
+    }
+    section.main:has(.onb-marker) .onb-brand,
+    [data-testid="stMain"]:has(.onb-marker) .onb-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    section.main:has(.onb-marker) .onb-brand-icon,
+    [data-testid="stMain"]:has(.onb-marker) .onb-brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #E1F5EE;
+      color: #0F6E56;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    section.main:has(.onb-marker) .onb-brand-icon svg,
+    [data-testid="stMain"]:has(.onb-marker) .onb-brand-icon svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+    }
+    section.main:has(.onb-marker) .onb-brand-text,
+    [data-testid="stMain"]:has(.onb-marker) .onb-brand-text {
+      font-family: var(--font-sans) !important;
+      font-size: 14px;
+      font-weight: 500;
+      color: #0F6E56;
+    }
+    section.main:has(.onb-marker) .onb-copy,
+    [data-testid="stMain"]:has(.onb-marker) .onb-copy {
+      text-align: left;
+    }
+    section.main:has(.onb-marker) .onb-title-entry,
+    [data-testid="stMain"]:has(.onb-marker) .onb-title-entry,
+    section.main:has(.onb-marker) .stMarkdown h1.onb-title-entry,
+    [data-testid="stMain"]:has(.onb-marker) .stMarkdown h1.onb-title-entry {
+      font-family: var(--font-sans) !important;
+      font-size: 22px !important;
+      font-weight: 500 !important;
+      line-height: 1.4 !important;
+      margin: 0 0 8px 0 !important;
+      color: #1a1a1a !important;
+      text-align: left;
+      letter-spacing: 0 !important;
+    }
+    section.main:has(.onb-marker) .onb-sub-hero,
+    [data-testid="stMain"]:has(.onb-marker) .onb-sub-hero {
+      font-family: var(--font-sans) !important;
+      font-size: 15px;
+      color: #5f5e5a;
+      line-height: 1.7;
+      margin: 0;
+      text-align: left;
+    }
+    section.main:has(.onb-marker) .onb-steps,
+    [data-testid="stMain"]:has(.onb-marker) .onb-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+    }
+    section.main:has(.onb-marker) .onb-step-card,
+    [data-testid="stMain"]:has(.onb-marker) .onb-step-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f5f4f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-sizing: border-box;
+    }
+    section.main:has(.onb-marker) .onb-step-num,
+    [data-testid="stMain"]:has(.onb-marker) .onb-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #9FE1CB;
+      color: #04342C;
+      font-family: var(--font-sans) !important;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    section.main:has(.onb-marker) .onb-step-ico,
+    [data-testid="stMain"]:has(.onb-marker) .onb-step-ico {
+      color: #0F6E56;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    section.main:has(.onb-marker) .onb-step-ico svg,
+    [data-testid="stMain"]:has(.onb-marker) .onb-step-ico svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+    }
+    section.main:has(.onb-marker) .onb-step-title,
+    [data-testid="stMain"]:has(.onb-marker) .onb-step-title {
+      font-family: var(--font-sans) !important;
+      font-size: 15px;
+      color: #1a1a1a;
+      flex: 1;
+      min-width: 0;
+      line-height: 1.4;
+    }
+    section.main:has(.onb-marker) .onb-cta-gap {
+      height: 24px;
+    }
+    section.main:has(.onb-marker) .onb-footnote,
+    [data-testid="stMain"]:has(.onb-marker) .onb-footnote {
+      font-family: var(--font-sans) !important;
+      font-size: 13px;
+      color: #888780;
+      text-align: center;
+      margin: 12px 0 0 0;
+    }
+    section.main:has(.onb-marker) div[data-testid="stElementContainer"] {
+      max-width: 100%;
+    }
+    section.main:has(.onb-marker) div[data-testid="stLinkButton"] {
+      width: 100%;
+    }
+    section.main:has(.onb-marker) div[data-testid="stLinkButton"] > a,
+    section.main:has(.onb-marker) a[data-testid="stLinkButton"] {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 8px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      padding: 14px !important;
+      min-height: unset !important;
+      border-radius: 8px !important;
+      background: #0F6E56 !important;
+      color: #ffffff !important;
+      font-family: var(--font-sans) !important;
+      font-size: 16px !important;
+      font-weight: 500 !important;
+      line-height: 1.4 !important;
+      text-decoration: none !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    section.main:has(.onb-marker) div[data-testid="stLinkButton"] > a::before,
+    section.main:has(.onb-marker) a[data-testid="stLinkButton"]::before {
+      content: "";
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23FFC107' d='M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z'/%3E%3Cpath fill='%23FF3D00' d='M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z'/%3E%3Cpath fill='%234CAF50' d='M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z'/%3E%3Cpath fill='%231976D2' d='M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z'/%3E%3C/svg%3E");
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] {
+      width: 100%;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"]:has(> button[kind="secondary"]),
+    section.main:has(.onb-marker) div[data-testid="stButton"]:has(> button[data-testid="baseButton-secondary"]) {
+      margin-top: 10px;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button {
+      width: 100% !important;
+      box-sizing: border-box !important;
+      border-radius: 8px !important;
+      min-height: unset !important;
+      font-family: var(--font-sans) !important;
+      letter-spacing: 0 !important;
+      box-shadow: none !important;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="primary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      padding: 14px !important;
+      background: #0F6E56 !important;
+      color: #ffffff !important;
+      border: none !important;
+      font-size: 16px !important;
+      font-weight: 500 !important;
+    }
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="secondary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
+      padding: 12px !important;
+      background: transparent !important;
+      color: var(--color-text-secondary) !important;
+      border: 0.5px solid rgba(17, 24, 39, 0.16) !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+    }
+    section.main:has(.onb-marker) div[data-testid="stAlert"],
+    section.main:has(.onb-marker) div[data-testid="stNotification"] {
+      margin-top: 12px;
     }
     section.main:has(.onb-marker) .onb-progress {
       text-align: center;
@@ -387,13 +601,6 @@ GLOBAL_CSS = """
       color: #111827 !important;
       line-height: 1.2;
       margin: 0 0 12px 0;
-    }
-    section.main:has(.onb-marker) .onb-sub-hero {
-      font-size: 0.98rem;
-      line-height: 1.55;
-      color: #4b5563 !important;
-      margin: 0 0 1rem 0;
-      font-weight: 500;
     }
     section.main:has(.onb-marker) .onb-mini-mock {
       border-radius: 18px;
@@ -610,42 +817,6 @@ GLOBAL_CSS = """
       list-style-type: decimal;
     }
     section.main:has(.onb-marker) .onb-plan-list li { margin-bottom: 8px; }
-    section.main:has(.onb-marker) .onb-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 0.35rem;
-    }
-    section.main:has(.onb-marker) .onb-actions--hero {
-      margin-top: 0.15rem;
-    }
-    section.main:has(.onb-marker) .onb-actions--stack {
-      gap: 10px;
-    }
-    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button {
-      border-radius: 15px !important;
-      min-height: 3rem !important;
-      font-weight: 700 !important;
-      font-size: 0.95rem !important;
-      letter-spacing: -0.01em;
-    }
-    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[kind="primary"],
-    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(135deg, #0f9f8f 0%, #14b8a6 100%) !important;
-      color: #ffffff !important;
-      border: none !important;
-      box-shadow: 0 6px 20px rgba(20, 184, 166, 0.32) !important;
-    }
-    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[kind="secondary"],
-    section.main:has(.onb-marker) .onb-actions div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
-      background: #ffffff !important;
-      color: #111827 !important;
-      border: 1.5px solid rgba(15, 23, 42, 0.1) !important;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-    }
-    section.main:has(.onb-marker) .onb-actions--split div[data-testid="column"] {
-      padding: 0 4px !important;
-    }
     section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button[kind="primary"],
     section.main:has(.onb-marker) .onb-choice-list div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
       background: rgba(20, 184, 166, 0.12) !important;
@@ -3927,6 +4098,18 @@ GLOBAL_CSS = """
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
       font-family: var(--font-display) !important;
     }
+    section.main:has(.onb-marker) .stMarkdown h1.onb-title-entry,
+    [data-testid="stMain"]:has(.onb-marker) .stMarkdown h1.onb-title-entry,
+    .onb-wrap h1.onb-title-entry {
+      font-family: var(--font-sans) !important;
+      font-size: 22px !important;
+      font-weight: 500 !important;
+      line-height: 1.4 !important;
+      margin: 0 0 8px 0 !important;
+      color: #1a1a1a !important;
+      text-align: left;
+      letter-spacing: 0 !important;
+    }
 
     /* --- Topic practice cards (tp-card) — after light-mode overrides -------- */
     .tp-cards-marker {
@@ -4945,6 +5128,68 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--pink { border-color: rgba(217, 83, 126, 0.40); color: #993556; }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--amber { border-color: rgba(186, 117, 23, 0.42); color: #854F0B; }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-chip--coral { border-color: rgba(216, 90, 48, 0.40); color: #993C1D; }
+
+    /* Onboarding card — final cascade (beats Streamlit default h1 / display font) */
+    .onb-wrap { max-width: 420px; margin: 0 auto; box-sizing: border-box; }
+    .onb-card {
+      background: #ffffff;
+      border: 0.5px solid rgba(0, 0, 0, 0.12);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      box-sizing: border-box;
+    }
+    .onb-brand { display: flex; align-items: center; gap: 10px; }
+    .onb-brand-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #E1F5EE; color: #0F6E56;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .onb-brand-icon svg { display: block; width: 20px; height: 20px; }
+    .onb-brand-text {
+      font-family: var(--font-sans) !important;
+      font-size: 14px; font-weight: 500; color: #0F6E56;
+    }
+    h1.onb-title-entry,
+    .stMarkdown h1.onb-title-entry,
+    .onb-wrap h1.onb-title-entry {
+      font-family: var(--font-sans) !important;
+      font-size: 22px !important;
+      font-weight: 500 !important;
+      line-height: 1.4 !important;
+      margin: 0 0 8px 0 !important;
+      color: #1a1a1a !important;
+      text-align: left;
+      letter-spacing: 0 !important;
+    }
+    .onb-sub-hero {
+      font-family: var(--font-sans) !important;
+      font-size: 15px; color: #5f5e5a; line-height: 1.7; margin: 0; text-align: left;
+    }
+    .onb-steps { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; }
+    .onb-step-card {
+      display: flex; align-items: center; gap: 8px;
+      background: #f5f4f0; border-radius: 8px; padding: 12px 14px; box-sizing: border-box;
+    }
+    .onb-step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #9FE1CB; color: #04342C;
+      font-family: var(--font-sans) !important;
+      font-size: 14px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .onb-step-ico { color: #0F6E56; display: flex; align-items: center; flex-shrink: 0; }
+    .onb-step-ico svg { display: block; width: 18px; height: 18px; }
+    .onb-step-title {
+      font-family: var(--font-sans) !important;
+      font-size: 15px; color: #1a1a1a; flex: 1; min-width: 0;
+    }
+    .onb-footnote {
+      font-family: var(--font-sans) !important;
+      font-size: 13px; color: #888780; text-align: center; margin: 12px 0 0 0;
+    }
 """
 
 

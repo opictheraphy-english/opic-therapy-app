@@ -18,6 +18,7 @@ from services.mock_exam.mock_exam_test_set_generator import (
     COMPARISON_POOL_IH,
     NEWS_ISSUE_POOL_AL,
     NEWS_ISSUE_POOL_IH,
+    Q5_POOL,
     TOPIC_TRANSLATIONS,
     SURVEY_TO_BANK_TOPICS,
 )
@@ -188,6 +189,26 @@ def _eligible_combo3_topic_ids() -> List[str]:
     ]
 
 
+def _eligible_combo2_topic_ids_im() -> List[str]:
+    """IM Combo2: q1, q2, and at least one of q3|q4 (Q7 flex)."""
+    return [
+        tid
+        for tid in list_topic_ids()
+        if _has_slot(tid, "q1")
+        and _has_slot(tid, "q2")
+        and _has_any_slot(tid, ("q3", "q4"))
+    ]
+
+
+def _eligible_combo3_topic_ids_im() -> List[str]:
+    """IM Combo3: q1, q3, q4 all required."""
+    return [
+        tid
+        for tid in list_topic_ids()
+        if _has_slot(tid, "q1") and _has_slot(tid, "q3") and _has_slot(tid, "q4")
+    ]
+
+
 def _resolve_topic_id(
     pool: List[str],
     preferred: List[str],
@@ -299,6 +320,33 @@ def _advanced_question(
     }
 
 
+def _pick_q5_pool_row(preferred: List[str]) -> Dict[str, Any]:
+    pref_set = set(preferred)
+    candidates = [row for row in Q5_POOL if row.get("topic_id") in pref_set]
+    if not candidates:
+        candidates = list(Q5_POOL)
+    return dict(random.choice(candidates))
+
+
+def _q5_pool_question(qnum: int, row: Dict[str, Any]) -> Dict[str, Any]:
+    tid = str(row.get("topic_id") or "").strip()
+    text = str(row.get("question_text") or row.get("question") or "").strip()
+    return {
+        "id": f"mock_v2_q{qnum}",
+        "question_index": qnum - 1,
+        "question_number": qnum,
+        "opic_type": "Q5",
+        "combo": "Advanced",
+        "step": "질문하기 (Ask the Interviewer)",
+        "topic": _topic_label(tid),
+        "topic_id": tid,
+        "bank_slot": "",
+        "question_text": text,
+        "ko_helper": _KO_HELPER_DEFAULT,
+        "source_id": None,
+    }
+
+
 def _pick_roleplay_triplet() -> List[Dict[str, Any]]:
     ready: List[str] = []
     for sid in list_roleplay_set_ids():
@@ -312,9 +360,159 @@ def _pick_roleplay_triplet() -> List[Dict[str, Any]]:
     return rows
 
 
-def build_mock_v2_exam(survey_results: dict, difficulty: int = 5) -> List[Dict[str, Any]]:
+def _build_mock_v2_exam_im(survey_results: dict, difficulty: int = 3) -> List[Dict[str, Any]]:
     """
-    Build 15 Mock V2 questions from opic_question_bank_v2.
+    Build 15 Mock V2 questions for IM path (levels 3–4).
+
+    Seat map:
+      Q1  Self-Introduction
+      Q2–4   topic t1: bank q1, q2, q3
+      Q5–6   topic t2: bank q1, q2
+      Q7     topic t2: bank q3 or q4
+      Q8–10  topic t3: bank q1, q3, q4
+      Q11–13 roleplay q6, q7, q8 (one set)
+      Q14    topic t4: bank q1
+      Q15    Q5_POOL (Ask-the-interviewer)
+    """
+    preferred = _survey_preferred_topic_ids(survey_results)
+    combo1_pool = _eligible_combo1_topic_ids()
+    combo2_pool = _eligible_combo2_topic_ids_im()
+    combo3_pool = _eligible_combo3_topic_ids_im()
+
+    if not combo1_pool:
+        raise RuntimeError("opic_question_bank_v2 cannot satisfy Combo1 (q1+q2+q3).")
+    if not combo2_pool:
+        raise RuntimeError("opic_question_bank_v2 cannot satisfy IM Combo2 (q1+q2+q3|q4).")
+    if not combo3_pool:
+        raise RuntimeError("opic_question_bank_v2 cannot satisfy IM Combo3 (q1+q3+q4).")
+
+    excluded: set[str] = set()
+    t1 = _resolve_topic_id(combo1_pool, preferred, excluded)
+    excluded.add(t1)
+    t2 = _resolve_topic_id(combo2_pool, preferred, excluded)
+    excluded.add(t2)
+    t3 = _resolve_topic_id(combo3_pool, preferred, excluded)
+    excluded.add(t3)
+    t4 = _resolve_topic_id(combo1_pool, preferred, excluded)
+    excluded.add(t4)
+
+    lev = int(difficulty) if difficulty is not None else 3
+    q5_row = _pick_q5_pool_row(preferred)
+
+    exam: List[Dict[str, Any]] = [_intro_question()]
+
+    r2 = _pick_row(t1, "q1")
+    exam.append(
+        _to_mock_v2_question(
+            2, combo="Combo1", step=_step_label("q1", r2), topic_id=t1, row=r2, bank_slot="q1"
+        )
+    )
+    r3 = _pick_row(t1, "q2")
+    exam.append(
+        _to_mock_v2_question(
+            3, combo="Combo1", step=_step_label("q2", r3), topic_id=t1, row=r3, bank_slot="q2"
+        )
+    )
+    r4 = _pick_row(t1, "q3")
+    exam.append(
+        _to_mock_v2_question(
+            4, combo="Combo1", step=_step_label("q3", r4), topic_id=t1, row=r4, bank_slot="q3"
+        )
+    )
+
+    r5 = _pick_row(t2, "q1")
+    exam.append(
+        _to_mock_v2_question(
+            5, combo="Combo2", step=_step_label("q1", r5), topic_id=t2, row=r5, bank_slot="q1"
+        )
+    )
+    r6 = _pick_row(t2, "q2")
+    exam.append(
+        _to_mock_v2_question(
+            6, combo="Combo2", step=_step_label("q2", r6), topic_id=t2, row=r6, bank_slot="q2"
+        )
+    )
+    r7, slot7 = _pick_flex_row(t2, ("q3", "q4"))
+    exam.append(
+        _to_mock_v2_question(
+            7,
+            combo="Combo2",
+            step=_step_label(slot7, r7),
+            topic_id=t2,
+            row=r7,
+            bank_slot=slot7,
+        )
+    )
+
+    r8 = _pick_row(t3, "q1")
+    exam.append(
+        _to_mock_v2_question(
+            8, combo="Combo3", step=_step_label("q1", r8), topic_id=t3, row=r8, bank_slot="q1"
+        )
+    )
+    r9 = _pick_row(t3, "q3")
+    exam.append(
+        _to_mock_v2_question(
+            9, combo="Combo3", step=_step_label("q3", r9), topic_id=t3, row=r9, bank_slot="q3"
+        )
+    )
+    r10 = _pick_row(t3, "q4")
+    exam.append(
+        _to_mock_v2_question(
+            10, combo="Combo3", step=_step_label("q4", r10), topic_id=t3, row=r10, bank_slot="q4"
+        )
+    )
+
+    rp = _pick_roleplay_triplet()
+    for qnum, row, slot in ((11, rp[0], "q6"), (12, rp[1], "q7"), (13, rp[2], "q8")):
+        tid = str(row.get("topic_id") or "")
+        exam.append(
+            _to_mock_v2_question(
+                qnum,
+                combo="Roleplay",
+                step=_step_label(slot, row),
+                topic_id=tid,
+                row=row,
+                bank_slot=slot,
+            )
+        )
+
+    r14 = _pick_row(t4, "q1")
+    exam.append(
+        _to_mock_v2_question(
+            14,
+            combo="Advanced",
+            step=_step_label("q1", r14),
+            topic_id=t4,
+            row=r14,
+            bank_slot="q1",
+        )
+    )
+    exam.append(_q5_pool_question(15, q5_row))
+
+    if len(exam) != 15:
+        raise RuntimeError(f"Mock V2 exam must have 15 questions, got {len(exam)}.")
+
+    try:
+        logger.info(
+            "[MOCK_V2_EXAM_BUILT] bank=opic_question_bank_v2 path=im questions_count=%s "
+            "difficulty=%s topics=%s,%s,%s,%s",
+            len(exam),
+            lev,
+            t1,
+            t2,
+            t3,
+            t4,
+        )
+    except Exception:
+        pass
+
+    return exam
+
+
+def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List[Dict[str, Any]]:
+    """
+    Build 15 Mock V2 questions from opic_question_bank_v2 (IH/AL path: levels 5–6).
 
     Seat map:
       Q1  Self-Introduction
@@ -476,3 +674,11 @@ def build_mock_v2_exam(survey_results: dict, difficulty: int = 5) -> List[Dict[s
         pass
 
     return exam
+
+
+def build_mock_v2_exam(survey_results: dict, difficulty: int = 5) -> List[Dict[str, Any]]:
+    """Route exam construction by difficulty tier."""
+    lev = int(difficulty) if difficulty is not None else 5
+    if lev in (3, 4):
+        return _build_mock_v2_exam_im(survey_results, lev)
+    return _build_mock_v2_exam_ih_al(survey_results, lev)

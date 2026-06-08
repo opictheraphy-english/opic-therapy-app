@@ -16,18 +16,12 @@ import streamlit as st
 logger = logging.getLogger(__name__)
 
 NEURAL2_EVA = "en-US-Neural2-F"
-NEURAL2_DANIEL = "en-US-Neural2-H"
 DEFAULT_TTS_SPEAKING_RATE = 0.95
 DEFAULT_TTS_PITCH = 0.0
 
 
-def neural2_voice_for_choice(voice_choice: str) -> str:
-    return NEURAL2_DANIEL if voice_choice == "Daniel" else NEURAL2_EVA
-
-
 def neural2_voice_for_session() -> str:
-    preset = st.session_state.get("voice_choice", "Eva")
-    return neural2_voice_for_choice(str(preset))
+    return NEURAL2_EVA
 
 
 def load_texttospeech_module():
@@ -209,19 +203,8 @@ def tts_audio_cached(text: str, voice_name: str, speaking_rate: float, pitch: fl
 def speak_direct_macos(text: str, voice_name: str) -> None:
     if os.name != "posix":
         return
-    preset = st.session_state.get("voice_choice", "Eva")
-    say_voice_map = {
-        "Eva": "Samantha",
-        "Daniel": "Daniel",
-    }
-    rate_map = {
-        "Eva": "190",
-        "Daniel": "180",
-    }
-    say_voice = say_voice_map.get(str(preset), "Samantha")
-    say_rate = rate_map.get(str(preset), "190")
     try:
-        subprocess.Popen(["say", "-v", say_voice, "-r", say_rate, text])
+        subprocess.Popen(["say", "-v", "Samantha", "-r", "190", text])
     except Exception as e:
         logger.warning("direct macOS say failed: %s: %s", type(e).__name__, e)
 

@@ -110,6 +110,24 @@ _SPORTS_OPTS = [
 ]
 _TRAVEL_OPTS = ["국내 여행", "해외 여행", "집에서 보내는 휴가(스테이케이션)"]
 
+_MOCK_V2_DIFFICULTY_OPTIONS = [3, 4, 5, 6]
+_MOCK_V2_DIFFICULTY_LABELS = {
+    3: "레벨 3 (IL-IM1 목표)",
+    4: "레벨 4 (IM2 목표)",
+    5: "레벨 5 (IH 목표)",
+    6: "레벨 6 (AL 목표)",
+}
+
+
+def _mock_v2_difficulty_radio_index(current: Any) -> int:
+    try:
+        value = int(current)
+    except (TypeError, ValueError):
+        return _MOCK_V2_DIFFICULTY_OPTIONS.index(5)
+    if value in _MOCK_V2_DIFFICULTY_OPTIONS:
+        return _MOCK_V2_DIFFICULTY_OPTIONS.index(value)
+    return _MOCK_V2_DIFFICULTY_OPTIONS.index(5)
+
 
 def clear_mock_v2_session() -> None:
     from utils.v2_flow_persistence import clear_mock_v2_disk_snapshot
@@ -798,11 +816,9 @@ def _render_mock_v2_survey() -> None:
 
     difficulty = st.radio(
         "난이도",
-        [5, 6],
-        index=0 if int(st.session_state.get("mock_v2_difficulty", 5)) == 5 else 1,
-        format_func=lambda v: (
-            "레벨 5 (IH 목표)" if v == 5 else "레벨 6 (AL 목표)"
-        ),
+        _MOCK_V2_DIFFICULTY_OPTIONS,
+        index=_mock_v2_difficulty_radio_index(st.session_state.get("mock_v2_difficulty", 5)),
+        format_func=lambda v: _MOCK_V2_DIFFICULTY_LABELS[v],
         horizontal=True,
         key="mock_v2_difficulty",
     )

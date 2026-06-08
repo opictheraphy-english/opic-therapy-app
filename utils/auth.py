@@ -27,7 +27,7 @@ from utils.browser_session import (
     read_refresh_token,
     store_refresh_token,
 )
-from utils.local_profile import complete_entry_guest, merge_app_session
+from utils.local_profile import complete_entry_guest, merge_app_session, persist_onboarding_completion
 
 logger = logging.getLogger(__name__)
 
@@ -173,21 +173,15 @@ def _set_authenticated(ss: MutableMapping[str, Any], user: dict) -> None:
     ss["sb_refresh_token"] = user.get("refresh_token")
     ss["sb_token_expires_at"] = user.get("expires_at")
     ss.pop("_google_oauth_url", None)
-    # Pass the existing entry/onboarding gates so the normal app loads.
     ss["entry_gate_completed"] = True
     ss["user_mode"] = "google"
-    if "onboarding_completed" not in ss:
-        ss["onboarding_completed"] = False
-    # Only the non-sensitive app-flow flags go to this browser's (per-device)
-    # local profile. Identity + tokens are NEVER written to server disk — the
-    # refresh token lives in this browser's cookie and the identity is
-    # re-derived from it on each fresh session.
     merge_app_session(
         {
             "entry_gate_completed": True,
             "user_mode": "google",
         }
     )
+    persist_onboarding_completion(ss, skip_preferences=True)
     # The cookie itself is written by _sync_login_cookie() on the next (rendering)
     # run — this run is discarded by handle_oauth_callback()'s st.rerun().
 
@@ -248,13 +242,17 @@ def force_refresh_access_token(ss: MutableMapping[str, Any]) -> Optional[str]:
 def handle_oauth_callback(ss: MutableMapping[str, Any]) -> None:
     """If the browser came back from Google with ``?code=``, exchange it for a
     session, store the user, and clear the param. Runs early in ``app.py``."""
-    if is_authenticated(ss):
-        _clear_oauth_params()
-        return
     try:
         code = st.query_params.get("code")
     except Exception:
         code = None
+    if is_authenticated(ss):
+        _clear_oauth_params()
+        if code and not ss.get("onboarding_completed"):
+            ss["entry_gate_completed"] = True
+            merge_app_session({"entry_gate_completed": True, "user_mode": "google"})
+            persist_onboarding_completion(ss, skip_preferences=True)
+        return
     if not code:
         return
 

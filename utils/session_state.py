@@ -40,7 +40,6 @@ _DEFAULT_MOCK: Dict[str, Any] = {
 
 _DEFAULT_SETTINGS: Dict[str, Any] = {
     "difficulty": 5,
-    "voice_choice": "Eva",
 }
 
 _LEGACY_MOCK_KEYS = frozenset(_DEFAULT_MOCK.keys())
@@ -81,7 +80,6 @@ def sync_settings_to_legacy(ss: MutableMapping[str, Any]) -> None:
     """Keep legacy top-level keys used by widgets / older snippets."""
     s = ensure_settings(ss)
     ss["difficulty"] = s.get("difficulty", 5)
-    ss["voice_choice"] = s.get("voice_choice", "Eva")
 
 
 def mock_session() -> Dict[str, Any]:
