@@ -391,7 +391,7 @@ def _render_quick_actions() -> None:
     # 4th tuple field = per-card modifier class for icon colour (styles.py).
     items = (
         ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기", "qa-card--pattern"),
-        ("SCRIPTS", "file", "스크립트 연습", "답변 구조 익히기", "qa-card--scripts"),
+        ("SCRIPTS", "file", "스크립트", "스마트스토어에서 구매", "qa-card--scripts"),
         ("LECTURES", "play", "강의 보기", "출제 유형 강의", "qa-card--lectures"),
         ("SCRIPT_COACHING", "chart", "스크립트 첨삭", "내 답변 등급 진단받기", "qa-card--coaching"),
     )

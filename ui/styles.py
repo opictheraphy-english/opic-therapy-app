@@ -5190,6 +5190,30 @@ GLOBAL_CSS = """
       font-family: var(--font-sans) !important;
       font-size: 13px; color: #888780; text-align: center; margin: 12px 0 0 0;
     }
+
+    /* Scripts tab — external Smart Store link (must open outside Streamlit iframe) */
+    section.main:has(.scripts-store-marker) a.scripts-store-cta,
+    [data-testid="stMain"]:has(.scripts-store-marker) a.scripts-store-cta {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      text-decoration: none;
+      padding: 0.65rem 1rem;
+      border-radius: 0.5rem;
+      font-family: var(--font-sans) !important;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffffff !important;
+      background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+      border: 1px solid rgba(15, 118, 110, 0.35);
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.22);
+    }
+    section.main:has(.scripts-store-marker) a.scripts-store-cta:hover,
+    [data-testid="stMain"]:has(.scripts-store-marker) a.scripts-store-cta:hover {
+      filter: brightness(1.04);
+      color: #ffffff !important;
+    }
 """
 
 

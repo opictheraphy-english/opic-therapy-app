@@ -2662,7 +2662,6 @@ def _render_portal_sample_report_section(mx: dict) -> None:
         build_demo_sample_pdf_bytes,
         open_demo_final_report,
     )
-    from services.pdf_report import pdf_export_available
     from utils.exam_state import has_resumable_exam
 
     st.markdown(
@@ -2686,7 +2685,6 @@ def _render_portal_sample_report_section(mx: dict) -> None:
         )
 
     pdf_bytes = build_demo_sample_pdf_bytes()
-    pdf_avail = pdf_export_available()
     b_view, b_pdf = st.columns(2)
     with b_view:
         if st.button(
@@ -2706,20 +2704,6 @@ def _render_portal_sample_report_section(mx: dict) -> None:
                 mime="application/pdf",
                 use_container_width=True,
                 key="portal_sample_report_pdf",
-            )
-
-    if not pdf_bytes:
-        if not pdf_avail:
-            st.markdown(
-                '<p class="mx-muted-note">PDF 다운로드는 현재 사용할 수 없습니다. '
-                "샘플 리포트 화면에서 내용을 확인해 주세요.</p>",
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                '<p class="mx-muted-note">PDF를 만들지 못했어요. '
-                "샘플 리포트 화면에서 내용을 확인해 주세요.</p>",
-                unsafe_allow_html=True,
             )
 
 
