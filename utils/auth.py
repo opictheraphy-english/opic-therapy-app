@@ -72,15 +72,23 @@ def init_auth_state(ss: MutableMapping[str, Any]) -> None:
 
 
 def _sync_login_cookie(ss: MutableMapping[str, Any]) -> None:
-    """Write the refresh-token cookie iff it differs from what we last wrote this
-    session. No-op for logged-out users (the cookie is cleared on logout)."""
+    """Align the browser ``opic_rt`` cookie with ``sb_refresh_token`` in session.
+
+    We compare against the **incoming request** cookie (``read_refresh_token``),
+    not a session-local "already wrote" flag. A ``st.rerun()`` that discards the
+    set-cookie iframe therefore retries on the next run until the browser sends
+    the cookie back on a full navigation/reload."""
     if not ss.get("user_authenticated"):
         return
     rt = ss.get("sb_refresh_token")
-    if not rt or ss.get("_rt_cookie_value") == rt:
+    if not rt:
         return
-    store_refresh_token(str(rt))
-    ss["_rt_cookie_value"] = rt
+    rt_str = str(rt)
+    cookie_rt = read_refresh_token()
+    if cookie_rt == rt_str:
+        return
+    store_refresh_token(rt_str)
+    logger.info("[AUTH] opic_rt cookie written (session→browser sync)")
 
 
 def _restore_auth_from_cookie(ss: MutableMapping[str, Any]) -> None:
@@ -94,11 +102,12 @@ def _restore_auth_from_cookie(ss: MutableMapping[str, Any]) -> None:
         return
     rt = read_refresh_token()
     if not rt:
+        logger.info("[AUTH] opic_rt missing on restore")
         return
     refreshed = refresh_access_token(str(rt))
     if not refreshed or not refreshed.get("id"):
-        # Token no longer valid — drop it so we don't retry every rerun.
         clear_refresh_token()
+        logger.warning("[AUTH] opic_rt restore failed (refresh rejected)")
         return
     ss["user_authenticated"] = True
     ss["is_guest"] = False
@@ -111,9 +120,8 @@ def _restore_auth_from_cookie(ss: MutableMapping[str, Any]) -> None:
     ss["entry_gate_completed"] = True
     ss["user_mode"] = "google"
     ss.setdefault("onboarding_completed", True)
-    # Persist the rotated refresh token back to the cookie (GoTrue rotates it).
-    store_refresh_token(refreshed.get("refresh_token"))
-    ss["_rt_cookie_value"] = refreshed.get("refresh_token")
+    logger.info("[AUTH] opic_rt restore ok user_id=%s", refreshed.get("id"))
+    _sync_login_cookie(ss)
 
 
 def is_authenticated(ss: MutableMapping[str, Any]) -> bool:
@@ -194,8 +202,7 @@ def _store_refreshed_tokens(ss: MutableMapping[str, Any], tokens: dict) -> str:
     ss["sb_access_token"] = tokens.get("access_token")
     ss["sb_refresh_token"] = tokens.get("refresh_token")
     ss["sb_token_expires_at"] = tokens.get("expires_at")
-    store_refresh_token(tokens.get("refresh_token"))
-    ss["_rt_cookie_value"] = tokens.get("refresh_token")
+    _sync_login_cookie(ss)
     return str(tokens.get("access_token") or "")
 
 
@@ -309,9 +316,8 @@ def logout(ss: MutableMapping[str, Any]) -> None:
     ss.pop("_login_info_open", None)
     ss.pop("_google_oauth_url", None)
     ss["_auth_restored"] = True  # don't re-restore the just-cleared identity
-    ss.pop("_rt_cookie_value", None)
-    # Drop this browser's login cookie so a fresh session can't restore it.
     clear_refresh_token()
+    logger.info("[AUTH] opic_rt cookie cleared (logout)")
     merge_app_session(
         {
             "entry_gate_completed": False,
