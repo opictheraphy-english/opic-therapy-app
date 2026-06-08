@@ -14,13 +14,10 @@ from data.opic_question_bank_v2 import (
     list_topic_ids,
 )
 from services.mock_exam.mock_exam_test_set_generator import (
-    COMPARISON_POOL_AL,
-    COMPARISON_POOL_IH,
-    NEWS_ISSUE_POOL_AL,
-    NEWS_ISSUE_POOL_IH,
     Q5_POOL,
     TOPIC_TRANSLATIONS,
     SURVEY_TO_BANK_TOPICS,
+    pick_advanced_set,
 )
 
 logger = logging.getLogger(__name__)
@@ -520,8 +517,8 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
       Q5–7   topic t2: bank q1, q3, flex q2|q3|q4
       Q8–10  topic t3: bank q1, flex q2|q3|q4, flex q3|q4
       Q11–13 roleplay q6, q7, q8 (one set)
-      Q14    Comparison pool (IH/AL by difficulty)
-      Q15    News/Issue pool (IH/AL by difficulty)
+      Q14    Comparison (paired advanced set)
+      Q15    News/Issue (same set as Q14)
     """
     preferred = _survey_preferred_topic_ids(survey_results)
     combo1_pool = _eligible_combo1_topic_ids()
@@ -544,11 +541,6 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
     excluded.add(t3)
 
     lev = int(difficulty) if difficulty is not None else 5
-    comp_pool = COMPARISON_POOL_AL if lev >= 6 else COMPARISON_POOL_IH
-    news_pool = NEWS_ISSUE_POOL_AL if lev >= 6 else NEWS_ISSUE_POOL_IH
-    q14 = random.choice(comp_pool)
-    q15_candidates = [x for x in news_pool if x.get("question") != q14.get("question")]
-    q15 = random.choice(q15_candidates or news_pool)
 
     exam: List[Dict[str, Any]] = [ _intro_question() ]
 
@@ -638,12 +630,17 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
             )
         )
 
+    adv_set = pick_advanced_set()
+    adv_topic = str(adv_set["set_id"])
+    q14 = adv_set["comparison"]
+    q15 = adv_set["news_issue"]
+
     exam.append(
         _advanced_question(
             14,
             combo="Advanced",
             step="Comparison",
-            topic=str(q14.get("topic") or "Comparison"),
+            topic=adv_topic,
             question_text=str(q14.get("question") or ""),
         )
     )
@@ -652,7 +649,7 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
             15,
             combo="Advanced",
             step="News/Issue",
-            topic=str(q15.get("topic") or "News_Issue"),
+            topic=adv_topic,
             question_text=str(q15.get("question") or ""),
         )
     )

@@ -76,123 +76,316 @@ SURVEY_TO_BANK_TOPICS = {
     "Jogging": ["Jogging"],
 }
 
-# IH (difficulty 5): 비교·사회 이슈 고득점용 독립 문항 (bank에 없는 타입은 여기서만 출제)
-COMPARISON_POOL_IH = [
+# IH/AL (levels 5–6): Q14 Comparison + Q15 News/Issue — 20 topic sets, picked as a pair
+ADVANCED_SET_POOL = [
     {
-        "topic": "Comparison",
-        "question": (
-            "I'd like to hear how homes from your childhood compare with homes people live in today—"
-            "what's the biggest shift you've noticed?"
-        ),
+        "set_id": "phone",
+        "comparison": {
+            "question": (
+                "Think back to how cell phones were used about five years ago. Which features and apps "
+                "did people rely on then? In your view, what has shifted the most in the way people "
+                "use their phones today?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Many adults feel that younger people are on their phones too much and may be missing "
+                "out on real, in-person conversation. In your country, how do people generally feel "
+                "about young people's phone habits?"
+            ),
+        },
     },
     {
-        "topic": "Comparison",
-        "question": (
-            "Walk me through how living alone stacks up against living with family for you—"
-            "convenience, stress, and lifestyle—what fits you better?"
-        ),
+        "set_id": "internet",
+        "comparison": {
+            "question": (
+                "People of different ages tend to use the internet in their own ways. What do younger "
+                "users mostly go online for, and how does that differ from what older users do?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "When it comes to the internet, people raise a number of worries — privacy and security "
+                "among them. What kinds of concerns come up most, and why do they matter to people?"
+            ),
+        },
     },
     {
-        "topic": "Comparison",
-        "question": (
-            "Compare apartments and standalone houses from your experience—which wins on convenience "
-            "and daily rhythm, and why?"
-        ),
+        "set_id": "home",
+        "comparison": {
+            "question": (
+                "When something goes wrong at home, how do you usually handle it? How does your parents' "
+                "way of handling it compare to yours? Where do the differences show up?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Renting a place to live comes with its own set of headaches. What kinds of problems do "
+                "renters often run into, and what do they usually do to fix them?"
+            ),
+        },
     },
     {
-        "topic": "Comparison",
-        "question": (
-            "Tell me how city life and suburban life feel different from where you've actually lived—"
-            "pace, noise, anything that stuck with you?"
-        ),
+        "set_id": "gatherings",
+        "comparison": {
+            "question": (
+                "Get-togethers and celebrations can look quite different depending on where you are. "
+                "How do they compare between smaller towns and larger cities in your country?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Putting together a gathering isn't always easy. What sorts of difficulties come up when "
+                "people try to organize one, and how do they usually work around them?"
+            ),
+        },
+    },
+    {
+        "set_id": "holidays",
+        "comparison": {
+            "question": (
+                "Walk me through some of the holidays celebrated in your country. What do people "
+                "typically do, and how do you yourself mark these days?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Holidays aren't always smooth — people have their share of worries about them. What "
+                "bothers people about holidays, and how do they handle it?"
+            ),
+        },
+    },
+    {
+        "set_id": "industry",
+        "comparison": {
+            "question": (
+                "Pick an industry you keep an eye on — maybe food, tech, mobile, or something else. "
+                "What was it like roughly three years ago, and in what ways has it shifted since?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Can you think of a product that let the public down? Maybe a gaming console that fell "
+                "flat, or a phone or app that launched with serious flaws. Walk me through what went wrong."
+            ),
+        },
+    },
+    {
+        "set_id": "transportation",
+        "comparison": {
+            "question": (
+                "Think about how getting around in your country has changed over time. How did people "
+                "travel in earlier days, and how does that compare with how they get around now?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Public transport isn't without its troubles. What kinds of problems do riders deal "
+                "with, and how do they usually cope with them?"
+            ),
+        },
+    },
+    {
+        "set_id": "technology",
+        "comparison": {
+            "question": (
+                "Take a device you use now and compare it with an older model of the same thing. What "
+                "was the earlier one like, and how has it gotten better?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "There's a sense among some people that we lean on technology a little too heavily. What "
+                "worries do people in your country voice about this, and where do those worries come from?"
+            ),
+        },
+    },
+    {
+        "set_id": "environment",
+        "comparison": {
+            "question": (
+                "How did the environment around where you live look in the past, compared with today? "
+                "What's gotten better, and what's gotten worse?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "There are several environmental matters people in your country pay attention to. Which "
+                "ones come up, and why do people see them as important?"
+            ),
+        },
+    },
+    {
+        "set_id": "health",
+        "comparison": {
+            "question": (
+                "The way people look after their health now isn't quite the same as before. Where do you "
+                "see the biggest differences between then and now?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "These days people have a few worries when it comes to staying healthy. What's behind "
+                "those worries, and what do people do to keep themselves well?"
+            ),
+        },
+    },
+    {
+        "set_id": "weather",
+        "comparison": {
+            "question": (
+                "Weather can shift quite a bit from season to season in your country. Take two seasons "
+                "and compare them — how do people's daily activities change?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Rough weather can cause real trouble. What kinds of problems does extreme weather bring "
+                "in your country, and how do people get ready for it or deal with it?"
+            ),
+        },
+    },
+    {
+        "set_id": "shopping",
+        "comparison": {
+            "question": (
+                "The way people shop has moved on over the years. How does shopping back then compare "
+                "with shopping now, online buying included?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Buying things online doesn't always go smoothly. What problems do shoppers run into on "
+                "the web, and how do they sort them out?"
+            ),
+        },
+    },
+    {
+        "set_id": "restaurants",
+        "comparison": {
+            "question": (
+                "Restaurants today aren't quite what they used to be. Compare them with restaurants "
+                "from the past — think food, service, or the overall feel."
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Eating out comes with a few worries for people, whether it's the bill or how safe the "
+                "food is. Why do these things matter to people?"
+            ),
+        },
+    },
+    {
+        "set_id": "travel",
+        "comparison": {
+            "question": (
+                "The way people take trips has changed over the years. How does traveling in the past "
+                "compare with the way people travel today?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Trips don't always go as planned. What sorts of problems do travelers run into, and "
+                "how do they handle them when they come up?"
+            ),
+        },
+    },
+    {
+        "set_id": "fashion",
+        "comparison": {
+            "question": (
+                "Fashion in your country has moved quite a bit over the years. Compare what people used "
+                "to wear with what they put on these days."
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "A few concerns come up around fashion — fast fashion or cost, for instance. Why do these "
+                "things worry people?"
+            ),
+        },
+    },
+    {
+        "set_id": "education",
+        "comparison": {
+            "question": (
+                "Learning today doesn't look much like it did years ago. Compare how students used to "
+                "study with the way they go about it now."
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "People hold a number of worries about how education works in your country. What are they, "
+                "and why do they matter so much?"
+            ),
+        },
+    },
+    {
+        "set_id": "jobs",
+        "comparison": {
+            "question": (
+                "The way people do their jobs has shifted in recent years. Compare working in the past "
+                "with working now — remote work included."
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Work brings its share of struggles these days. What's causing them, and how do people "
+                "get through them?"
+            ),
+        },
+    },
+    {
+        "set_id": "neighborhood",
+        "comparison": {
+            "question": (
+                "How does your neighborhood today compare with how it was a few years back? What's "
+                "different about it now?"
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Neighborhoods come with their own problems for the people living there. Why do these "
+                "come about, and how do people work them out?"
+            ),
+        },
+    },
+    {
+        "set_id": "banks",
+        "comparison": {
+            "question": (
+                "Banking has come a long way over the years. Compare how people dealt with banks in the "
+                "past with how they handle it now, mobile banking included."
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "People have a few worries when it comes to online banking or managing their money. Why "
+                "do these concerns matter to them?"
+            ),
+        },
+    },
+    {
+        "set_id": "social_media",
+        "comparison": {
+            "question": (
+                "The way people use social media has shifted over the years. Compare how it was used "
+                "earlier with how people use it today."
+            ),
+        },
+        "news_issue": {
+            "question": (
+                "Social media brings up a number of worries for people. What are they anxious about, and "
+                "how does it shape their daily lives?"
+            ),
+        },
     },
 ]
 
-NEWS_ISSUE_POOL_IH = [
-    {
-        "topic": "News_Issue",
-        "question": (
-            "What's been in the conversation lately around housing where you're from—rent jumps, "
-            "supply, younger buyers—and how do people around you react?"
-        ),
-    },
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Pick something tech-related that's been trending—short video, AI tools, whatever—and "
-            "tell me why it's blowing up and whether that worries or excites you."
-        ),
-    },
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Talk about a workplace or career shift you've seen in the news or among friends—"
-            "remote work, layoffs, side gigs—and what that says about where things are headed."
-        ),
-    },
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Environmental headlines pop up every season—anything local you've noticed "
-            "(floods, heat, recycling drives) and how everyday people respond?"
-        ),
-    },
-]
 
-COMPARISON_POOL_AL = [
-    {
-        "topic": "Comparison",
-        "question": (
-            "Compare renting long-term with buying a home—stability, monthly cash flow, "
-            "and personal freedom—which trade-offs matter most to people you know?"
-        ),
-    },
-    {
-        "topic": "Comparison",
-        "question": (
-            "Urban redevelopment versus preserving older neighborhoods—if you had to choose a priority "
-            "for your city, what would you defend and why?"
-        ),
-    },
-    {
-        "topic": "Comparison",
-        "question": (
-            "Contrast online-only learning with in-person classes beyond convenience—social capital, "
-            "motivation, long-term outcomes."
-        ),
-    },
-]
-
-NEWS_ISSUE_POOL_AL = [
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Discuss the social ripple effects of rising housing prices—who gets squeezed hardest and "
-            "what patterns you see among peers?"
-        ),
-    },
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Remote and hybrid work reshaped where people live—talk about that shift as a news-level "
-            "story: winners, losers, unexpected side effects."
-        ),
-    },
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Should governments actively cool housing markets or let them run—give two reasons for "
-            "intervention and one honest counterargument you'd respect."
-        ),
-    },
-    {
-        "topic": "News_Issue",
-        "question": (
-            "Pick a sustainability or climate policy you've seen debated recently—what's the headline "
-            "takeaway and what would you push policymakers to fix first?"
-        ),
-    },
-]
+def pick_advanced_set() -> dict:
+    """Pick one Q14+Q15 topic set (Comparison + News/Issue pair) for IH/AL exams."""
+    return random.choice(ADVANCED_SET_POOL)
 
 # Ask-the-interviewer (OPIc Q5): bank 밖 독립 풀 — 레벨 3·4 출제 연결은 별도 단계
 Q5_POOL = [
@@ -556,14 +749,6 @@ def generate_test_set(survey_results=None, difficulty=5):
     bundle_topic = random.choice(roleplay_ready)
     bb = role_buckets[bundle_topic]
 
-    lev = int(difficulty) if difficulty is not None else 5
-    comp_pool = COMPARISON_POOL_AL if lev >= 6 else COMPARISON_POOL_IH
-    news_pool = NEWS_ISSUE_POOL_AL if lev >= 6 else NEWS_ISSUE_POOL_IH
-
-    q14 = random.choice(comp_pool)
-    q15_candidates = [x for x in news_pool if x["question"] != q14.get("question")]
-    q15 = random.choice(q15_candidates or news_pool)
-
     test_set = []
 
     test_set.append(
@@ -659,12 +844,17 @@ def generate_test_set(survey_results=None, difficulty=5):
         )
     )
 
+    adv_set = pick_advanced_set()
+    q14 = adv_set["comparison"]
+    q15 = adv_set["news_issue"]
+    adv_topic = adv_set["set_id"]
+
     test_set.append(
         _exam_item(
             14,
             "Advanced",
             "Comparison",
-            q14["topic"],
+            adv_topic,
             "Comparison",
             q14["question"],
             bank_id=None,
@@ -675,7 +865,7 @@ def generate_test_set(survey_results=None, difficulty=5):
             15,
             "Advanced",
             "News/Issue",
-            q15["topic"],
+            adv_topic,
             "News_Issue",
             q15["question"],
             bank_id=None,

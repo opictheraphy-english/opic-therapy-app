@@ -76,6 +76,8 @@ _KEY_FB_IN_FLIGHT = "topic_v2_feedback_in_flight"
 _KEY_FB_COOLDOWN_UNTIL = "topic_v2_feedback_cooldown_until"
 _KEY_FB_ATTEMPTS = "topic_v2_feedback_attempts"
 _KEY_FB_NOTICE = "topic_v2_feedback_user_notice"
+_KEY_PRACTICE_SIG = "topic_v2_practice_sig"
+_KEY_FEEDBACK_BY_Q = "topic_v2_feedback_by_q"
 
 _FEEDBACK_COOLDOWN_BASE_SEC = 45
 _FEEDBACK_COOLDOWN_STEP_SEC = 15
@@ -550,6 +552,8 @@ def clear_topic_v2_session() -> None:
         _KEY_ROLEPLAY_SET_ID,
         _KEY_ANSWERS,
         _KEY_FEEDBACK,
+        _KEY_FEEDBACK_BY_Q,
+        _KEY_PRACTICE_SIG,
         _KEY_DRAFT_TRANSCRIPT,
         _KEY_AUDIO_BLOBS,
     ):
@@ -870,6 +874,8 @@ def _start_topic_practice(topic_id: str) -> None:
     st.session_state[_KEY_Q_INDEX] = 0
     st.session_state[_KEY_ANSWERS] = []
     st.session_state[_KEY_FEEDBACK] = None
+    st.session_state[_KEY_FEEDBACK_BY_Q] = {}
+    st.session_state[_KEY_PRACTICE_SIG] = uuid.uuid4().hex
     st.session_state.pop(_KEY_DRAFT_TRANSCRIPT, None)
     if len(qs) < 3:
         st.session_state[_KEY_QUESTIONS] = qs
@@ -2420,6 +2426,7 @@ def _run_topic_v2_feedback_request(
     st.session_state[_KEY_FEEDBACK] = result
     if result.get("ok"):
         _clear_feedback_guard(aid)
+        _stash_topic_v2_feedback_for_q(q_idx, result)
         _log_topic_v2_feedback_ready(topic=topic, q_idx=q_idx, answer_id=aid)
         st.session_state[_KEY_STEP] = "feedback"
     else:
@@ -2429,7 +2436,116 @@ def _run_topic_v2_feedback_request(
     st.rerun()
 
 
+def _stash_topic_v2_feedback_for_q(q_idx: int, result: Dict[str, Any]) -> None:
+    """Keep per-question short feedback for history sync (session-only)."""
+    if not isinstance(result, dict) or not result.get("ok"):
+        return
+    log = st.session_state.get(_KEY_FEEDBACK_BY_Q)
+    if not isinstance(log, dict):
+        log = {}
+    log[int(q_idx)] = {
+        "ok": True,
+        "summary": result.get("summary"),
+        "strength": result.get("strength"),
+        "correction_focus": result.get("correction_focus"),
+        "better_expression": result.get("better_expression"),
+        "upgrade_sample": result.get("upgrade_sample"),
+        "keyword_drill": result.get("keyword_drill"),
+        "practice_mission": result.get("practice_mission"),
+    }
+    st.session_state[_KEY_FEEDBACK_BY_Q] = log
+
+
+def _topic_v2_short_feedback_for_q(q_idx: int) -> Optional[Dict[str, Any]]:
+    log = st.session_state.get(_KEY_FEEDBACK_BY_Q)
+    if isinstance(log, dict):
+        fb = log.get(int(q_idx))
+        if isinstance(fb, dict) and fb.get("ok"):
+            return fb
+    return None
+
+
+def build_topic_v2_history_payload(topic_id: str) -> Dict[str, Any]:
+    """Assemble practice_history content from topic_v2_answers + per-q feedback."""
+    from utils.local_profile import iso_now
+
+    tid = str(topic_id or "").strip()
+    title = _topic_display_title(tid)
+    results: List[Dict[str, Any]] = []
+    feedback_bits: List[str] = []
+
+    for q_idx in range(3):
+        row = _last_answer_row_for_q(q_idx) or {}
+        student, transcript = _answer_text_fields_from_row(row) if row else ("", "")
+        text = (transcript or student or "").strip()
+        fb = _topic_v2_short_feedback_for_q(q_idx)
+        fb_summary = str(fb.get("summary") or "").strip() if fb else ""
+        if fb_summary:
+            feedback_bits.append(fb_summary)
+        results.append(
+            {
+                "question_index": q_idx,
+                "question": str(row.get("en") or "").strip(),
+                "topic": str(row.get("en") or "").strip()[:80],
+                "transcript": text,
+                "answer_text": text,
+                "feedback": fb_summary,
+                "short_feedback": fb,
+                "opic_type": str(row.get("opic_type") or "").strip(),
+                "status": str(row.get("status") or "").strip(),
+                "answer_id": str(row.get("answer_id") or "").strip(),
+            }
+        )
+
+    if feedback_bits:
+        summary = feedback_bits[0] if len(feedback_bits) == 1 else " / ".join(feedback_bits[:2])
+    else:
+        summary = f"{title} 주제 3문항 연습을 완료했어요."
+
+    saved_n = sum(1 for r in results if str(r.get("transcript") or "").strip())
+
+    return {
+        "ok": True,
+        "report_source": "topic_practice_v2",
+        "topic_id": tid,
+        "topic_title": title,
+        "completed_at": iso_now(),
+        "summary": summary,
+        "results": results,
+        "answers_count": saved_n,
+    }
+
+
+def _maybe_persist_topic_v2_history(topic_id: str) -> None:
+    """Logged-in users: append one practice_history row (idempotent per practice sig)."""
+    if _is_roleplay_mode():
+        return
+    tid = str(topic_id or "").strip()
+    if not tid or not _topic_id_valid(tid):
+        return
+    if _topic_v2_answers_count() < 3:
+        return
+    sig = str(st.session_state.get(_KEY_PRACTICE_SIG) or "").strip()
+    if not sig:
+        sig = f"{tid}_fallback"
+    try:
+        from utils.history_sync import save_topic_report
+
+        payload = build_topic_v2_history_payload(tid)
+        save_topic_report(
+            payload,
+            topic_title=_topic_display_title(tid),
+            sig=sig,
+        )
+    except Exception:
+        try:
+            logger.exception("[TOPIC_V2_HISTORY] save failed topic=%s", tid)
+        except Exception:
+            pass
+
+
 def _render_saved_complete(topic: str) -> None:
+    _maybe_persist_topic_v2_history(topic)
     title = _topic_display_title(topic)
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 완료")
     _render_topic_v2_accent_scope(
