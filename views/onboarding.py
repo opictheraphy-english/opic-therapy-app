@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import html
+import json
 from typing import Any, MutableMapping
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from services.supabase_client import supabase_configured
 from utils.auth import google_login_url, is_authenticated, start_guest
@@ -94,20 +96,36 @@ def _render_onboarding_card_html() -> str:
 """
 
 
+def _same_tab_redirect_script(url: str) -> str:
+    """JS snippet: navigate the top-level window (same tab), not target=_blank."""
+    return f'<script>window.top.location.href = {json.dumps(str(url))};</script>'
+
+
+def _render_same_tab_oauth_redirect(url: str) -> None:
+    components.html(_same_tab_redirect_script(url), height=0, width=0)
+
+
+def _maybe_render_pending_oauth_redirect(ss: MutableMapping[str, Any]) -> bool:
+    """If the user tapped Google login, redirect in the same tab. Returns True if emitted."""
+    pending = ss.pop("_oauth_redirect_url", None)
+    if not pending:
+        return False
+    _render_same_tab_oauth_redirect(str(pending))
+    return True
+
+
 def render_onboarding() -> None:
     ss = st.session_state
 
     st.markdown('<div class="onb-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     st.markdown(_render_onboarding_card_html(), unsafe_allow_html=True)
 
+    if _maybe_render_pending_oauth_redirect(ss):
+        return
+
     err = ss.pop("_auth_error", None)
     if err:
         st.error(err)
-
-    login_url = ss.get("_google_oauth_url")
-    if login_url is None and supabase_configured():
-        login_url = google_login_url()
-        ss["_google_oauth_url"] = login_url
 
     st.markdown('<div class="onb-cta-gap" aria-hidden="true"></div>', unsafe_allow_html=True)
 
@@ -119,17 +137,22 @@ def render_onboarding() -> None:
             key="onb_continue_logged_in",
         ):
             _finish_to_home(ss)
-    elif login_url:
-        st.link_button(
+    elif supabase_configured():
+        if st.button(
             "구글로 시작하기",
-            login_url,
             type="primary",
             use_container_width=True,
-        )
-    elif supabase_configured():
-        st.warning(
-            "로그인 링크를 만들지 못했어요. 잠시 후 다시 시도하거나 로그인 없이 둘러보기를 이용해 주세요."
-        )
+            key="onb_google_start",
+        ):
+            login_url = google_login_url()
+            if login_url:
+                ss["_oauth_redirect_url"] = login_url
+                st.rerun()
+            else:
+                st.warning(
+                    "로그인 링크를 만들지 못했어요. 잠시 후 다시 시도하거나 "
+                    "로그인 없이 둘러보기를 이용해 주세요."
+                )
     else:
         st.info(
             "구글 로그인 설정(SUPABASE_URL · SUPABASE_ANON_KEY)이 아직 없어요. "
@@ -150,4 +173,8 @@ def render_onboarding() -> None:
     )
 
 
-__all__ = ["render_onboarding"]
+__all__ = [
+    "render_onboarding",
+    "_same_tab_redirect_script",
+    "_maybe_render_pending_oauth_redirect",
+]
