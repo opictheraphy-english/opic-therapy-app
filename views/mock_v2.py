@@ -16,6 +16,7 @@ from components.answer_countdown_timer import (
     handle_answer_timer_expiry,
     render_answer_countdown_timer,
 )
+from components.audio_player import render_exam_question_audio_player
 from components.exam_question_screen import (
     build_progress_segments_html,
     opic_type_badge_label,
@@ -27,6 +28,7 @@ from components.topbar import render_top_bar
 from services.mock_v2_question_selector import build_mock_v2_exam
 from services.stt_service import count_english_words
 from utils.local_profile import iso_now
+from utils.question_audio_assets import load_question_mp3_bytes, mock_v2_question_audio_id
 
 logger = logging.getLogger(__name__)
 
@@ -903,6 +905,24 @@ def _render_mock_v2_survey() -> None:
         st.rerun()
 
 
+def _render_mock_v2_question_listen(q: dict, qnum: int) -> None:
+    """Play pre-built question MP3 when available (same pattern as topic_practice_v2)."""
+    audio_id = mock_v2_question_audio_id(q)
+    if not audio_id:
+        return
+    audio_bytes = load_question_mp3_bytes(audio_id)
+    if not audio_bytes:
+        return
+    render_exam_question_audio_player(
+        audio_bytes,
+        "audio/mp3",
+        f"mock_v2_{audio_id}",
+        int(qnum),
+        max_plays=2,
+        accent="teal",
+    )
+
+
 def _render_mock_v2_question() -> None:
     q = _current_question()
     if q is None:
@@ -935,6 +955,7 @@ def _render_mock_v2_question() -> None:
         question_ko=str(q.get("ko_helper") or ""),
         accent="teal",
     )
+    _render_mock_v2_question_listen(q, qnum)
     render_exam_answer_card_top(accent="teal")
     timer_id = build_answer_timer_id("mock_v2", question_id, str(idx))
     render_answer_countdown_timer(

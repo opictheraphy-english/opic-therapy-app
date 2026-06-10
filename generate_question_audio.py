@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Synthesize MP3s for topic-practice question audio.
+"""Synthesize MP3s for topic-practice and mock-exam question audio.
 
-Generates one MP3 per question for ALL topics in the question bank, so the
-"질문 듣기" button can play a pre-built file instead of calling TTS at
-runtime. Mirrors generate_pattern_audio.py.
+Generates one MP3 per question from:
+  - TOPIC_PRACTICE_QUESTIONS q1–q4 (topic practice + mock bank seats)
+  - ROLEPLAY_PRACTICE_SETS q6–q7–q8 (mock exam roleplay Q11–13)
 
   python generate_question_audio.py --metadata-only   # count jobs, no TTS
-  python generate_question_audio.py                   # synthesize all
+  python generate_question_audio.py                   # synthesize all missing
+  python generate_question_audio.py --roleplay-only   # roleplay q6–q8 only
   python generate_question_audio.py --force           # re-make existing files
-  python generate_question_audio.py --topics home cafe # limit to some topics
+  python generate_question_audio.py --topics home cafe # limit topic q1–q4
 
 Output: assets/question_audio/{question_id}.mp3  (e.g. home_q1_001.mp3)
-Already-existing MP3s are skipped unless --force is given, so re-running
-after the first 6-topic batch only synthesizes the newly added topics.
+Already-existing MP3s are skipped unless --force is given.
 These MP3s are committed to git so they ship with the Render deploy.
 """
 
@@ -31,6 +31,7 @@ if str(ROOT) not in sys.path:
 AUDIO_DIR = ROOT / "assets" / "question_audio"
 
 _SLOTS = ("q1", "q2", "q3", "q4")
+_ROLEPLAY_SLOTS = ("q6", "q7", "q8")
 
 
 def _all_topic_ids() -> list[str]:
@@ -40,9 +41,8 @@ def _all_topic_ids() -> list[str]:
     return sorted(TOPIC_PRACTICE_QUESTIONS.keys())
 
 
-def _collect_jobs(topic_ids: list[str]) -> list[tuple[str, str, str]]:
-    """Return [(question_id, english_text, mp3_filename), ...] for the given
-    topics. Skips rows with no id or empty question text."""
+def _collect_topic_jobs(topic_ids: list[str]) -> list[tuple[str, str, str]]:
+    """Return [(question_id, english_text, mp3_filename), ...] for topic q1–q4."""
     from data.opic_question_bank_v2 import TOPIC_PRACTICE_QUESTIONS
 
     jobs: list[tuple[str, str, str]] = []
@@ -56,15 +56,39 @@ def _collect_jobs(topic_ids: list[str]) -> list[tuple[str, str, str]]:
                 qid = str(row.get("id") or "").strip()
                 text = str(row.get("question_text") or "").strip()
                 if not qid or not text:
-                    # No stable id or no text -> cannot name/synthesize.
                     print(f"  [skip] missing id/text in {topic_id}/{slot}")
                     continue
                 if qid in seen_ids:
-                    # Defensive: ids are unique in the bank, but never
-                    # emit the same file twice.
                     continue
                 seen_ids.add(qid)
                 jobs.append((qid, text, f"{qid}.mp3"))
+    return jobs
+
+
+def _collect_roleplay_jobs() -> list[tuple[str, str, str]]:
+    """Return [(question_id, english_text, mp3_filename), ...] for roleplay q6–q8."""
+    from data.opic_question_bank_v2 import ROLEPLAY_PRACTICE_SETS
+
+    jobs: list[tuple[str, str, str]] = []
+    seen_ids: set[str] = set()
+    for ent in ROLEPLAY_PRACTICE_SETS:
+        if not isinstance(ent, dict):
+            continue
+        qs = ent.get("questions") or {}
+        for slot in _ROLEPLAY_SLOTS:
+            row = qs.get(slot)
+            if not isinstance(row, dict):
+                continue
+            qid = str(row.get("id") or "").strip()
+            text = str(row.get("question_text") or "").strip()
+            if not qid or not text:
+                set_id = str(ent.get("set_id") or "?")
+                print(f"  [skip] missing id/text in roleplay {set_id}/{slot}")
+                continue
+            if qid in seen_ids:
+                continue
+            seen_ids.add(qid)
+            jobs.append((qid, text, f"{qid}.mp3"))
     return jobs
 
 
@@ -85,7 +109,17 @@ def main() -> int:
         nargs="+",
         default=None,
         metavar="TOPIC_ID",
-        help="Limit to specific topic_ids. Default: all topics in the bank.",
+        help="Limit to specific topic_ids for q1–q4. Default: all topics in the bank.",
+    )
+    parser.add_argument(
+        "--roleplay-only",
+        action="store_true",
+        help="Synthesize only roleplay q6–q8 (42 questions).",
+    )
+    parser.add_argument(
+        "--topics-only",
+        action="store_true",
+        help="Synthesize only topic bank q1–q4 (skip roleplay).",
     )
     parser.add_argument(
         "--voice",
@@ -97,11 +131,20 @@ def main() -> int:
     args = parser.parse_args()
 
     topic_ids = args.topics if args.topics else _all_topic_ids()
-    jobs = _collect_jobs(topic_ids)
+    jobs: list[tuple[str, str, str]] = []
+    if not args.roleplay_only:
+        jobs.extend(_collect_topic_jobs(topic_ids))
+    if not args.topics_only:
+        jobs.extend(_collect_roleplay_jobs())
     total = len(jobs)
 
     if args.metadata_only:
-        print(f"[ok] topics={len(topic_ids)}, question_audio_jobs={total}")
+        topic_jobs = 0 if args.roleplay_only else len(_collect_topic_jobs(topic_ids))
+        roleplay_jobs = 0 if args.topics_only else len(_collect_roleplay_jobs())
+        print(
+            f"[ok] topic_q1_q4_jobs={topic_jobs}, "
+            f"roleplay_q6_q8_jobs={roleplay_jobs}, total={total}"
+        )
         return 0
 
     if total == 0:

@@ -7,6 +7,7 @@ Synthesize MP3s from master_patterns.json.
 
   python generate_pattern_audio.py --metadata-only
   python generate_pattern_audio.py
+  python generate_pattern_audio.py --force   # re-make existing files
 """
 
 from __future__ import annotations
@@ -47,6 +48,11 @@ def _example_jobs(rec: dict, rec_index: int) -> list[tuple[str, str]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Pattern MP3 asset builder")
     parser.add_argument("--metadata-only", action="store_true")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-synthesize even if the MP3 already exists.",
+    )
     parser.add_argument("--voice", default=None)
     parser.add_argument("--speaking-rate", type=float, default=0.95)
     parser.add_argument("--pitch", type=float, default=0.0)
@@ -79,9 +85,13 @@ def main() -> int:
 
     voice_name = args.voice or NEURAL2_EVA
     ok = 0
+    skipped = 0
     err = 0
     for en, af in jobs:
         out = AUDIO_DIR / af
+        if out.is_file() and not args.force:
+            skipped += 1
+            continue
         try:
             payload = synthesize_tts_audio(
                 en,
@@ -99,7 +109,9 @@ def main() -> int:
             err += 1
             print(f"[fail] {af}: {e}", file=sys.stderr)
 
-    print(f"[done] wrote {ok} files to {AUDIO_DIR}, errors={err}")
+    print(
+        f"[done] wrote {ok}, skipped {skipped}, errors {err} -> {AUDIO_DIR}"
+    )
     return 0 if err == 0 else 2
 
 
