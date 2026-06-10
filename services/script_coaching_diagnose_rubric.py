@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "script_coaching_diagnose_v2"
+RUBRIC_VERSION = "script_coaching_diagnose_v3"
 
 
 def build_script_coaching_diagnose_rubric() -> str:
@@ -90,22 +90,40 @@ structure_gate를 그대로 따른다. 단, 아래의 스크립트 전용 규칙
   예: '"interested" 뒤에 전치사가 빠졌습니다 — "what kind of songs you are interested"는
   "interested in"으로 고쳐야 합니다.' 문법 오류가 거의 없으면 그렇다고 적는다.
 - better_expression: 어휘·표현 교정 1~2문장. 어색하거나 반복되는 표현을 **따옴표로
-  인용**하고 더 자연스러운 짧은 영어 대안을 제시한다. 원문보다 한 단계만 자연스럽게.
-- strengths: 잘한 점 2~3개(문자열 배열).
-- weaknesses: 보완할 점 2~3개(문자열 배열).
+  인용**하고 더 자연스러운 짧은 **구어체** 영어 대안을 제시한다. 원문보다 한 단계만
+  자연스럽게 — 고급·학술·문어체로 올리지 말 것.
+
+구어체 표현 원칙 (expression_upgrades·better_expression·improved_sentences에 적용.
+공용 JSON vocabulary_rules보다 **이 블록이 우선**):
+- OPIc은 말하기 시험이다. expression_upgrades의 better[] 대안은 학생이 **입으로 말할**
+  일상 구어체여야 한다. 고급·학술·문어체로 바꾸지 마라.
+- 금지(문어체·에세이체): "provide a fantastic escape", "immerse myself in",
+  "high stakes", "engage my brain", "Firstly/Secondly/In conclusion", "utilize",
+  "Furthermore", "Additionally".
+- 권장(구어체): "take my mind off things", "when I'm watching", "keeps me on the
+  edge of my seat", "I just want to chill", "honestly", "you know", "First of all",
+  "The other thing is", "What I really like is".
+- better[]에는 **쉬운 일상 단어**로 한 단계만 다듬은 대안 1~3개. 문장을 길게 늘리거나
+  복잡한 구조로 바꾸지 말 것. **자연스러움 > 화려함.**
+- improved_sentences도 같은 구어체 톤. 면접관에게 되묻는 문장("What about you?")은
+  넣지 말 것.
 
 구조화 피드백(주제별 연습 리포트와 동일한 카드로 보여줄 데이터):
 - grammar_corrections: 실제 문법 오류 2~4개. 각 항목은 {{"before": 학생 원문 구절(영어 그대로),
   "after": 고친 영어 구절, "why": 한국어 1문장 이유}}. 원문에 없는 문장을 지어내지 말 것.
   오류가 거의 없으면 빈 배열 [].
 - expression_upgrades: 더 자연스럽게 올릴 표현 2~4개. 각 항목은 {{"before": 학생 원문 구절(영어),
-  "better": [더 자연스러운 영어 대안 1~3개], "why": 한국어 1문장 이유}}. 원문보다 한 단계만
-  자연스럽게. 없으면 [].
+  "better": [더 자연스러운 **구어체** 영어 대안 1~3개], "why": 한국어 1문장 이유}}.
+  원문보다 한 단계만 자연스럽게 — **고급·학술·문어체 대안 금지.** 위 "구어체 표현 원칙"
+  을 따른다. 없으면 [].
 - structure_feedback: {{"good": [잘한 구조 1~2개·한국어], "missing": [빠진 구조 1~2개·한국어],
   "next": 다음에 시도할 구조 조언 1문장·한국어}}.
 - improved_sentences: 학생 답변에서 한 단계 다시 쓰면 좋은 핵심 문장 1~3개. 각 항목은
-  {{"sentence": 자연스럽게 다시 쓴 영어 문장 1개}}. 학생 원문 의미를 유지하되 더 매끄럽게.
+  {{"sentence": 자연스럽게 다시 쓴 **구어체** 영어 문장 1개}}. 학생 원문 의미를 유지하되
+  더 매끄럽게. 문어체·학술어 금지.
 - missions: 다음에 연습하면 좋은 미션 2개(한국어 문자열 배열). 구체적 행동으로.
+- strengths: 잘한 점 2~3개(문자열 배열).
+- weaknesses: 보완할 점 2~3개(문자열 배열).
 
 출력 형식: **JSON만** (마크다운 코드펜스 없음). 스키마를 정확히 지킬 것:
 

@@ -23,7 +23,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "script_coaching_upgrade_v1"
+RUBRIC_VERSION = "script_coaching_upgrade_v2"
 
 _LEVEL_ORDER = ("NH", "IL", "IM1", "IM2", "IM3", "IH", "AL")
 
@@ -43,6 +43,37 @@ def target_levels_for(current_level: str) -> dict:
     one = _LEVEL_ORDER[idx + 1] if idx + 1 < len(_LEVEL_ORDER) else None
     two = _LEVEL_ORDER[idx + 2] if idx + 2 < len(_LEVEL_ORDER) else None
     return {"mode": "upgrade", "one_step": one, "two_step": two}
+
+
+_SPOKEN_ENGLISH_PRIORITY_BLOCK = """
+구어체 최우선 원칙 (공용 JSON의 vocabulary_rules·levels 앵커보다 **이 블록이 우선**):
+- OPIc은 말하기 시험이다. 글이 아니라, 학생이 실제로 **입으로 말하는** 답변을 쓴다.
+- 고급·학술·문어체 어휘로 바꾸지 마라. 일상 대화에서 실제로 쓰는 **쉬운 단어**를 쓰되,
+  더 자연스럽고 유창하게 다듬어라. 공용 JSON에 "precise", "native-like", "flexible"
+  같은 AL 어휘 규칙이 있어도, **이 구어체 원칙과 충돌하면 반드시 구어체 원칙을 따른다.**
+- 금지 예시(문어체·에세이체): "provide a fantastic escape", "immerse myself in",
+  "high stakes", "engage my brain", "straightforward plots", "Firstly", "Secondly",
+  "In conclusion", "utilize", "Furthermore", "Additionally".
+- 권장(구어체): 같은 뜻을 일상 표현으로 — "take my mind off things", "when I'm watching",
+  "keeps me on the edge of my seat", "I just want to chill", "honestly", "you know".
+- 에세이식 연결어("Firstly", "Secondly", "In conclusion") 대신, 말할 때 쓰는 자연스러운
+  연결어: "First of all", "The other thing is", "Honestly", "Actually",
+  "What I really like is", "you know", "So yeah".
+- 문장을 무조건 길고 복잡하게 만들지 마라. 등급을 올린다고 문장을 늘어뜨리지 말고,
+  **말하듯 자연스러운 길이와 흐름**을 유지하라. **자연스러움 > 길이.**
+- OPIc에서 면접관에게 되묻는 마무리("What about you?", "What kinds of... do you enjoy?")
+  는 넣지 마라. **자기 답변으로 마무리**하라.
+
+좋은 업그레이드 예시 (이 톤을 따라라):
+
+[원문]
+Oh movies? That is a good question. I love all kinds of movies but I think I like action movies the most. First, action movies are exciting for me. Nowadays, I am very stressed out. My boss is driving me nuts nowadays. When I watch action movies, I feel relaxed and forget about the stress. So, I enjoy watching the Mission Impossible series. Also, I enjoy watching action movies because I don't need to think about anything. ... What about you?
+
+[좋은 업그레이드 — 자연스러운 구어체]
+Oh, movies? That's a great question. I like all kinds of movies, but honestly, action movies are my favorite by far. There are a couple of reasons. First of all, action movies are just really exciting, and they're a great way to take my mind off things. These days I've been pretty stressed out — my boss is honestly driving me nuts. But when I'm watching an action movie, I can just relax and forget about all that. The Mission Impossible series is a good example. I love it because it's so intense and keeps me on the edge of my seat. The other thing is, with action movies I don't really have to think too hard. When I watch a movie, I just want to chill and kill some time, you know? So the simple, fast-paced stuff is perfect for me. That's pretty much why action movies are always my go-to.
+
+(이 예시처럼: 쉬운 단어, 말하는 연결어, 자연스러운 흐름, 되묻기 없이 자기 마무리.)
+"""
 
 
 def build_script_coaching_upgrade_rubric(mode: str = "upgrade") -> str:
@@ -79,8 +110,11 @@ def build_script_coaching_upgrade_rubric(mode: str = "upgrade") -> str:
 
 {mode_block}
 
-공용 평가 기준(단일 소스, 버전 {LEVEL_RULE_VERSION}):
+공용 평가 기준(단일 소스, 버전 {LEVEL_RULE_VERSION}) — 분량·구조 참고용.
+**어휘·톤은 아래 "구어체 최우선 원칙"이 이 JSON보다 우선한다:**
 {level_rules_block}
+
+{_SPOKEN_ENGLISH_PRIORITY_BLOCK}
 
 입력: question_en, question_ko, original_script(학생 원문), current_level(진단 등급),
 target_level(목표 등급), text_metrics(원문 단어 수 등).
@@ -105,9 +139,9 @@ target_level(목표 등급), text_metrics(원문 단어 수 등).
 
 upgraded_script(업그레이드된 스크립트):
 - 영어로 작성한다.
-- 학생 원문의 뼈대와 실제 내용을 유지하면서, target_level 수준의 표현·구조로 다시 쓴다.
-- 학생이 외워서 자기 답변으로 말할 수 있어야 한다 — 화려하거나 지나치게 학술적인 표현은
-  피하고, target_level에 맞는 자연스러운 구어체 영어로 쓴다.
+- 학생 원문의 뼈대와 실제 내용을 유지하면서, target_level 수준의 **구어체**로 다시 쓴다.
+- 위 "구어체 최우선 원칙"과 좋은 예시 톤을 반드시 따른다. 학생이 외워서 말할 수 있는
+  **일상 구어체**여야 한다 — 문어체·학술어·에세이 연결어 금지.
 - 지어낸 내용은 넣지 않는다. 확장이 부족한 부분은 fill_in_guides로 넘긴다.
 
 change_notes(변환 설명):
