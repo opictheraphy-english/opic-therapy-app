@@ -712,6 +712,9 @@ def _bank_question_at_index(q_index: int) -> Dict[str, Any]:
 def _persist_topic_v2_answer(row: Dict[str, Any]) -> None:
     """Upsert active answer row for saved screen, feedback, and retry flow."""
     _upsert_topic_v2_answer(row)
+    from utils.recording_blob_memory import trim_topic_v2_audio_blobs
+
+    trim_topic_v2_audio_blobs(st.session_state)
     _log_after_save_counts(row)
 
 
@@ -1589,6 +1592,9 @@ def _log_topic_v2_retry_same_question(*, topic: str, q_idx: int) -> None:
 
 
 def _log_topic_v2_next_question(*, topic: str, from_q: int, to_q: int) -> None:
+    from utils.recording_blob_memory import trim_topic_v2_audio_blobs
+
+    trim_topic_v2_audio_blobs(st.session_state, topic=topic)
     try:
         logger.info(
             "[TOPIC_V2_NEXT_QUESTION] topic=%s from_q=%s to_q=%s",

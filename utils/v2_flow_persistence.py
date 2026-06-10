@@ -29,7 +29,6 @@ _MINI_V2_SESSION_KEYS: tuple[str, ...] = (
     "mini_v2_analysis_started_at",
     "mini_v2_analysis_started_attempt",
     "mini_v2_analysis_finished_attempt",
-    "mini_v2_audio_blobs",
     "mini_mock_v2_active",
     "active_learning_mode",
 )
@@ -40,7 +39,6 @@ _MOCK_V2_SESSION_KEYS: tuple[str, ...] = (
     "mock_v2_questions",
     "mock_v2_index",
     "mock_v2_answers",
-    "mock_v2_audio_blobs",
     "mock_v2_started_at",
     "mock_v2_finished_at",
     "mock_v2_report",
@@ -191,15 +189,18 @@ def _apply_routing(ss: MutableMapping[str, Any], routing: Dict[str, Any]) -> Non
             ss["mock_page"] = mock_page
 
 
+_SKIP_RESTORE_AUDIO_KEYS = frozenset({"mini_v2_audio_blobs", "mock_v2_audio_blobs"})
+
+
 def _apply_snapshot(ss: MutableMapping[str, Any], snap: Dict[str, Any]) -> None:
     """Restore exam payload only — never change ``page`` or URL routing."""
     for key, val in snap.items():
         if key.startswith("_"):
             continue
+        if key in _SKIP_RESTORE_AUDIO_KEYS:
+            continue
         try:
             decoded = _decode_value(val)
-            if key == "mini_v2_audio_blobs" and isinstance(decoded, dict):
-                decoded = _coerce_int_dict_keys(decoded)
             ss[key] = decoded
         except Exception:
             logger.debug("skip restore key %s", key)
@@ -238,10 +239,15 @@ def v2_flow_signature_part(ss: MutableMapping[str, Any]) -> str:
 
 def persist_v2_flows_now(ss: MutableMapping[str, Any]) -> None:
     """Force-write V2 snapshots (e.g. right after each saved answer)."""
+    from utils.recording_blob_memory import trim_v2_flow_audio_blobs
     from utils.user_progress_store import load_user_progress, save_user_progress
 
     if not ss.get("entry_gate_completed"):
         return
+    try:
+        trim_v2_flow_audio_blobs(ss)
+    except Exception:
+        logger.debug("trim_v2_flow_audio_blobs failed", exc_info=True)
     mini_snap = _build_mini_v2_snapshot(ss)
     mock_snap = _build_mock_v2_snapshot(ss)
     if not mini_snap and not mock_snap:
@@ -255,7 +261,7 @@ def persist_v2_flows_now(ss: MutableMapping[str, Any]) -> None:
     save_user_progress(data)
     try:
         logger.info(
-            "[V2_FLOW_PERSIST] mini=%s mock=%s answers=(%s,%s)",
+            "[V2_FLOW_PERSIST] mini=%s mock=%s answers=(%s,%s) audio_excluded=True",
             bool(mini_snap),
             bool(mock_snap),
             len(mini_snap.get("mini_v2_answers") or []) if mini_snap else 0,

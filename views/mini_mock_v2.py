@@ -1010,6 +1010,9 @@ def _upsert_v2_answer_row(row: Dict[str, Any]) -> Dict[str, Any]:
         )
     except Exception:
         pass
+    from utils.recording_blob_memory import trim_mini_v2_audio_blobs
+
+    trim_mini_v2_audio_blobs(st.session_state)
     from utils.v2_flow_persistence import persist_v2_flows_now
 
     persist_v2_flows_now(st.session_state)
@@ -1536,6 +1539,9 @@ def _render_saved_step(q_idx: int) -> None:
             use_container_width=True,
             key=f"mini_v2_next_{q_idx}",
         ):
+            from utils.recording_blob_memory import trim_mini_v2_audio_blobs
+
+            trim_mini_v2_audio_blobs(st.session_state)
             next_idx = q_idx + 1
             st.session_state[_KEY_INDEX] = next_idx
             st.session_state[_KEY_STEP] = "question"

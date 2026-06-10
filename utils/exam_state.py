@@ -670,6 +670,9 @@ def save_real_mock_unanalyzed_answer(
             result=stored,
         ),
     )
+    from utils.recording_blob_memory import trim_legacy_mock_recordings
+
+    trim_legacy_mock_recordings(mx)
 
 
 def apply_stt_to_mock_exam_saved_row(
@@ -764,6 +767,9 @@ def save_answer_placeholder_before_ai(
             result=pending,
         ),
     )
+    from utils.recording_blob_memory import trim_legacy_mock_recordings
+
+    trim_legacy_mock_recordings(mx)
 
 
 def apply_completed_analysis_result(
@@ -1206,6 +1212,9 @@ def reconcile_mock_exam_pointer(mx: Dict[str, Any]) -> int:
         return int(mx["current_idx"])
     next_idx = min(prefix, max(total - 1, 0))
     mx["current_idx"] = next_idx
+    from utils.recording_blob_memory import trim_legacy_mock_recordings
+
+    trim_legacy_mock_recordings(mx)
     return next_idx
 
 

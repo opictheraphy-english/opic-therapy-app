@@ -249,6 +249,9 @@ def _upsert_mock_v2_answer(row: Dict[str, Any]) -> None:
     answers.append(row)
     answers.sort(key=lambda a: int(a.get("question_index", 0)))
     st.session_state[_KEY_ANSWERS] = answers
+    from utils.recording_blob_memory import trim_mock_v2_audio_blobs
+
+    trim_mock_v2_audio_blobs(st.session_state)
     from utils.v2_flow_persistence import persist_v2_flows_now
 
     persist_v2_flows_now(st.session_state)
@@ -1073,6 +1076,9 @@ def _render_mock_v2_saved() -> None:
             use_container_width=True,
             key="mock_v2_next_question",
         ):
+            from utils.recording_blob_memory import trim_mock_v2_audio_blobs
+
+            trim_mock_v2_audio_blobs(st.session_state)
             st.session_state[_KEY_INDEX] = idx + 1
             st.session_state[_KEY_STEP] = "question"
             st.rerun()
