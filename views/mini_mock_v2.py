@@ -48,6 +48,7 @@ _KEY_ANALYSIS_STARTED_ATTEMPT = "mini_v2_analysis_started_attempt"
 _KEY_ANALYSIS_FINISHED_ATTEMPT = "mini_v2_analysis_finished_attempt"
 _KEY_RECORDINGS = "mini_v2_recordings"
 _KEY_AUDIO_BLOBS = "mini_v2_audio_blobs"
+_KEY_QUESTIONS = "mini_v2_questions"
 
 _MIN_ANSWER_MIN_WORDS = 5
 _MIN_TEXT_MIN_WORDS = 5
@@ -105,15 +106,28 @@ _OLD_MINI_MOCK_MX_KEYS = (
 
 
 def _questions() -> List[Dict[str, Any]]:
-    try:
-        from data.mini_mock_questions import get_mini_mock_questions
+    cached = st.session_state.get(_KEY_QUESTIONS)
+    if isinstance(cached, list) and len(cached) >= _QUESTION_COUNT:
+        return [dict(r) for r in cached[:_QUESTION_COUNT]]
+    return _ensure_mini_v2_questions()
 
-        rows = get_mini_mock_questions()
-        if isinstance(rows, list) and len(rows) >= _QUESTION_COUNT:
-            return [dict(r) for r in rows[:_QUESTION_COUNT]]
+
+def _ensure_mini_v2_questions() -> List[Dict[str, Any]]:
+    """Build or restore the 3-question set; persist in session for reruns/resume."""
+    cached = st.session_state.get(_KEY_QUESTIONS)
+    if isinstance(cached, list) and len(cached) >= _QUESTION_COUNT:
+        return [dict(r) for r in cached[:_QUESTION_COUNT]]
+    try:
+        from services.mock_v2_question_selector import build_mini_mock_v2_questions
+
+        rows = build_mini_mock_v2_questions()
     except Exception:
-        logger.debug("[MINI_MOCK_V2] question import failed", exc_info=True)
-    return _fallback_questions()
+        logger.warning("[MINI_MOCK_V2] bank question build failed — fallback", exc_info=True)
+        rows = _fallback_questions()
+    if not isinstance(rows, list) or len(rows) < _QUESTION_COUNT:
+        rows = _fallback_questions()
+    st.session_state[_KEY_QUESTIONS] = [dict(r) for r in rows[:_QUESTION_COUNT]]
+    return [dict(r) for r in st.session_state[_KEY_QUESTIONS]]
 
 
 def _fallback_questions() -> List[Dict[str, Any]]:
@@ -180,6 +194,7 @@ def reset_mini_mock_v2() -> None:
     st.session_state.pop(_KEY_ANALYSIS_FINISHED_ATTEMPT, None)
     st.session_state.pop(_KEY_RECORDINGS, None)
     st.session_state.pop(_KEY_AUDIO_BLOBS, None)
+    st.session_state.pop(_KEY_QUESTIONS, None)
     st.session_state.pop("recording_active_audio_key", None)
     try:
         logger.info("[MINI_MOCK_V2] reset_mini_mock_v2")
@@ -224,6 +239,8 @@ def _init_v2_session() -> None:
     st.session_state[_KEY_INDEX] = 0
     st.session_state[_KEY_ANSWERS] = []
     st.session_state[_KEY_RECORDING_ACTIVE] = False
+    st.session_state.pop(_KEY_QUESTIONS, None)
+    _ensure_mini_v2_questions()
 
 
 def begin_mini_mock_v2_session(mx: dict) -> None:

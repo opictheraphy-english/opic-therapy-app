@@ -679,3 +679,125 @@ def build_mock_v2_exam(survey_results: dict, difficulty: int = 5) -> List[Dict[s
     if lev in (3, 4):
         return _build_mock_v2_exam_im(survey_results, lev)
     return _build_mock_v2_exam_ih_al(survey_results, lev)
+
+
+def _to_mini_v2_question(
+    question_index: int,
+    *,
+    topic_id: str,
+    row: Dict[str, Any],
+    bank_slot: str,
+    type_key: str,
+    type_label: str,
+    roleplay_set_id: str = "",
+) -> Dict[str, Any]:
+    """Shape a bank row into the dict ``views/mini_mock_v2`` expects."""
+    idx = int(question_index)
+    tid = str(topic_id or row.get("topic_id") or "").strip()
+    text_en = str(row.get("question_text") or "").strip()
+    ko = str(row.get("ko_helper") or _KO_HELPER_DEFAULT).strip() or _KO_HELPER_DEFAULT
+    source_id = str(row.get("id") or "").strip()
+    qid = source_id or f"mini_v2_q{idx + 1}"
+    out: Dict[str, Any] = {
+        "question_id": qid,
+        "question_index": idx,
+        "type": type_key,
+        "type_label": type_label,
+        "topic_id": tid,
+        "topic": _topic_label(tid),
+        "opic_type": str(row.get("opic_type") or "").strip(),
+        "bank_slot": bank_slot,
+        "source_id": source_id or None,
+        "question_en": text_en,
+        "question_ko": ko,
+    }
+    if roleplay_set_id:
+        out["roleplay_set_id"] = roleplay_set_id
+    return out
+
+
+def _eligible_q1_topic_ids() -> List[str]:
+    return [tid for tid in list_topic_ids() if _has_slot(tid, "q1")]
+
+
+def _eligible_q4_topic_ids() -> List[str]:
+    return [tid for tid in list_topic_ids() if _has_slot(tid, "q4")]
+
+
+def _pick_mini_roleplay_problem_row() -> Tuple[str, Dict[str, Any]]:
+    """Random roleplay set → Q7 (problem/solution) row for the mini mock seat."""
+    ready: List[str] = []
+    for sid in list_roleplay_set_ids():
+        if len(get_roleplay_practice_set(sid)) >= 2:
+            ready.append(sid)
+    if not ready:
+        raise RuntimeError("opic_question_bank_v2 has no roleplay set for mini mock Q3.")
+    set_id = random.choice(ready)
+    rows = get_roleplay_practice_set(set_id)
+    row = rows[1] if len(rows) > 1 else rows[0]
+    return set_id, dict(row)
+
+
+def build_mini_mock_v2_questions() -> List[Dict[str, Any]]:
+    """Build 3 random mini-mock seats: Q1 description, Q4 experience, roleplay Q7.
+
+    Seat topics are independent (Q1 and Q2 prefer different ``topic_id``).
+    Reuses the same bank helpers as full ``build_mock_v2_exam``.
+    """
+    q1_pool = _eligible_q1_topic_ids()
+    q4_pool = _eligible_q4_topic_ids()
+    if not q1_pool:
+        raise RuntimeError("opic_question_bank_v2 has no topic with q1 for mini mock.")
+    if not q4_pool:
+        raise RuntimeError("opic_question_bank_v2 has no topic with q4 for mini mock.")
+
+    t1 = random.choice(q1_pool)
+    q4_candidates = [tid for tid in q4_pool if tid != t1]
+    t2 = random.choice(q4_candidates or q4_pool)
+
+    r1 = _pick_row(t1, "q1")
+    r2 = _pick_row(t2, "q4")
+    rp_set_id, r3 = _pick_mini_roleplay_problem_row()
+    rp_topic = str(r3.get("topic_id") or "").strip()
+
+    exam = [
+        _to_mini_v2_question(
+            0,
+            topic_id=t1,
+            row=r1,
+            bank_slot="q1",
+            type_key="description",
+            type_label="묘사",
+        ),
+        _to_mini_v2_question(
+            1,
+            topic_id=t2,
+            row=r2,
+            bank_slot="q4",
+            type_key="memorable_experience",
+            type_label="기억에 남는 경험",
+        ),
+        _to_mini_v2_question(
+            2,
+            topic_id=rp_topic,
+            row=r3,
+            bank_slot="q7",
+            type_key="roleplay",
+            type_label="롤플레이",
+            roleplay_set_id=rp_set_id,
+        ),
+    ]
+    try:
+        logger.info(
+            "[MINI_MOCK_V2_QUESTIONS] q1_topic=%s q2_topic=%s roleplay_set=%s "
+            "source_ids=(%s,%s,%s)",
+            t1,
+            t2,
+            rp_set_id,
+            exam[0].get("source_id"),
+            exam[1].get("source_id"),
+            exam[2].get("source_id"),
+        )
+    except Exception:
+        pass
+    return exam

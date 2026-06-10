@@ -129,10 +129,14 @@ class V2SnapshotAudioExclusionTests(unittest.TestCase):
             "mini_v2_answers": [{"question_index": 0, "transcript": "hi"}],
             "mini_v2_audio_blobs": {0: _blob(5000)},
             "mini_v2_index": 0,
+            "mini_v2_questions": [
+                {"question_index": 0, "question_en": "Q1", "type_label": "묘사"},
+            ],
         }
         snap = _build_mini_v2_snapshot(ss)
         self.assertNotIn("mini_v2_audio_blobs", snap)
         self.assertIn("mini_v2_answers", snap)
+        self.assertIn("mini_v2_questions", snap)
 
     def test_restore_skips_legacy_audio_blobs_in_snapshot(self) -> None:
         ss: Dict[str, Any] = {}

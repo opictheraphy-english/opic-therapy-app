@@ -1,4 +1,4 @@
-"""Fixed 3-question set for 5-minute diagnostic mini mock."""
+"""Mini mock question access — random bank-backed sets for V2, fixed fallback for legacy."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 
 MINI_MOCK_QUESTION_COUNT = 3
 
+# Legacy fixed set — used only when legacy mini-mock paths call ``get_mini_mock_question``
+# without a session-scoped V2 question list (``views/mock_exam.py`` legacy flow).
 MINI_MOCK_QUESTIONS: List[Dict[str, Any]] = [
     {
         "question_id": "mini_mock_q1",
@@ -52,7 +54,15 @@ MINI_MOCK_QUESTIONS: List[Dict[str, Any]] = [
 ]
 
 
+def build_random_mini_mock_questions() -> List[Dict[str, Any]]:
+    """Random 3-question mini mock from ``opic_question_bank_v2``."""
+    from services.mock_v2_question_selector import build_mini_mock_v2_questions
+
+    return build_mini_mock_v2_questions()
+
+
 def get_mini_mock_questions() -> List[Dict[str, Any]]:
+    """Return the legacy fixed set (non-V2 callers only)."""
     return list(MINI_MOCK_QUESTIONS)
 
 

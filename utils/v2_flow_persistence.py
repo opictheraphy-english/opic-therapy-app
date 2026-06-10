@@ -29,6 +29,7 @@ _MINI_V2_SESSION_KEYS: tuple[str, ...] = (
     "mini_v2_analysis_started_at",
     "mini_v2_analysis_started_attempt",
     "mini_v2_analysis_finished_attempt",
+    "mini_v2_questions",
     "mini_mock_v2_active",
     "active_learning_mode",
 )
