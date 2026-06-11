@@ -102,16 +102,21 @@ def _same_tab_redirect_script(url: str) -> str:
 
 
 def _render_same_tab_oauth_redirect(url: str) -> None:
+    """Navigate away in the same tab — meta refresh + JS fallback for Render."""
+    safe_url = html.escape(str(url), quote=True)
+    st.markdown(
+        f'<meta http-equiv="refresh" content="0; url={safe_url}">',
+        unsafe_allow_html=True,
+    )
     components.html(_same_tab_redirect_script(url), height=0, width=0)
 
 
-def _maybe_render_pending_oauth_redirect(ss: MutableMapping[str, Any]) -> bool:
-    """If the user tapped Google login, redirect in the same tab. Returns True if emitted."""
+def _emit_pending_oauth_redirect(ss: MutableMapping[str, Any]) -> None:
+    """After CTAs render, redirect once if the user tapped Google login."""
     pending = ss.pop("_oauth_redirect_url", None)
     if not pending:
-        return False
+        return
     _render_same_tab_oauth_redirect(str(pending))
-    return True
 
 
 def render_onboarding() -> None:
@@ -120,12 +125,15 @@ def render_onboarding() -> None:
     st.markdown('<div class="onb-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     st.markdown(_render_onboarding_card_html(), unsafe_allow_html=True)
 
-    if _maybe_render_pending_oauth_redirect(ss):
-        return
-
     err = ss.pop("_auth_error", None)
     if err:
         st.error(err)
+
+    if ss.pop("_oauth_login_failed", None):
+        st.warning(
+            "로그인 링크를 만들지 못했어요. 잠시 후 다시 시도하거나 "
+            "로그인 없이 둘러보기를 이용해 주세요."
+        )
 
     st.markdown('<div class="onb-cta-gap" aria-hidden="true"></div>', unsafe_allow_html=True)
 
@@ -144,15 +152,16 @@ def render_onboarding() -> None:
             use_container_width=True,
             key="onb_google_start",
         ):
-            login_url = google_login_url()
+            try:
+                login_url = google_login_url()
+            except Exception:
+                login_url = None
             if login_url:
                 ss["_oauth_redirect_url"] = login_url
                 st.rerun()
             else:
-                st.warning(
-                    "로그인 링크를 만들지 못했어요. 잠시 후 다시 시도하거나 "
-                    "로그인 없이 둘러보기를 이용해 주세요."
-                )
+                ss["_oauth_login_failed"] = True
+                st.rerun()
     else:
         st.info(
             "구글 로그인 설정(SUPABASE_URL · SUPABASE_ANON_KEY)이 아직 없어요. "
@@ -172,9 +181,11 @@ def render_onboarding() -> None:
         unsafe_allow_html=True,
     )
 
+    _emit_pending_oauth_redirect(ss)
+
 
 __all__ = [
     "render_onboarding",
     "_same_tab_redirect_script",
-    "_maybe_render_pending_oauth_redirect",
+    "_emit_pending_oauth_redirect",
 ]

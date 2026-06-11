@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import inspect
 import unittest
 from unittest.mock import patch
 
-from views.onboarding import _maybe_render_pending_oauth_redirect, _same_tab_redirect_script
+from views.onboarding import (
+    _emit_pending_oauth_redirect,
+    _same_tab_redirect_script,
+    render_onboarding,
+)
 
 
 class OnboardingOAuthRedirectTests(unittest.TestCase):
@@ -20,25 +25,30 @@ class OnboardingOAuthRedirectTests(unittest.TestCase):
         self.assertIn("\\\"a\\\"", script)
 
     @patch("views.onboarding._render_same_tab_oauth_redirect")
-    def test_pending_redirect_pops_and_emits(self, mock_render) -> None:
+    def test_emit_redirect_pops_and_emits(self, mock_render) -> None:
         ss = {"_oauth_redirect_url": "https://oauth.example/start"}
-        self.assertTrue(_maybe_render_pending_oauth_redirect(ss))
+        _emit_pending_oauth_redirect(ss)
         mock_render.assert_called_once_with("https://oauth.example/start")
         self.assertNotIn("_oauth_redirect_url", ss)
 
-    def test_no_pending_redirect_is_noop(self) -> None:
+    @patch("views.onboarding._render_same_tab_oauth_redirect")
+    def test_no_pending_redirect_is_noop(self, mock_render) -> None:
         ss: dict = {}
-        self.assertFalse(_maybe_render_pending_oauth_redirect(ss))
+        _emit_pending_oauth_redirect(ss)
+        mock_render.assert_not_called()
 
-    def test_onboarding_has_no_link_button(self) -> None:
-        import inspect
-
-        from views import onboarding
-
-        src = inspect.getsource(onboarding.render_onboarding)
+    def test_render_onboarding_never_returns_early_before_ctas(self) -> None:
+        src = inspect.getsource(render_onboarding)
         self.assertNotIn("link_button", src)
-        self.assertIn("onb_google_start", src)
-        self.assertIn("_oauth_redirect_url", src)
+        self.assertNotIn("return\n", src.replace(" ", ""))
+        # CTAs must render before redirect emit
+        self.assertLess(src.index("onb_guest_start"), src.index("_emit_pending_oauth_redirect"))
+        self.assertLess(src.index("onb_google_start"), src.index("_emit_pending_oauth_redirect"))
+
+    def test_oauth_url_failure_flag_does_not_block_guest_button(self) -> None:
+        src = inspect.getsource(render_onboarding)
+        self.assertIn("_oauth_login_failed", src)
+        self.assertLess(src.index("_oauth_login_failed"), src.index("onb_guest_start"))
 
 
 if __name__ == "__main__":
