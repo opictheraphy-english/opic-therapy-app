@@ -20,6 +20,7 @@ def render_collapsible_section(
     toggle_close_label: str = "접기",
     count: Optional[int] = None,
     css_scope: str = "ui-col",
+    header_toggle: bool = False,
 ) -> None:
     """HTML header + ``st.button`` toggle; body only when open."""
     safe_title = clean_visible_label((title or "").strip(), "내용")
@@ -36,21 +37,45 @@ def render_collapsible_section(
         count_html = f'<span class="{css_scope}-count">{int(count)}</span>'
 
     open_cls = f"{css_scope}-head--open" if is_open else ""
-    st.markdown(
-        f'<div class="{css_scope}-head {open_cls}">'
-        f'<span class="{css_scope}-title">{title_h}</span>'
-        f"{count_html}"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-    toggle_label = toggle_close_label if is_open else toggle_open_label
-    if st.button(
-        toggle_label,
-        key=f"{css_scope}_toggle_{wid}",
-        use_container_width=True,
-    ):
-        st.session_state[open_key] = not is_open
-        st.rerun()
+    chevron = "▴" if is_open else "▾"
+
+    if header_toggle:
+        head_html = (
+            f'<div class="{css_scope}-toggle-row">'
+            f'<div class="{css_scope}-head {open_cls}">'
+            f'<span class="{css_scope}-title">{title_h}</span>'
+            f'<span class="{css_scope}-meta">'
+            f"{count_html}"
+            f'<span class="{css_scope}-chev" aria-hidden="true">{chevron}</span>'
+            f"</span>"
+            f"</div>"
+            f"</div>"
+        )
+        with st.container():
+            st.markdown(head_html, unsafe_allow_html=True)
+            if st.button(
+                " ",
+                key=f"{css_scope}_toggle_{wid}",
+                use_container_width=True,
+            ):
+                st.session_state[open_key] = not is_open
+                st.rerun()
+    else:
+        st.markdown(
+            f'<div class="{css_scope}-head {open_cls}">'
+            f'<span class="{css_scope}-title">{title_h}</span>'
+            f"{count_html}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+        toggle_label = toggle_close_label if is_open else toggle_open_label
+        if st.button(
+            toggle_label,
+            key=f"{css_scope}_toggle_{wid}",
+            use_container_width=True,
+        ):
+            st.session_state[open_key] = not is_open
+            st.rerun()
 
     if not is_open:
         return

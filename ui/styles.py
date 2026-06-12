@@ -2134,231 +2134,583 @@ GLOBAL_CSS = """
     .focus-shell { background: rgba(15, 23, 42, 0.55); border-radius: var(--radius-lg); padding: var(--space-2); }
 
     /* ==================================================================
-     * Pattern screen (UI redesign step 3) — premium mobile learning UX.
-     *
-     * Scoped under ``.pat-screen`` so Streamlit overrides (st.tabs,
-     * st.expander, st.button) never leak to the rest of the app. The
-     * pattern-specific classes (.pat-card, .pat-en, …) are namespaced
-     * by prefix and unique to this view.
+     * Pattern screen — flat drill UX (scoped via ``.pat-screen-marker``).
      * ================================================================== */
 
-    .pat-screen {
+    .pat-screen-marker {
+      display: none !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) {
       max-width: 720px;
-      margin: 0 auto;
+      margin-left: auto;
+      margin-right: auto;
       padding: 0 4px;
-      overflow-x: hidden;
       box-sizing: border-box;
     }
-    .pat-screen [data-testid="column"],
-    .pat-screen [data-testid="stHorizontalBlock"] {
+    [data-testid="stMain"]:has(.pat-screen-marker) [data-testid="column"],
+    [data-testid="stMain"]:has(.pat-screen-marker) [data-testid="stHorizontalBlock"] {
       max-width: 100%;
     }
 
-    /* --- Hero (greeting + subtitle) ----------------------------------- */
-    .pat-hero {
-      background: #ffffff;
-      border: 1px solid rgba(13, 148, 136, 0.14);
-      border-radius: var(--radius-lg);
-      padding: 18px 20px;
-      margin: 4px 0 16px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    /* --- Header (text only) ----------------------------------------- */
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-hero {
+      margin: 4px 0 14px 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
     }
-    .pat-hero .pat-eyebrow {
-      font-size: 0.7rem;
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-hero .pat-title {
+      font-size: 18px;
       font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--mint);
-      margin: 0;
+      color: #111827;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      margin: 0 0 4px 0;
     }
-    .pat-hero .pat-title {
-      font-size: 1.6rem;
-      font-weight: 500;
-      color: var(--navy);
-      letter-spacing: -0.025em;
-      line-height: 1.15;
-      margin: 6px 0 6px 0;
-    }
-    .pat-hero .pat-sub {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      line-height: 1.55;
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-hero .pat-sub {
+      font-size: 12px;
+      font-weight: 400;
+      color: #888780;
+      line-height: 1.45;
       margin: 0;
     }
 
-    /* --- Pattern category tabs (st.radio horizontal, not st.tabs) ------ */
-    .pat-screen .pat-tab-radio {
-      margin: 0 0 14px 0;
-      padding: 6px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid var(--border-subtle);
-      border-radius: 999px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    /* --- Segment control tabs (st.radio horizontal) ------------------- */
+    .pat-tab-radio-marker {
+      display: none !important;
     }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] {
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"]) {
+      margin: 0 0 16px 0;
+      padding: 3px;
+      background: #F1EFE8;
+      border: none;
+      border-radius: 999px;
+      box-shadow: none;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] {
       margin: 0 !important;
     }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] > div {
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] > div {
       flex-direction: row !important;
-      flex-wrap: wrap !important;
-      gap: 6px !important;
-      align-items: center !important;
+      flex-wrap: nowrap !important;
+      gap: 2px !important;
+      align-items: stretch !important;
+      justify-content: stretch !important;
+      width: 100%;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: transparent !important;
+      border: none !important;
       justify-content: center !important;
     }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label {
-      margin: 0 !important;
-      padding: 0 !important;
-      background: transparent !important;
-      border: none !important;
-    }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label > div:first-child {
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label > div:first-child {
       display: none !important;
     }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label p,
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label span {
-      font-size: 0.88rem !important;
-      font-weight: 500 !important;
-      color: #4b5563 !important;
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label p,
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label span {
+      font-size: 12px !important;
+      font-weight: 400 !important;
+      color: #5F5E5A !important;
       line-height: 1.2 !important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p,
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) span {
-      color: #ffffff !important;
-    }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label:has(input:checked) {
-      background: #ffffff;
-      border-radius: 999px !important;
-      padding: 8px 14px !important;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label:not(:has(input:checked)) {
-      padding: 8px 14px !important;
-      border-radius: 999px !important;
-    }
-    .pat-screen .pat-tab-radio [data-testid="stRadio"] label:not(:has(input:checked)):hover {
-      background: rgba(13, 148, 136, 0.06) !important;
-    }
-
-    /* Hide legacy st.tabs if any leak into the pattern screen */
-    .pat-screen [data-testid="stTabs"] {
-      display: none !important;
-      visibility: hidden !important;
-      height: 0 !important;
-      max-height: 0 !important;
-      overflow: hidden !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      pointer-events: none !important;
-    }
-
-    /* --- Streamlit tab bar (legacy — kept hidden above) ---------------- */
-    .pat-screen [data-testid="stTabs"] [role="tablist"] {
-      gap: 6px;
-      padding: 4px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid var(--border-subtle);
-      border-radius: 999px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      overflow-x: auto;
-      flex-wrap: nowrap;
-      scrollbar-width: none;
-    }
-    .pat-screen [data-testid="stTabs"] [role="tablist"]::-webkit-scrollbar {
-      display: none;
-    }
-    .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"] {
-      flex: 0 0 auto;
-      padding: 8px 16px !important;
-      border-radius: 999px !important;
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p,
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) span {
+      color: #0F6E56 !important;
       font-weight: 500 !important;
-      font-size: 0.88rem !important;
-      color: var(--text-secondary) !important;
-      background: transparent !important;
-      border: none !important;
-      transition: background 0.18s var(--ease-out), color 0.18s var(--ease-out);
-      min-height: auto !important;
     }
-    .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"]:hover {
-      color: var(--mint) !important;
-      background: rgba(13, 148, 136, 0.06) !important;
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label:has(input:checked) {
+      background: #ffffff !important;
+      border-radius: 999px !important;
+      padding: 7px 6px !important;
+      box-shadow: none;
     }
-    .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
-      color: #ffffff !important;
-      background: #ffffff;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
-    /* Kill the default Streamlit bottom underline / highlight bar. */
-    .pat-screen [data-testid="stTabs"] [data-baseweb="tab-highlight"],
-    .pat-screen [data-testid="stTabs"] [data-baseweb="tab-border"] {
-      display: none !important;
-    }
-    .pat-screen [data-testid="stTabs"] [data-baseweb="tab-list"] {
-      border-bottom: none !important;
-    }
-    .pat-screen [data-testid="stTabs"] [role="tabpanel"] {
-      padding-top: 18px;
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+      + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+      [data-testid="stRadio"] label:not(:has(input:checked)) {
+      padding: 7px 6px !important;
+      border-radius: 999px !important;
     }
 
-    /* --- Section groups (custom toggle — not st.expander) --------------- */
-    .pat-screen .pat-sec-head {
+    /* --- Section headers (toggle row container + overlay button) ----- */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-sec-toggle-row) {
+      position: relative;
+      width: 100%;
+      margin: 0 0 8px 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-sec-head--open) {
+      margin-bottom: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-toggle-row {
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      margin: 0 0 6px 0;
-      padding: 12px 14px;
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      gap: 12px;
+      margin: 0;
+      padding: 14px 16px;
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 14px;
+      box-shadow: none;
     }
-    .pat-screen .pat-sec-head--open {
-      border-color: rgba(13, 148, 136, 0.22);
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-head--open {
+      border-color: rgba(15, 110, 86, 0.30);
       margin-bottom: 0;
     }
-    .pat-screen .pat-sec-title {
-      font-size: 0.95rem;
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 14px;
       font-weight: 500;
       color: #111827 !important;
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
       line-height: 1.35;
     }
-    .pat-screen .pat-sec-count {
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       flex-shrink: 0;
-      font-size: 0.78rem;
-      font-weight: 500;
-      color: #0f766e;
-      background: rgba(204, 251, 241, 0.65);
-      border: 1px solid rgba(13, 148, 136, 0.18);
-      padding: 4px 10px;
-      border-radius: 999px;
+      margin-left: 4px;
     }
-    .pat-screen .pat-sec-body {
-      margin: 0 0 12px 0;
-      padding: 12px 12px 4px 12px;
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(13, 148, 136, 0.22);
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      font-size: 12px;
+      font-weight: 500;
+      color: #0F6E56;
+      background: #E1F5EE;
+      border: none;
+      padding: 3px 10px;
+      border-radius: 999px;
+      line-height: 1.2;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-chev {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1rem;
+      font-size: 12px;
+      line-height: 1;
+      color: #888780;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-body {
+      margin: 8px 0 8px 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-sec-toggle-row)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"]) {
+      position: absolute !important;
+      inset: 0 !important;
+      height: 100% !important;
+      z-index: 2 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-sec-toggle-row)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"])
+      div[data-testid="stButton"] {
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-sec-toggle-row)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"])
+      div[data-testid="stButton"] > button {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 2rem !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 14px !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      color: transparent !important;
+      cursor: pointer !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-head,
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-sec-head * {
+      pointer-events: none !important;
+    }
+
+    /* --- Pattern cards (visual surface) ------------------------------- */
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-shell--tap {
+      margin: 0 0 8px 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-shell--tap:has(.pat-card--header-open) {
+      margin-bottom: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card--header {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 14px;
+      padding: 13px 14px;
+      box-shadow: none;
+      color: inherit !important;
+      margin: 0;
+      pointer-events: none;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card--header-open {
+      border-color: rgba(15, 110, 86, 0.30);
+      border-radius: 14px 14px 0 0;
+      border-bottom: none;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-detail-wrap {
+      margin: 0 0 8px 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-detail {
+      background: #ffffff;
+      border: 0.5px solid rgba(15, 110, 86, 0.30);
       border-top: none;
-      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      border-radius: 0 0 14px 14px;
+      padding: 12px 14px 14px 14px;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-main {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-en {
+      font-size: 14px;
+      font-weight: 500;
+      color: #111827;
+      line-height: 1.45;
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-ko {
+      font-size: 12px;
+      font-weight: 400;
+      color: #888780;
+      line-height: 1.45;
+      margin: 4px 0 0 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-card-chevron {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: #E1F5EE;
+      color: #0F6E56;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      line-height: 1;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-pattern-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #0F6E56;
+      margin: 0 0 6px 0;
+      padding-right: 36px;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-pattern-en {
+      font-size: 16px;
+      font-weight: 500;
+      color: #111827;
+      line-height: 1.4;
+      margin: 0 0 6px 0;
+      padding-right: 36px;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-pattern-meaning {
+      font-size: 13px;
+      font-weight: 400;
+      color: #444441;
+      line-height: 1.5;
+      margin: 0 0 4px 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-pattern-usage {
+      font-size: 12px;
+      font-weight: 400;
+      color: #888780;
+      line-height: 1.45;
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-divider {
+      border: none;
+      border-top: 0.5px solid rgba(17, 24, 39, 0.08);
+      margin: 12px 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-block {
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #0F6E56;
+      margin: 0 0 6px 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-label--purple {
+      color: #534AB7;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-en {
+      font-size: 14px;
+      color: #111827;
+      line-height: 1.55;
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-en--500 {
+      font-weight: 500;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-en--400 {
+      font-weight: 400;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-ex-ko {
+      font-size: 12px;
+      font-weight: 400;
+      color: #888780;
+      line-height: 1.45;
+      margin: 4px 0 0 0;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) .pat-nuance {
+      margin-top: 12px;
+      background: #F1EFE8;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 400;
+      color: #5F5E5A;
+      line-height: 1.55;
+    }
+
+    /* Pattern tap column — header shell + one transparent toggle (tp-card clone).
+       Only .pat-card-shell--tap columns get overlay rules; detail/buttons are outside. */
+    /* Positioning anchor for the absolute overlay button. Both the column and
+       its vertical block are made relative so inset:0 always sizes to the card
+       even if Streamlit's wrapper nesting changes. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap) {
+      position: relative;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      > [data-testid="stVerticalBlock"] {
+      position: relative;
+      gap: 0 !important;
+      height: auto !important;
+    }
+    /* Let the card's containers grow to the card's true height so the overlay
+       (sized to the column) covers the whole card — not a flex-clipped strip. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap) {
+      align-self: flex-start !important;
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      div[data-testid="stElementContainer"]:has(.pat-card-shell--tap) {
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      div[data-testid="stMarkdown"]:has(.pat-card-shell--tap) {
+      margin-bottom: 0 !important;
+    }
+    /* The markdown container ships a negative bottom margin (-1rem) that pulls
+       the card up and shrinks its element-container's reported height (58→42),
+       which previously starved the overlay. Zero it so the column wraps the
+       full card and the overlay covers all of it. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      div[data-testid="stMarkdownContainer"]:has(.pat-card-shell--tap) {
+      margin-bottom: 0 !important;
+    }
+    /* The whole card visual (wrapper + card + every child) must NOT capture
+       clicks — all clicks fall through to the transparent overlay button so
+       the entire card surface is tappable, not just the arrow. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      div[data-testid="stElementContainer"]:has(.pat-card-shell--tap),
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      div[data-testid="stMarkdown"]:has(.pat-card-shell--tap),
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap) .pat-card--header,
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap) .pat-card--header * {
+      pointer-events: none !important;
+    }
+    /* Streamlit sets .element-container { position: relative } by default, which
+       would trap an absolute stButton inside its own (collapsed, 0-height)
+       wrapper. So make the button's element-container ITSELF the overlay layer,
+       sized to the column, and let the inner button fill it. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-card-shell--tap)
+      > div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"]) {
+      position: absolute !important;
+      inset: 0 !important;
+      height: 100% !important;
+      z-index: 3 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-card-shell--tap)
+      div[data-testid="stButton"] {
+      position: static !important;
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stVerticalBlock"]:has(.pat-card-shell--tap)
+      div[data-testid="stButton"]
+      > button {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 16px !important !important;
+      background: transparent !important;
+      box-shadow: none;
+      color: transparent !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
+    /* Lift the card when the overlay button is hovered/focused (desktop). */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .pat-card--header,
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .pat-card--header {
+      border-color: rgba(13, 148, 136, 0.35) !important;
+    }
+    /* Hover: nudge the arrow right + fill its circle a touch. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .pat-card--header .pat-card-chevron {
+      transform: translateX(2px);
+    }
+    /* Tap feedback (mobile + desktop): press the card in slightly. */
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
+      .pat-card--header {
+      transform: translateY(0) scale(0.985);
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
-    .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] {
-      margin: -2px 0 10px 0 !important;
+    [data-testid="stMain"]:has(.pat-screen-marker)
+      div[data-testid="stColumn"]:has(.pat-card-shell--tap)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
+      .pat-card--header .pat-card-chevron {
+      transform: translateX(1px) scale(0.94);
     }
-    .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] > button {
-      min-height: 2.4rem !important;
-      font-size: 0.82rem !important;
-      border-radius: 10px !important !important;
-      color: #0f766e !important;
-      background: rgba(240, 253, 250, 0.9) !important;
-      border: 1px solid rgba(13, 148, 136, 0.22) !important;
+
+    /* Expanded card action buttons (not overlay) ----------------------- */
+    [data-testid="stMain"]:has(.pat-screen-marker) div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]),
+    [data-testid="stMain"]:has(.pat-screen-marker) div[data-testid="stButton"]:has(button[key*="pat_detail_close"]) {
+      margin-top: 0 !important;
     }
-    /* Shared collapsible sections (mock survey / report / patterns) */
+    [data-testid="stMain"]:has(.pat-screen-marker) div[data-testid="stHorizontalBlock"]:has(button[key*="pat_detail_close"]) {
+      margin-top: 8px !important;
+      gap: 8px !important;
+    }
+    [data-testid="stMain"]:has(.pat-screen-marker) div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) > button,
+    [data-testid="stMain"]:has(.pat-screen-marker) div[data-testid="stButton"]:has(button[key*="pat_detail_close"]) > button {
+      min-height: 2.35rem !important;
+      padding: 8px 12px !important;
+      border-radius: 10px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: #444441 !important;
+      background: #ffffff !important;
+      border: 0.5px solid #D3D1C7 !important;
+      box-shadow: none !important;
+    }
+
+    @media (max-width: 480px) {
+      [data-testid="stMain"]:has(.pat-screen-marker)
+        div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+        + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+        [data-testid="stRadio"] label p,
+      [data-testid="stMain"]:has(.pat-screen-marker)
+        div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+        + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+        [data-testid="stRadio"] label span {
+        font-size: 11px !important;
+      }
+      [data-testid="stMain"]:has(.pat-screen-marker)
+        div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+        + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+        [data-testid="stRadio"] label:has(input:checked),
+      [data-testid="stMain"]:has(.pat-screen-marker)
+        div[data-testid="stElementContainer"]:has(.pat-tab-radio-marker)
+        + div[data-testid="stElementContainer"]:has([data-testid="stRadio"])
+        [data-testid="stRadio"] label:not(:has(input:checked)) {
+        padding: 7px 4px !important;
+      }
+    }
+
+    /* Shared collapsible sections (mock survey / report) */
     .mx-survey-head,
-    .mx-col-head,
-    .pat-sec-head {
+    .mx-col-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -2371,8 +2723,7 @@ GLOBAL_CSS = """
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .mx-survey-title,
-    .mx-col-title,
-    .pat-sec-title {
+    .mx-col-title {
       font-size: 0.95rem;
       font-weight: 500;
       color: #111827 !important;
@@ -2380,8 +2731,7 @@ GLOBAL_CSS = """
       line-height: 1.35;
     }
     .mx-survey-count,
-    .mx-col-count,
-    .pat-sec-count {
+    .mx-col-count {
       flex-shrink: 0;
       font-size: 0.78rem;
       font-weight: 500;
@@ -2392,8 +2742,7 @@ GLOBAL_CSS = """
       border-radius: 999px;
     }
     .mx-survey-body,
-    .mx-col-body,
-    .pat-sec-body {
+    .mx-col-body {
       margin: 0 0 12px 0;
       padding: 12px 12px 4px 12px;
       background: rgba(255, 255, 255, 0.92);
@@ -2401,283 +2750,8 @@ GLOBAL_CSS = """
       border-radius: var(--radius-md);
     }
     section.main:has(.mx-marker) .mx-survey-head--open,
-    section.main:has(.mx-marker) .mx-col-head--open,
-    .pat-screen .pat-sec-head--open {
+    section.main:has(.mx-marker) .mx-col-head--open {
       border-color: rgba(13, 148, 136, 0.22);
-    }
-
-    /* --- Pattern detail stack (UI redesign step 5) -------------------- */
-    .pat-detail-hero {
-      position: relative;
-      background: #ffffff;
-      border: 1px solid rgba(13, 148, 136, 0.2);
-      border-radius: var(--radius-lg);
-      padding: 20px 18px 18px 20px;
-      margin: 0 0 14px 0;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      overflow: hidden;
-    }
-    .pat-detail-hero::after {
-      content: "";
-      position: absolute;
-      right: -24px; top: -24px;
-      width: 120px; height: 120px;
-      border-radius: 50%;
-      background: #ffffff;
-      pointer-events: none;
-    }
-    .pat-detail-eyebrow {
-      font-size: 0.68rem;
-      font-weight: 500;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--mint);
-      margin: 0 0 6px 0;
-    }
-    .pat-detail-pattern {
-      font-size: 1.22rem;
-      font-weight: 500;
-      color: var(--navy);
-      line-height: 1.35;
-      letter-spacing: -0.02em;
-      margin: 0 0 8px 0;
-    }
-    .pat-detail-meaning {
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: var(--text);
-      line-height: 1.5;
-      margin: 0 0 10px 0;
-    }
-    .pat-detail-usage {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      line-height: 1.55;
-      margin: 0;
-    }
-    .pat-detail-usage .pat-usage-meta {
-      color: var(--mint);
-      font-weight: 500;
-    }
-
-    .pat-learn-card {
-      background: #ffffff;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 14px 16px 14px 16px;
-      margin: 0 0 10px 0;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
-    .pat-learn-eyebrow {
-      font-size: 0.62rem;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(13, 148, 136, 0.75);
-      margin: 0 0 4px 0;
-    }
-    .pat-learn-title {
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: var(--navy);
-      margin: 0 0 8px 0;
-      letter-spacing: -0.02em;
-    }
-    .pat-learn-body { margin: 0; }
-    .pat-learn-en {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--navy);
-      line-height: 1.55;
-      margin: 0;
-    }
-    .pat-learn-en--long {
-      font-weight: 500;
-      font-size: 0.88rem;
-      line-height: 1.6;
-    }
-    .pat-learn-ko {
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      margin: 8px 0 0 0;
-    }
-    .pat-learn-tip {
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin: 0;
-    }
-    .pat-learn-ih-hint {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      line-height: 1.55;
-      margin: 10px 0 0 0;
-    }
-
-    .pat-learn-card--short {
-      border-left: 3px solid rgba(13, 148, 136, 0.45);
-    }
-    .pat-learn-card--opic {
-      background: #ffffff;
-      border-color: rgba(15, 23, 42, 0.06);
-    }
-    .pat-learn-card--ih {
-      background: #ffffff;
-      border: 1px solid rgba(13, 148, 136, 0.28);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
-    .pat-learn-card--tip {
-      background: rgba(255, 251, 235, 0.65);
-      border-color: rgba(251, 191, 36, 0.25);
-    }
-
-    .pat-practice-shell {
-      margin: 4px 0 6px 0;
-      padding: 14px 16px 4px 16px;
-      background: rgba(15, 23, 42, 0.03);
-      border: 1px dashed rgba(13, 148, 136, 0.35);
-      border-radius: var(--radius-md);
-    }
-    .pat-practice-eyebrow {
-      font-size: 0.62rem;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--mint);
-      margin: 0 0 4px 0;
-    }
-    .pat-practice-title {
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--navy);
-      margin: 0 0 0 0;
-    }
-    .pat-screen div[data-testid="stTextArea"] textarea {
-      border-radius: var(--radius-sm) !important;
-      border-color: rgba(13, 148, 136, 0.22) !important;
-      font-size: 0.88rem !important;
-    }
-
-    .pat-ex-wrap--tail {
-      margin-top: 8px;
-    }
-
-    /* --- Pattern card (legacy compact; step 5 uses pat-detail-hero) --- */
-    .pat-screen .pat-card {
-      position: relative;
-      background: #ffffff;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 14px 14px 14px 18px;
-      margin: 0 0 10px 0;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      transition: box-shadow 0.18s var(--ease-out), transform 0.18s var(--ease-out);
-    }
-    .pat-screen .pat-card::before {
-      content: "";
-      position: absolute;
-      left: 0; top: 14px; bottom: 14px;
-      width: 3px;
-      border-radius: 3px;
-      background: #ffffff;
-      opacity: 0.85;
-    }
-    .pat-screen .pat-card:hover {
-    }
-    .pat-screen .pat-en {
-      font-size: 0.98rem;
-      font-weight: 500;
-      color: var(--navy);
-      line-height: 1.4;
-      letter-spacing: -0.005em;
-    }
-    .pat-screen .pat-ko {
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      margin-top: 4px;
-    }
-
-    /* --- Examples block ---------------------------------------------- */
-    .pat-screen .pat-ex-wrap {
-      margin: 10px 0 0 0;
-      padding: 10px 12px;
-      background: rgba(248, 250, 252, 0.85);
-      border: 1px solid rgba(15, 23, 42, 0.04);
-      border-radius: var(--radius-sm);
-    }
-    .pat-screen .pat-ex-label {
-      display: inline-block;
-      font-size: 0.66rem;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mint);
-      margin-bottom: 4px;
-    }
-    .pat-screen .pat-ex-wrap ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .pat-screen .pat-ex-wrap li {
-      position: relative;
-      padding: 4px 0 4px 14px;
-      font-size: 0.84rem;
-      line-height: 1.55;
-      color: var(--text);
-    }
-    .pat-screen .pat-ex-wrap li::before {
-      content: "";
-      position: absolute;
-      left: 0; top: 13px;
-      width: 5px; height: 5px;
-      border-radius: 999px;
-      background: var(--mint);
-      opacity: 0.55;
-    }
-    .pat-screen .pat-ex-wrap--extra {
-      margin-top: 6px;
-      background: rgba(204, 251, 241, 0.32);
-      border-color: rgba(13, 148, 136, 0.14);
-    }
-
-    /* --- Pattern card action buttons (열기 / 예문 더보기 / 접기) ------------ */
-    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]),
-    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) {
-      margin-top: 8px !important;
-    }
-    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]) > button,
-    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) > button {
-      min-height: 1.9rem !important;
-      padding: 4px 14px !important;
-      border-radius: 999px !important;
-      font-size: 0.78rem !important;
-      font-weight: 500 !important;
-      color: var(--mint) !important;
-      background: rgba(204, 251, 241, 0.55) !important;
-      border: 1px solid rgba(13, 148, 136, 0.25) !important;
-      box-shadow: none;
-    }
-    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]) > button:hover,
-    .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) > button:hover {
-      background: rgba(204, 251, 241, 0.9) !important;
-      border-color: var(--mint) !important;
-    }
-
-    /* --- Mobile tweaks ----------------------------------------------- */
-    @media (max-width: 480px) {
-      .pat-screen .pat-hero { padding: 16px 16px; }
-      .pat-screen .pat-hero .pat-title { font-size: 1.4rem; }
-      .pat-screen .pat-card { padding: 12px 12px 12px 16px; }
-      .pat-screen .pat-detail-hero { padding: 16px 14px; }
-      .pat-screen .pat-detail-pattern { font-size: 1.08rem; }
-      .pat-screen .pat-learn-card { padding: 12px 14px; }
-      .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"] {
-        padding: 7px 13px !important;
-        font-size: 0.82rem !important;
-      }
     }
 
     /* --- Topic practice: selection screen (filters + compact cards) ----- */
@@ -4405,9 +4479,8 @@ GLOBAL_CSS = """
       width: 18px;
       height: 18px;
     }
-    /* Card = single tappable unit — transparent st.button overlays the card
-       (topic-practice grid only, Streamlit 1.50). The card markdown is the
-       visible surface; the button sits on top (inset:0) and receives clicks. */
+    /* Pattern tap column — header shell + one transparent toggle (tp-card clone).
+       Only .pat-card-shell--tap columns get overlay rules; detail/buttons are outside. */
     /* Positioning anchor for the absolute overlay button. Both the column and
        its vertical block are made relative so inset:0 always sizes to the card
        even if Streamlit's wrapper nesting changes. */

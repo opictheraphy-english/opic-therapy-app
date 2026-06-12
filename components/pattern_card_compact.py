@@ -1,15 +1,10 @@
-"""Pattern detail — guided speaking-learning stack (UI redesign step 5).
-
-Layered cards: hero → short example → real OPIc → IH upgrade → tip → practice.
-Optional example audio from ``assets/pattern_audio`` when files exist.
-"""
+"""Pattern drill cards — tap header column + detail body outside column."""
 
 from __future__ import annotations
 
 import html
-import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import streamlit as st
 
@@ -19,21 +14,9 @@ from utils.streamlit_ui import ascii_widget_key, is_leaked_internal_label
 _ROOT = Path(__file__).resolve().parent.parent
 _PATTERN_AUDIO_DIR = _ROOT / "assets" / "pattern_audio"
 
-# Guided stack uses the first (STACK_HEAD + 1) examples (Steps 1–3: short / real / IH).
 STACK_HEAD = 2
-# Cap on extra example lines shown per "더보기" expand (beyond the guided stack).
 STACK_MAX = 6
-# Beyond the stack, how many extra lines to show per "더보기" toggle slice
 ADDITIONAL_EXAMPLE_SLICE = 2
-
-_TAB_LABEL_KO: Dict[str, str] = {
-    "describe": "묘사",
-    "routine": "루틴",
-    "experience": "경험",
-    "comparison": "비교",
-    "opinion": "의견",
-    "roleplay": "롤플레이",
-}
 
 _ROLE_USAGE: Dict[str, str] = {
     "starter": "답변 첫머리에서 주제와 분위기를 잡을 때 가장 잘 맞습니다.",
@@ -97,29 +80,9 @@ def _examples_dicts(pat: Dict[str, Any]) -> List[Dict[str, Any]]:
     return out
 
 
-def _usage_blurb(pat: Dict[str, Any], tab_id: str) -> str:
+def _usage_role_only(pat: Dict[str, Any]) -> str:
     role = normalize_role(pat.get("pattern_role")) or ""
-    base = _ROLE_USAGE.get(role, "자연스러운 영어 답변을 이어 가는 데 쓰입니다.")
-    tab_ko = _TAB_LABEL_KO.get(tab_id, tab_id)
-    sub = (pat.get("subcategory") or "").strip().replace("_", " ")
-    if sub:
-        return f"{base} · <span class=\"pat-usage-meta\">{html.escape(tab_ko)} · {html.escape(sub)}</span>"
-    return f"{base} · <span class=\"pat-usage-meta\">{html.escape(tab_ko)}</span>"
-
-
-def _speaking_tip_body(pat: Dict[str, Any], first_ko: str) -> str:
-    tags = pat.get("tags") if isinstance(pat.get("tags"), list) else []
-    tag_bits = [html.escape(str(t).strip()) for t in tags if str(t).strip()]
-    parts: List[str] = []
-    if tag_bits:
-        parts.append("태그: " + ", ".join(tag_bits[:5]) + ".")
-    parts.append(
-        "문장 끝을 살짝 내려 말하면 차분하게 들리고, "
-        "같은 두 단어를 연속으로 세게 쓰지 않도록 리듬을 나눠 보세요."
-    )
-    if first_ko:
-        parts.append("뉘앙스(한국어): " + html.escape(first_ko))
-    return " ".join(parts)
+    return _ROLE_USAGE.get(role, "자연스러운 영어 답변을 이어 가는 데 쓰입니다.")
 
 
 def _try_play_example_audio(filename: str) -> None:
@@ -135,27 +98,119 @@ def _try_play_example_audio(filename: str) -> None:
         return
 
 
-def _learn_card(
+def _divider_html() -> str:
+    return '<hr class="pat-divider" aria-hidden="true">'
+
+
+def _example_block_html(
     *,
-    kind: str,
-    eyebrow: str,
-    title: str,
-    body_html: str,
-    extra_class: str = "",
-) -> None:
-    cls = f"pat-learn-card pat-learn-card--{kind}"
-    if extra_class:
-        cls += f" {extra_class}"
-    eb = html.escape(eyebrow)
-    tt = html.escape(title)
-    st.markdown(
-        f'<section class="{cls}">'
-        f'<p class="pat-learn-eyebrow">{eb}</p>'
-        f'<h3 class="pat-learn-title">{tt}</h3>'
-        f'<div class="pat-learn-body">{body_html}</div>'
-        "</section>",
-        unsafe_allow_html=True,
+    label: str,
+    en: str,
+    ko: str = "",
+    en_weight: str = "500",
+    label_class: str = "pat-ex-label",
+) -> str:
+    ko_block = f'<p class="pat-ex-ko">{html.escape(ko)}</p>' if ko else ""
+    return (
+        f'<div class="pat-ex-block">'
+        f'<p class="{label_class}">{html.escape(label)}</p>'
+        f'<p class="pat-ex-en pat-ex-en--{en_weight}">{html.escape(en)}</p>'
+        f"{ko_block}"
+        f"</div>"
     )
+
+
+def _header_card_html(*, tpl_h: str, meaning_h: str, is_open: bool) -> str:
+    chevron = "▴" if is_open else "▾"
+    open_cls = " pat-card--header-open" if is_open else ""
+    return (
+        f'<article class="pat-card pat-card--header{open_cls}" aria-label="패턴 카드">'
+        f'<div class="pat-card-main">'
+        f'<p class="pat-card-en">{tpl_h}</p>'
+        f'<p class="pat-card-ko">{meaning_h}</p>'
+        f"</div>"
+        f'<span class="pat-card-chevron" aria-hidden="true">{chevron}</span>'
+        f"</article>"
+    )
+
+
+def _detail_body_html(
+    *,
+    tpl_h: str,
+    meaning_h: str,
+    usage_h: str,
+    ex_rows: List[Dict[str, Any]],
+    tail_rows: List[Dict[str, Any]],
+) -> str:
+    parts: List[str] = [
+        '<div class="pat-card-detail">',
+        '<p class="pat-pattern-label">패턴</p>',
+        f'<p class="pat-pattern-en">{tpl_h}</p>',
+        f'<p class="pat-pattern-meaning">{meaning_h}</p>',
+        f'<p class="pat-pattern-usage">{usage_h}</p>',
+    ]
+
+    if ex_rows:
+        parts.append(_divider_html())
+        short = ex_rows[0]
+        parts.append(
+            _example_block_html(
+                label="짧은 예문",
+                en=short["en"],
+                ko=short.get("ko") or "",
+                en_weight="500",
+            )
+        )
+
+    if len(ex_rows) >= 2:
+        parts.append(_divider_html())
+        real = ex_rows[1]
+        parts.append(
+            _example_block_html(
+                label="실전 OPIc 예문",
+                en=real["en"],
+                ko=real.get("ko") or "",
+                en_weight="400",
+            )
+        )
+
+    parts.append(_divider_html())
+    if len(ex_rows) >= 3:
+        ih = ex_rows[2]
+        parts.append(
+            _example_block_html(
+                label="IH 업그레이드",
+                en=ih["en"],
+                ko=ih.get("ko") or "",
+                en_weight="400",
+                label_class="pat-ex-label pat-ex-label--purple",
+            )
+        )
+    else:
+        parts.append(
+            '<div class="pat-ex-block">'
+            '<p class="pat-ex-label pat-ex-label--purple">IH 업그레이드</p>'
+            f'<p class="pat-ex-en pat-ex-en--400">{_IH_CONNECTOR_HINT}</p>'
+            "</div>"
+        )
+
+    first_ko = (ex_rows[0].get("ko") or "").strip() if ex_rows else ""
+    if first_ko:
+        parts.append(f'<div class="pat-nuance">{html.escape(first_ko)}</div>')
+
+    for row in tail_rows:
+        parts.append(_divider_html())
+        parts.append(
+            _example_block_html(
+                label="추가 예문",
+                en=row["en"],
+                ko=row.get("ko") or "",
+                en_weight="400",
+            )
+        )
+
+    parts.append("</div>")
+    return "".join(parts)
 
 
 def render_compact_pattern_card(
@@ -168,7 +223,6 @@ def render_compact_pattern_card(
     collapse_label: str = "접기",
     additional_example_count: int | None = None,
 ) -> None:
-    """Guided stack: hero → examples → IH → tip → lightweight practice."""
     add_n = (
         additional_example_count
         if additional_example_count is not None
@@ -182,31 +236,28 @@ def render_compact_pattern_card(
     meaning = _meaning_line(pat)
     tpl_h = html.escape(tpl)
     meaning_h = html.escape(meaning)
-    usage_inner = _usage_blurb(pat, tab_id)
+    usage_h = html.escape(_usage_role_only(pat))
 
-    # Only one expanded pattern detail per page (controller in session state).
     st.session_state.setdefault("open_pattern_key", None)
     this_open_key = row_key
     detail_open = st.session_state.get("open_pattern_key") == this_open_key
 
-    # Collapsed header (short): stays in-place and prevents scroll hell.
-    col_left, col_btn = st.columns([8, 2], gap="small")
-    with col_left:
+    ex_rows = _examples_dicts(pat)
+    tail_all = ex_rows[STACK_HEAD + 1 :] if len(ex_rows) > STACK_HEAD + 1 else []
+    tail_open = bool(st.session_state.get(expand_key))
+    tail_visible = tail_all[: min(add_n, len(tail_all), STACK_MAX)] if tail_open else []
+
+    # Overlay column: header markdown + exactly one transparent toggle button.
+    col, = st.columns(1)
+    with col:
+        header_html = _header_card_html(tpl_h=tpl_h, meaning_h=meaning_h, is_open=detail_open)
         st.markdown(
-            f"""
-            <div class="pat-card" style="margin: 0 0 8px 0;">
-              <div class="pat-en">{tpl_h}</div>
-              <div class="pat-ko">{meaning_h}</div>
-            </div>
-            """,
+            f'<div class="pat-card-shell pat-card-shell--tap">{header_html}</div>',
             unsafe_allow_html=True,
         )
-    with col_btn:
-        btn_label = "접기 ▲" if detail_open else "열기"
         if st.button(
-            btn_label,
-            key=f"pat_detail_toggle_{row_key}",
-            type="secondary",
+            " ",
+            key=f"pat_card_toggle_{row_key}",
             use_container_width=True,
         ):
             if detail_open:
@@ -216,141 +267,43 @@ def render_compact_pattern_card(
                 st.session_state["open_pattern_key"] = this_open_key
             st.rerun()
 
+    # Detail body and action buttons render outside the overlay column.
     if not detail_open:
         return
 
-    # --- 1) Hero ---------------------------------------------------------
     st.markdown(
-        f"""
-        <article class="pat-detail-hero" aria-label="패턴 히어로">
-          <p class="pat-detail-eyebrow">패턴</p>
-          <p class="pat-detail-pattern">{tpl_h}</p>
-          <p class="pat-detail-meaning">{meaning_h}</p>
-          <p class="pat-detail-usage">{usage_inner}</p>
-        </article>
-        """,
+        f'<div class="pat-card-detail-wrap">{_detail_body_html(tpl_h=tpl_h, meaning_h=meaning_h, usage_h=usage_h, ex_rows=ex_rows, tail_rows=tail_visible)}</div>',
         unsafe_allow_html=True,
     )
 
-    ex_rows = _examples_dicts(pat)
-    first_ko = (ex_rows[0].get("ko") or "") if ex_rows else ""
-
-    # --- 2) Short example -------------------------------------------------
     if ex_rows:
-        short = ex_rows[0]
-        en0 = html.escape(short["en"])
-        ko0 = html.escape(short["ko"]) if short.get("ko") else ""
-        ko_block = f'<p class="pat-learn-ko">{ko0}</p>' if ko0 else ""
-        _learn_card(
-            kind="short",
-            eyebrow="Step 1",
-            title="짧은 예문 · 바로 이해",
-            body_html=f'<p class="pat-learn-en">{en0}</p>{ko_block}',
-        )
-        _try_play_example_audio(short.get("audio_file") or "")
-
-    # --- 3) Real OPIc example --------------------------------------------
+        _try_play_example_audio(ex_rows[0].get("audio_file") or "")
     if len(ex_rows) >= 2:
-        real = ex_rows[1]
-        en1 = html.escape(real["en"])
-        ko1 = html.escape(real["ko"]) if real.get("ko") else ""
-        ko_block = f'<p class="pat-learn-ko">{ko1}</p>' if ko1 else ""
-        _learn_card(
-            kind="opic",
-            eyebrow="Step 2",
-            title="실전 OPIc 예문",
-            body_html=f'<p class="pat-learn-en pat-learn-en--long">{en1}</p>{ko_block}',
-        )
-        _try_play_example_audio(real.get("audio_file") or "")
-
-    # --- 4) IH upgrade ----------------------------------------------------
+        _try_play_example_audio(ex_rows[1].get("audio_file") or "")
     if len(ex_rows) >= 3:
-        ih = ex_rows[2]
-        en2 = html.escape(ih["en"])
-        ko2 = html.escape(ih["ko"]) if ih.get("ko") else ""
-        ko_block = f'<p class="pat-learn-ko">{ko2}</p>' if ko2 else ""
-        _learn_card(
-            kind="ih",
-            eyebrow="Step 3",
-            title="IH 업그레이드 예시",
-            body_html=f'<p class="pat-learn-en pat-learn-en--long">{en2}</p>{ko_block}',
-        )
-        _try_play_example_audio(ih.get("audio_file") or "")
-    else:
-        body = (
-            f'<p class="pat-learn-en">{tpl_h}</p>'
-            f'<p class="pat-learn-ih-hint">{_IH_CONNECTOR_HINT}</p>'
-        )
-        _learn_card(
-            kind="ih",
-            eyebrow="Step 3",
-            title="IH 업그레이드 · 연결어",
-            body_html=body,
-        )
+        _try_play_example_audio(ex_rows[2].get("audio_file") or "")
+    for row in tail_visible:
+        _try_play_example_audio(row.get("audio_file") or "")
 
-    # --- 5) Speaking tip --------------------------------------------------
-    tip_html = _speaking_tip_body(pat, first_ko)
-    _learn_card(
-        kind="tip",
-        eyebrow="Step 4",
-        title="스피킹 팁",
-        body_html=f'<p class="pat-learn-tip">{tip_html}</p>',
-    )
-
-    # --- 6) Try speaking (lightweight) ------------------------------------
-    practice_seed = ex_rows[0]["en"] if ex_rows else tpl
-    prompt = (
-        f"위 패턴으로 한 문장을 직접 말해 보세요. "
-        f"아래에 적어도 되고, 소리 내어 연습해도 좋아요.\n"
-        f"예: {practice_seed}"
-    )
-    st.markdown(
-        '<section class="pat-practice-shell" aria-label="직접 말해보기">'
-        '<p class="pat-practice-eyebrow">Step 5</p>'
-        '<h3 class="pat-practice-title">직접 말해보기</h3>'
-        "</section>",
-        unsafe_allow_html=True,
-    )
-    st.caption("마이크 녹음은 아직 가볍게만 — 문장을 적거나 소리 내어 따라 해 보세요.")
-    st.text_area(
-        "연습 노트",
-        value="",
-        height=88,
-        key=f"pat_practice_{row_key}",
-        placeholder=prompt[:220],
-        label_visibility="collapsed",
-    )
-
-    # --- Extra examples (beyond first 3) ---------------------------------
-    show_tail = len(ex_rows) > STACK_HEAD + 1
-    if show_tail:
-        tail = ex_rows[STACK_HEAD + 1 :]
-        tail_open = bool(st.session_state.get(expand_key))
-        btn_label = collapse_label if tail_open else expand_more_label
-        if st.button(btn_label, key=f"pat_ex_toggle_{row_key}", type="secondary"):
-            st.session_state[expand_key] = not tail_open
-            tail_open = bool(st.session_state.get(expand_key))
-
-        if tail_open:
-            slice_n = min(add_n, len(tail), STACK_MAX)
-            for j, row in enumerate(tail[:slice_n]):
-                en = html.escape(row["en"])
-                st.markdown(
-                    f'<div class="pat-ex-wrap pat-ex-wrap--extra pat-ex-wrap--tail">'
-                    f'<span class="pat-ex-label">추가 예문 {j + 1}</span>'
-                    f'<ul><li>{en}</li></ul>'
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-                _try_play_example_audio(row.get("audio_file") or "")
-
-    # Bottom 접기 (also collapses the long detail stack).
-    if st.button(
-        "접기",
-        key=f"pat_detail_close_bottom_{row_key}",
-        type="secondary",
-        use_container_width=True,
-    ):
-        st.session_state["open_pattern_key"] = None
-        st.session_state.pop(expand_key, None)
-        st.rerun()
+    btn_cols = st.columns(2 if tail_all else 1)
+    col_i = 0
+    if tail_all:
+        with btn_cols[col_i]:
+            more_label = "예문 접기" if tail_open else f"예문 {len(tail_all)}개 더보기"
+            if st.button(
+                more_label,
+                key=f"pat_ex_toggle_{row_key}",
+                use_container_width=True,
+            ):
+                st.session_state[expand_key] = not tail_open
+                st.rerun()
+        col_i += 1
+    with btn_cols[col_i]:
+        if st.button(
+            collapse_label,
+            key=f"pat_detail_close_{row_key}",
+            use_container_width=True,
+        ):
+            st.session_state["open_pattern_key"] = None
+            st.session_state.pop(expand_key, None)
+            st.rerun()
