@@ -10,6 +10,7 @@ from typing import Any, Optional
 import streamlit as st
 
 from config.waiting_tips import WAITING_TIPS, WaitingTip
+from components.brand_character import render_character_svg
 
 # Local UI testing only — never enable in production.
 DEBUG_SLOW_ANALYSIS_UI_DELAY_SEC = 1.5
@@ -67,7 +68,7 @@ def render_ai_analysis_waiting(
     stage_html = (
         f'<p class="mx-ai-wait-stage">{html.escape(stage)}</p>' if stage else ""
     )
-    wait_title = (title or "AI가 답변을 듣고 있어요").strip()
+    wait_title = (title or "치료사가 답변을 듣고 있어요").strip()
     wait_sub = (
         subtitle
         or "문법, 표현, 흐름을 차근차근 확인하는 중입니다.<br/>잠시만 기다려 주세요."
@@ -81,25 +82,24 @@ def render_ai_analysis_waiting(
     meaning = html.escape(str(tip.get("meaning") or ""))
     example = html.escape(str(tip.get("example") or ""))
 
+    character_svg = render_character_svg("listening", 84)
+    wave_svg = (
+        '<svg class="mx-ai-wait-wave" width="150" height="26" viewBox="0 0 150 26" '
+        'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+        '<polyline class="mx-ai-wait-wave-line" '
+        'points="6,13 32,13 42,5 54,21 66,2 78,18 88,13 144,13" '
+        'fill="none" stroke="#1D9E75" stroke-width="2.4" '
+        'stroke-linecap="round" stroke-linejoin="round"/>'
+        "</svg>"
+    )
+
     st.markdown(
         f"""
         <div class="mx-ai-wait-marker" aria-hidden="true"></div>
         <section class="mx-ai-wait" role="status" aria-live="polite" aria-busy="true">
           <div class="mx-ai-wait-anim" aria-hidden="true">
-            <div class="mx-ai-wait-ring"></div>
-            <div class="mx-ai-wait-mic" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-                <line x1="8" y1="23" x2="16" y2="23"/>
-              </svg>
-            </div>
-            <div class="mx-ai-wait-bubble" aria-hidden="true"></div>
-          </div>
-          <div class="mx-ai-wait-dots" aria-hidden="true">
-            <span></span><span></span><span></span>
+            {character_svg}
+            {wave_svg}
           </div>
           <h2 class="mx-ai-wait-title">{html.escape(wait_title)}</h2>
           <p class="mx-ai-wait-sub">{wait_sub}</p>

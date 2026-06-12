@@ -14,14 +14,18 @@ def render_splash_screen() -> None:
     st.markdown(
         """
 <section class="splash-root" aria-label="앱 시작">
-  <div class="splash-card">
-    <p class="splash-brand">오픽치료사</p>
-    <p class="splash-sub">AI 오픽 말하기 코치</p>
-    <p class="splash-line">오늘도 한 문장씩,<br/>더 자연스럽게 말해볼까요?</p>
-    <p class="splash-loading">학습 환경을 준비하고 있어요...</p>
-    <div class="splash-dots" aria-hidden="true">
-      <span></span><span></span><span></span>
-    </div>
+  <div class="splash-logo" aria-hidden="true">
+    <svg width="88" height="40" viewBox="0 0 130 48" xmlns="http://www.w3.org/2000/svg">
+      <polyline points="6,28 28,28 36,16 46,40 56,6 66,34 74,28 124,28"
+        fill="none" stroke="#0F6E56" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <p class="splash-brand">오픽치료사</p>
+  <p class="splash-sub">OPIC THERAPY</p>
+  <p class="splash-line">오늘도 한 문장씩,<br/>더 자연스럽게 말해볼까요?</p>
+  <div class="splash-dots" aria-hidden="true">
+    <span></span><span></span><span></span>
   </div>
 </section>
         """,

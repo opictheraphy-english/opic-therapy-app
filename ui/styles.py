@@ -833,9 +833,7 @@ GLOBAL_CSS = """
 
     /* --- Session splash (before Home, scoped) ----------------------------- */
     section.main:has(.splash-marker) {
-      background:
-        radial-gradient(ellipse 85% 50% at 50% 0%, rgba(13, 148, 136, 0.14) 0%, transparent 52%),
-        linear-gradient(180deg, #fafaf9 0%, #f4f4f5 50%, #f1f5f9 100%) !important;
+      background: #fafaf9 !important;
     }
     section.main:has(.splash-marker) div.block-container {
       max-width: 480px !important;
@@ -847,63 +845,51 @@ GLOBAL_CSS = """
     }
     section.main:has(.splash-marker) .splash-root {
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       min-height: min(72vh, 520px);
-    }
-    section.main:has(.splash-marker) .splash-card {
-      width: 100%;
-      border-radius: 24px;
-      padding: 2rem 1.5rem 1.75rem 1.5rem;
       text-align: center;
-      background:
-        radial-gradient(ellipse 100% 70% at 100% 0%, rgba(45, 212, 191, 0.2) 0%, transparent 48%),
-        linear-gradient(165deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%);
-      border: 1px solid rgba(13, 148, 136, 0.16);
-      box-shadow: 0 14px 44px rgba(15, 23, 42, 0.08), 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+    }
+    section.main:has(.splash-marker) .splash-logo {
+      line-height: 0;
+    }
+    section.main:has(.splash-marker) .splash-logo svg {
+      display: block;
     }
     section.main:has(.splash-marker) .splash-brand {
-      font-size: clamp(1.65rem, 6vw, 2.1rem);
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      margin: 0 0 6px 0;
-      background: linear-gradient(135deg, #0f766e 0%, #14b8a6 45%, #2dd4bf 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+      margin: 14px 0 0 0;
+      font-size: 24px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: #111827;
     }
     section.main:has(.splash-marker) .splash-sub {
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
+      margin: 6px 0 0 0;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: var(--text-muted);
-      margin: 0 0 1.25rem 0;
+      color: #888780;
     }
     section.main:has(.splash-marker) .splash-line {
-      font-size: 1.08rem;
+      margin: 18px 0 0 0;
+      font-size: 14px;
       line-height: 1.55;
-      font-weight: 600;
-      color: var(--navy);
-      margin: 0 0 1.5rem 0;
-    }
-    section.main:has(.splash-marker) .splash-loading {
-      font-size: 0.88rem;
-      color: var(--text-secondary);
-      margin: 0 0 14px 0;
-      font-weight: 500;
+      font-weight: 400;
+      color: #444441;
     }
     section.main:has(.splash-marker) .splash-dots {
       display: flex;
       justify-content: center;
       gap: 10px;
-      margin-top: 4px;
+      margin: 16px 0 0 0;
     }
     section.main:has(.splash-marker) .splash-dots span {
       width: 9px;
       height: 9px;
       border-radius: 999px;
-      background: linear-gradient(135deg, #0d9488 0%, #5eead4 100%);
+      background: #1d9e75;
       opacity: 0.35;
       animation: splash-dot 1.05s ease-in-out infinite;
     }
@@ -912,6 +898,13 @@ GLOBAL_CSS = """
     @keyframes splash-dot {
       0%, 80%, 100% { transform: scale(0.92); opacity: 0.35; }
       40% { transform: scale(1.15); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      section.main:has(.splash-marker) .splash-dots span {
+        animation: none;
+        opacity: 0.75;
+        transform: none;
+      }
     }
 
     /* Hero */
@@ -1616,72 +1609,113 @@ GLOBAL_CSS = """
     }
 
     /* ==================================================================
-     * Mock-exam recovery card — soft amber panel surfaced when Gemini
-     * analysis has failed and the user can safely retry the same question.
+     * Mock-exam recovery card — analysis failure / retry surfaces.
+     * Scoped to mock (mx-marker), topic practice (tq-screen-marker),
+     * and mini report wrap only.
      * ================================================================== */
-    .recovery-card {
-      position: relative;
-      padding: 20px 22px 18px 22px;
-      border-radius: 16px;
-      background: #ffffff;
-      border: 1px solid rgba(245, 158, 11, 0.28);
-      box-shadow:
-        0 1px 0 rgba(15, 23, 42, 0.03),
-        0 10px 28px rgba(245, 158, 11, 0.10);
+    section.main:has(.mx-marker) .recovery-card,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card,
+    .mm-report-wrap .recovery-card {
       margin: 6px 0 16px 0;
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 16px;
       overflow: hidden;
     }
-    .recovery-card::after {
-      content: "";
-      position: absolute;
-      top: -34px;
-      right: -30px;
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      background: #ffffff;
-      pointer-events: none;
+    section.main:has(.mx-marker) .recovery-card .rv-stage,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-stage,
+    .mm-report-wrap .recovery-card .rv-stage {
+      background: #F1EFE8;
+      padding: 22px 18px 14px;
+      text-align: center;
     }
-    .recovery-card .rv-eyebrow {
-      font-size: 0.68rem;
-      font-weight: 500;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #b45309;
-      position: relative;
-      z-index: 1;
+    section.main:has(.mx-marker) .recovery-card .rv-stage svg,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-stage svg,
+    .mm-report-wrap .recovery-card .rv-stage svg {
+      display: block;
+      margin: 0 auto;
     }
-    .recovery-card .rv-title {
-      margin-top: 8px;
-      font-size: 1.15rem;
+    section.main:has(.mx-marker) .recovery-card .rv-content,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-content,
+    .mm-report-wrap .recovery-card .rv-content {
+      padding: 16px 18px 20px;
+      text-align: center;
+    }
+    section.main:has(.mx-marker) .recovery-card .rv-eyebrow,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-eyebrow,
+    .mm-report-wrap .recovery-card .rv-eyebrow {
+      margin: 0 0 6px 0;
+      font-size: 12px;
       font-weight: 500;
-      color: var(--navy);
-      letter-spacing: -0.015em;
+      color: #854F0B;
+      letter-spacing: -0.01em;
+    }
+    section.main:has(.mx-marker) .recovery-card .rv-title,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-title,
+    .mm-report-wrap .recovery-card .rv-title {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: #111827;
+      letter-spacing: -0.02em;
       line-height: 1.35;
-      position: relative;
-      z-index: 1;
     }
-    .recovery-card .rv-body {
-      margin-top: 8px;
-      font-size: 0.92rem;
-      color: var(--text-secondary);
-      line-height: 1.55;
-      position: relative;
-      z-index: 1;
+    section.main:has(.mx-marker) .recovery-card--compact .rv-title,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card--compact .rv-title,
+    .mm-report-wrap .recovery-card--compact .rv-title {
+      font-size: 15px;
     }
-    .recovery-card .rv-meta {
+    section.main:has(.mx-marker) .recovery-card .rv-body,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-body,
+    .mm-report-wrap .recovery-card .rv-body {
+      margin: 0;
+      font-size: 13px;
+      color: #5F5E5A;
+      line-height: 1.6;
+    }
+    section.main:has(.mx-marker) .recovery-card .rv-body .rv-emphasis,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-body .rv-emphasis,
+    .mm-report-wrap .recovery-card .rv-body .rv-emphasis {
+      color: #0F6E56;
+      font-weight: 500;
+    }
+    section.main:has(.mx-marker) .recovery-card .rv-meta,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-meta,
+    .mm-report-wrap .recovery-card .rv-meta {
       margin-top: 12px;
-      font-size: 0.76rem;
-      color: var(--text-muted);
+      font-size: 11px;
+      color: #888780;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: center;
       gap: 4px 6px;
-      position: relative;
-      z-index: 1;
     }
-    .recovery-card .rv-meta .rv-sep {
-      color: var(--text-soft);
+    section.main:has(.mx-marker) .recovery-card .rv-meta .rv-sep,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card .rv-meta .rv-sep,
+    .mm-report-wrap .recovery-card .rv-meta .rv-sep {
+      color: #888780;
+    }
+    section.main:has(.mx-marker) .rv-retry-caption,
+    [data-testid="stMain"]:has(.tq-screen-marker) .rv-retry-caption,
+    .mm-report-wrap .rv-retry-caption {
+      margin: 8px 0 0 0;
+      font-size: 11px;
+      color: #888780;
+      text-align: center;
+      line-height: 1.45;
+    }
+    section.main:has(.mx-marker) .recovery-card--plain,
+    [data-testid="stMain"]:has(.tq-screen-marker) .recovery-card--plain {
+      padding: 16px 18px;
+      border-style: dashed;
+      opacity: 0.95;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.tq-screen-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+      background: #0F6E56 !important;
+      color: #ffffff !important;
+      border-color: transparent !important;
     }
 
     /* ------------------------------------------------------------------
@@ -2829,6 +2863,106 @@ GLOBAL_CSS = """
       color: var(--text-secondary);
       line-height: 1.5;
     }
+    /* --- Final report completion hero (mock v2 report) ------------- */
+    .mx-fr-hero {
+      margin: 16px 0 18px 0;
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .mx-fr-hero-stage {
+      background: #E1F5EE;
+      padding: 24px 18px 16px;
+      text-align: center;
+    }
+    .mx-fr-celebration-scene {
+      display: block;
+      width: min(240px, 100%);
+      height: auto;
+      margin: 0 auto;
+    }
+    .mx-fr-hero-body {
+      padding: 18px 18px 20px;
+      text-align: center;
+    }
+    .mx-fr-hero-eyebrow {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: #0F6E56;
+      letter-spacing: -0.01em;
+    }
+    .mx-fr-hero-title {
+      margin: 0 0 14px 0;
+      font-size: 18px;
+      font-weight: 500;
+      color: #111827;
+      letter-spacing: -0.02em;
+      line-height: 1.35;
+    }
+    .mx-fr-hero-grade {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 auto 14px auto;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: #E1F5EE;
+    }
+    .mx-fr-hero-grade-label {
+      font-size: 12px;
+      color: #085041;
+    }
+    .mx-fr-hero-grade-value {
+      font-size: 20px;
+      font-weight: 500;
+      color: #04342C;
+      letter-spacing: -0.02em;
+    }
+    .mx-fr-hero-pending {
+      margin: 0 0 14px 0;
+      font-size: 0.84rem;
+      color: #0f766e;
+      line-height: 1.45;
+    }
+    .mx-fr-hero-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 0 0 4px 0;
+    }
+    .mx-fr-hero-chip {
+      flex: 1 1 88px;
+      min-width: 88px;
+      max-width: 140px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #F1EFE8;
+      text-align: center;
+    }
+    .mx-fr-hero-chip-label {
+      display: block;
+      margin: 0 0 4px 0;
+      font-size: 11px;
+      color: #5F5E5A;
+      line-height: 1.3;
+    }
+    .mx-fr-hero-chip-val {
+      display: block;
+      font-size: 15px;
+      font-weight: 500;
+      color: #111827;
+      letter-spacing: -0.01em;
+    }
+    .mx-fr-hero-note {
+      margin: 12px 0 0 0;
+      font-size: 0.88rem;
+      color: #475569;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
     .mx-fr-progress {
       margin: 0 0 14px 0;
       padding: 10px 14px;
@@ -3659,68 +3793,28 @@ GLOBAL_CSS = """
       text-align: center;
     }
     .mx-ai-wait-anim {
-      position: relative;
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 14px auto;
-    }
-    .mx-ai-wait-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 3px solid rgba(13, 148, 136, 0.15);
-      border-top-color: var(--mint);
-      animation: mxWaitSpin 1.1s linear infinite;
-    }
-    @keyframes mxWaitSpin {
-      to { transform: rotate(360deg); }
-    }
-    .mx-ai-wait-mic {
-      position: absolute;
-      inset: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      color: var(--mint);
-      animation: mxWaitPulse 1.6s ease-in-out infinite;
+      gap: 10px;
+      margin: 0 auto 16px auto;
     }
-    @keyframes mxWaitPulse {
-      0%, 100% { transform: scale(1); opacity: 0.85; }
-      50% { transform: scale(1.06); opacity: 1; }
+    .mx-ai-wait-wave {
+      display: block;
     }
-    .mx-ai-wait-bubble {
-      position: absolute;
-      top: 4px;
-      right: -2px;
-      width: 18px;
-      height: 14px;
-      border-radius: 10px 10px 10px 2px;
-      background: rgba(204, 251, 241, 0.9);
-      border: 1px solid rgba(13, 148, 136, 0.25);
-      animation: mxWaitBubble 1.8s ease-in-out infinite;
+    .mx-ai-wait-wave-line {
+      stroke-dasharray: 180;
+      stroke-dashoffset: 180;
+      animation: mxWaitWaveFlow 2s linear infinite;
     }
-    @keyframes mxWaitBubble {
-      0%, 100% { transform: scale(0.92); opacity: 0.7; }
-      50% { transform: scale(1.05); opacity: 1; }
+    @keyframes mxWaitWaveFlow {
+      to { stroke-dashoffset: 0; }
     }
-    .mx-ai-wait-dots {
-      display: flex;
-      justify-content: center;
-      gap: 6px;
-      margin: 0 0 12px 0;
-    }
-    .mx-ai-wait-dots span {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--mint);
-      animation: mxWaitBounce 1.2s ease-in-out infinite;
-    }
-    .mx-ai-wait-dots span:nth-child(2) { animation-delay: 0.15s; }
-    .mx-ai-wait-dots span:nth-child(3) { animation-delay: 0.3s; }
-    @keyframes mxWaitBounce {
-      0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
-      40% { transform: translateY(-6px); opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .mx-ai-wait-wave-line {
+        animation: none;
+        stroke-dashoffset: 0;
+      }
     }
     .mx-ai-wait-title {
       font-size: 1.2rem;
@@ -3785,6 +3879,159 @@ GLOBAL_CSS = """
     .mx-ai-wait-tip-example {
       color: var(--text-secondary);
       font-style: italic;
+    }
+
+    /* --- History list empty state ------------------------------------ */
+    .hist-list-marker {
+      display: none !important;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-card {
+      max-width: 420px;
+      margin: 20px auto 0 auto;
+      padding: 0;
+      overflow: hidden;
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 16px;
+      box-sizing: border-box;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-stage {
+      position: relative;
+      background: #E1F5EE;
+      padding: 26px 18px 18px;
+      text-align: center;
+      overflow: hidden;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-char-wrap {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-wave {
+      display: block;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-chip {
+      position: absolute;
+      z-index: 0;
+      background: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 999px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-chip--desc {
+      top: 16px;
+      left: 18px;
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-chip--role {
+      top: 34px;
+      right: 16px;
+      color: #534AB7;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-chip--cmp {
+      bottom: 20px;
+      left: 24px;
+      color: #185FA5;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-body {
+      padding: 18px 18px 20px;
+      text-align: center;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #111827;
+      margin: 0 0 8px 0;
+      line-height: 1.35;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-sub {
+      font-size: 13px;
+      font-weight: 400;
+      color: #888780;
+      margin: 0 0 18px 0;
+      line-height: 1.6;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-preview-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #B4B2A9;
+      margin: 0 0 10px 0;
+      text-align: left;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px dashed #D3D1C7;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel--primary {
+      opacity: 0.75;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel--secondary {
+      opacity: 0.45;
+      margin-bottom: 16px;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-tile {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: #F1EFE8;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-bars {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-bar {
+      height: 8px;
+      border-radius: 999px;
+      background: #F1EFE8;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-bar--w72 { width: 72%; }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-bar--w46 { width: 46%; }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-bar--w64 { width: 64%; }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-bar--w38 { width: 38%; }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-skel-pill {
+      flex-shrink: 0;
+      background: #F1EFE8;
+      color: #B4B2A9;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 999px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-cta {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      background: #0F6E56;
+      color: #ffffff !important;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 13px;
+      border-radius: 10px;
+      text-align: center;
+      text-decoration: none !important;
+      line-height: 1.2;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-cta:hover {
+      color: #ffffff !important;
+      text-decoration: none !important;
+      opacity: 0.92;
     }
 
     .mx-speech-debug {

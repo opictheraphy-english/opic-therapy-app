@@ -15,6 +15,7 @@ import streamlit as st
 
 from components.navigation import navigate_to
 from components.topbar import render_top_bar
+from components.brand_character import render_character_svg
 from services.history_store import get_history_record, list_history
 from utils.auth import is_authenticated
 
@@ -481,6 +482,58 @@ def _render_login_gate() -> None:
 # List
 # ---------------------------------------------------------------------------
 
+def _render_empty_list() -> None:
+    character = render_character_svg("default", 104, bg="#ffffff")
+    wave_svg = (
+        '<svg class="hist-empty-wave" width="170" height="26" viewBox="0 0 150 26" '
+        'aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+        '<polyline points="6,13 32,13 42,5 54,21 66,2 78,18 88,13 144,13" '
+        'fill="none" stroke="#1D9E75" stroke-width="2.2" '
+        'stroke-linecap="round" stroke-linejoin="round"/>'
+        "</svg>"
+    )
+    st.markdown(
+        f"""
+        <div class="hist-list-marker" aria-hidden="true"></div>
+        <div class="hist-empty-card">
+          <div class="hist-empty-stage">
+            <span class="hist-empty-chip hist-empty-chip--desc">묘사</span>
+            <span class="hist-empty-chip hist-empty-chip--role">롤플레이</span>
+            <span class="hist-empty-chip hist-empty-chip--cmp">비교</span>
+            <div class="hist-empty-char-wrap">
+              {character}
+              {wave_svg}
+            </div>
+          </div>
+          <div class="hist-empty-body">
+            <p class="hist-empty-title">아직 진료 기록이 없어요</p>
+            <p class="hist-empty-sub">첫 연습을 마치면 오픽치료사의 진단 기록이 여기에 쌓여요</p>
+            <p class="hist-empty-preview-label">앞으로 쌓일 기록</p>
+            <div class="hist-empty-skel hist-empty-skel--primary">
+              <div class="hist-empty-skel-tile" aria-hidden="true"></div>
+              <div class="hist-empty-skel-bars">
+                <div class="hist-empty-skel-bar hist-empty-skel-bar--w72"></div>
+                <div class="hist-empty-skel-bar hist-empty-skel-bar--w46"></div>
+              </div>
+              <span class="hist-empty-skel-pill">등급</span>
+            </div>
+            <div class="hist-empty-skel hist-empty-skel--secondary">
+              <div class="hist-empty-skel-tile" aria-hidden="true"></div>
+              <div class="hist-empty-skel-bars">
+                <div class="hist-empty-skel-bar hist-empty-skel-bar--w64"></div>
+                <div class="hist-empty-skel-bar hist-empty-skel-bar--w38"></div>
+              </div>
+            </div>
+            <a class="hist-empty-cta" href="?nav=MOCK&amp;reset_practice=1" target="_self">
+              첫 진료 시작하기
+            </a>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_list() -> None:
     ss = st.session_state
     active = str(ss.get(_KEY_FILTER) or "all")
@@ -502,11 +555,7 @@ def _render_list() -> None:
     rows = list_history(practice_type=practice_type, limit=100)
 
     if not rows:
-        st.markdown(
-            '<p class="ds-muted" style="text-align:center;margin-top:28px;">'
-            "아직 저장된 기록이 없어요.<br/>모의고사나 스크립트 첨삭을 완료하면 여기에 쌓여요.</p>",
-            unsafe_allow_html=True,
-        )
+        _render_empty_list()
         return
 
     for row in rows:

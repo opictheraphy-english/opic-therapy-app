@@ -24,10 +24,8 @@ GEMINI_REQUEST_TIMEOUT_SEC = 35
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 
 _STUDENT_FEEDBACK_UNAVAILABLE = (
-    "AI 피드백 서버가 잠시 바빠요.\n\n"
-    "답변은 이미 저장되어 있습니다.\n\n"
-    "45초 정도 지난 뒤 「피드백 다시 받기」를 한 번만 눌러 주세요. "
-    "연속으로 누르면 같은 오류가 반복되고 API 사용량만 늘어납니다."
+    "방금 답변은 안전하게 보관 중이에요. "
+    "재녹음 없이 분석만 다시 받을 수 있어요."
 )
 
 _FEEDBACK_MODEL_ATTEMPTS = 2  # one automatic retry per model on transient errors

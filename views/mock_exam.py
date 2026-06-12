@@ -62,6 +62,11 @@ from components.final_report_preview import (
     render_final_report_preview_card,
     render_real_mock_progress_chip,
 )
+from components.recovery_card import (
+    render_analysis_recovery_card,
+    render_recovery_card_html,
+    render_recovery_retry_caption_html,
+)
 from components.topbar import render_top_bar
 from services.evaluation_service import analyze_audio_with_retry
 from services.mock_exam.mock_exam_test_set_generator import generate_test_set
@@ -547,14 +552,14 @@ def _render_real_mock_recovery(mx: dict) -> None:
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     st.markdown(
-        """
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">연결 안내</div>
-          <div class="rv-title">화면을 다시 연결해야 해요</div>
-          <div class="rv-body">현재 모의고사 화면 상태가 정상적으로 연결되지 않았어요.<br/>
-            저장된 답변은 유지되어 있습니다. 아래 버튼으로 이어서 진행해 주세요.</div>
-        </section>
-        """,
+        render_recovery_card_html(
+            eyebrow="연결 안내",
+            title="화면을 다시 연결해야 해요",
+            body_html=(
+                "현재 모의고사 화면 상태가 정상적으로 연결되지 않았어요.<br/>"
+                "저장된 답변은 유지되어 있습니다. 아래 버튼으로 이어서 진행해 주세요."
+            ),
+        ),
         unsafe_allow_html=True,
     )
     c1, c2 = st.columns(2)
@@ -659,13 +664,14 @@ def _render_real_mock_error_fallback(mx: dict) -> None:
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     st.markdown(
-        """
-        <section class="recovery-card" role="alert">
-          <div class="rv-eyebrow">화면 오류</div>
-          <div class="rv-title">화면을 불러오는 중 문제가 생겼어요</div>
-          <div class="rv-body">답변은 저장되어 있을 수 있어요. 다시 시도하거나 학습 홈으로 돌아가 주세요.</div>
-        </section>
-        """,
+        render_recovery_card_html(
+            eyebrow="화면 오류",
+            title="화면을 불러오는 중 문제가 생겼어요",
+            body_html=(
+                "답변은 저장되어 있을 수 있어요. "
+                "다시 시도하거나 학습 홈으로 돌아가 주세요."
+            ),
+        ),
         unsafe_allow_html=True,
     )
     c1, c2 = st.columns(2)
@@ -1635,13 +1641,12 @@ def _render_mini_mock_api_debug_panel() -> None:
     """Temporary on-screen API failure info (REPORT_PENDING only; no API key / raw audio)."""
     debug = st.session_state.get(_LATEST_MINI_MOCK_API_DEBUG_KEY)
     st.markdown(
-        """
-        <section class="recovery-card" style="margin-top:12px; border-style:dashed; opacity:0.95;"
-                 aria-label="API 실패 원인 확인용">
-          <div class="rv-eyebrow">디버그</div>
-          <div class="rv-title" style="font-size:1rem;">API 실패 원인 확인용</div>
-        </section>
-        """,
+        render_recovery_card_html(
+            eyebrow="디버그",
+            title="API 실패 원인 확인용",
+            body_html="",
+            show_character=False,
+        ).replace('class="recovery-card"', 'class="recovery-card recovery-card--plain"', 1),
         unsafe_allow_html=True,
     )
     if not isinstance(debug, dict) or not debug:
@@ -3124,15 +3129,9 @@ def _render_topic_api_delay_recovery_card(
     saved_audio = mx.get("audio_bytes") or get_topic_recordings().get(audio_key)
     audio_size = len(saved_audio) if saved_audio else 0
     st.markdown(
-        f"""
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">AI 분석 지연</div>
-          <div class="rv-title">AI 분석이 잠시 지연되고 있어요</div>
-          <div class="rv-body">답변은 저장되었습니다.<br/>
-            다음 문항으로 넘어가도 괜찮아요. 나중에 다시 분석할 수 있어요.</div>
-          <div class="rv-meta"><span>녹음 {html.escape(f"{audio_size:,}")} bytes 보존됨</span></div>
-        </section>
-        """,
+        render_analysis_recovery_card(
+            meta_html=f"<span>녹음 {html.escape(f'{audio_size:,}')} bytes 보존됨</span>",
+        ),
         unsafe_allow_html=True,
     )
     from utils.ai_pending_diag import render_ai_pending_dev_expander
@@ -3173,6 +3172,7 @@ def _render_topic_api_delay_recovery_card(
             use_container_width=True,
         ):
             _topic_advance_after_saved_answer(mx, topic_id, question_id)
+    st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
 
 def _run_topic_practice_analysis(
@@ -5237,14 +5237,9 @@ def render_mini_mock_report_pending_page(mx: dict) -> None:
         )
         back_label = "학습 방식 다시 선택"
     st.markdown(
-        f"""
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">AI 분석</div>
-          <div class="rv-title">{html.escape(title)}</div>
-          <div class="rv-body">{body}</div>
-          <div class="rv-meta"><span>저장된 답변 {saved_n}개</span></div>
-        </section>
-        """,
+        render_analysis_recovery_card(
+            meta_html=f"<span>저장된 답변 {saved_n}개</span>",
+        ),
         unsafe_allow_html=True,
     )
     if is_soft_delay:
@@ -5262,6 +5257,7 @@ def render_mini_mock_report_pending_page(mx: dict) -> None:
     ):
         _mini_mock_begin_report_analysis(retrying=True)
         st.rerun()
+    st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
     if st.button(back_label, use_container_width=True, key="mm_pending_back_portal"):
         reset_to_learning_portal()
         st.rerun()
@@ -6699,17 +6695,7 @@ def _render_real_mock_analysis_pending(mx: dict, q: dict, q_id: int, audio_key: 
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     _render_learning_portal_back_button(mx)
-    st.markdown(
-        """
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">AI 분석</div>
-          <div class="rv-title">AI 분석이 잠시 지연되고 있어요</div>
-          <div class="rv-body">답변은 저장되었습니다.<br/>
-            다음 문항으로 넘어가도 괜찮아요. 나중에 다시 분석할 수 있어요.</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(render_analysis_recovery_card(), unsafe_allow_html=True)
     saved_audio = mx.get("audio_bytes") or (mx.get("recordings") or {}).get(audio_key)
     audio_size = recording_byte_length(saved_audio)
     if audio_size > 0 and st.session_state.get("show_dev_debug"):
@@ -6740,6 +6726,7 @@ def _render_real_mock_analysis_pending(mx: dict, q: dict, q_id: int, audio_key: 
             key=f"real_mock_pending_next_{q_id}",
         ):
             go_to_next_real_mock_question(mx, from_q_id=int(q_id))
+    st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
 
 def _render_real_mock_speech_recovery(mx: dict, q: dict, q_id: int, audio_key: str) -> None:
@@ -6806,14 +6793,14 @@ def _render_real_mock_speech_recovery(mx: dict, q: dict, q_id: int, audio_key: s
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     _render_learning_portal_back_button(mx)
     st.markdown(
-        """
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">응답 부족</div>
-          <div class="rv-title">응답이 충분하지 않았어요</div>
-          <div class="rv-body">말소리가 충분히 인식되지 않아 이 문항은 자세한 피드백을 제공하기 어렵습니다.<br/>
-            다시 말하거나 다음 문항으로 넘어갈 수 있어요.</div>
-        </section>
-        """,
+        render_recovery_card_html(
+            eyebrow="응답 부족",
+            title="응답이 충분하지 않았어요",
+            body_html=(
+                "말소리가 충분히 인식되지 않아 이 문항은 자세한 피드백을 제공하기 어렵습니다.<br/>"
+                "다시 말하거나 다음 문항으로 넘어갈 수 있어요."
+            ),
+        ),
         unsafe_allow_html=True,
     )
     if nbytes > 0 and st.session_state.get("show_dev_debug"):
@@ -8066,15 +8053,9 @@ def _render_api_delay_recovery_card(mx: dict, q: dict, q_id: int, audio_key: str
     saved_audio = mx.get("audio_bytes") or mx.get("recordings", {}).get(audio_key)
     audio_size = len(saved_audio) if saved_audio else 0
     st.markdown(
-        f"""
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">AI 분석 지연</div>
-          <div class="rv-title">AI 분석이 잠시 지연되고 있어요</div>
-          <div class="rv-body">답변은 저장되었습니다.<br/>
-            다음 문항으로 넘어가도 괜찮아요. 나중에 다시 분석할 수 있어요.</div>
-          <div class="rv-meta"><span>녹음 {html.escape(f"{audio_size:,}")} bytes 보존됨</span></div>
-        </section>
-        """,
+        render_analysis_recovery_card(
+            meta_html=f"<span>녹음 {html.escape(f'{audio_size:,}')} bytes 보존됨</span>",
+        ),
         unsafe_allow_html=True,
     )
     row = find_result_row(mx, int(q_id))
@@ -8110,6 +8091,7 @@ def _render_api_delay_recovery_card(mx: dict, q: dict, q_id: int, audio_key: str
             use_container_width=True,
         ):
             _go_to_next_question(mx, q_id)
+    st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
 
 def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None:
@@ -8172,23 +8154,31 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
             else ""
         )
 
-    st.markdown(
-        f"""
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">{html.escape(eyebrow_text)}</div>
-          <div class="rv-title">{html.escape(title)}</div>
-          <div class="rv-body">{html.escape(body)}</div>
-          <div class="rv-meta">
-            <span>시도 횟수 {attempts}회</span>
-            <span class="rv-sep">·</span>
-            <span>{html.escape(audio_meta)}</span>
-            <span class="rv-sep">·</span>
-            <span>Q{q_id} 위치 유지</span>
-          </div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    if is_speech_issue:
+        card_html = render_recovery_card_html(
+            eyebrow=eyebrow_text,
+            title=title,
+            body_html=html.escape(body).replace("\n", "<br/>"),
+            meta_html=(
+                f"<span>시도 횟수 {attempts}회</span>"
+                f'<span class="rv-sep">·</span>'
+                f"<span>{html.escape(audio_meta)}</span>"
+                f'<span class="rv-sep">·</span>'
+                f"<span>Q{q_id} 위치 유지</span>"
+            ),
+        )
+    else:
+        card_html = render_analysis_recovery_card(
+            meta_html=(
+                f"<span>시도 횟수 {attempts}회</span>"
+                f'<span class="rv-sep">·</span>'
+                f"<span>{html.escape(audio_meta)}</span>"
+                f'<span class="rv-sep">·</span>'
+                f"<span>Q{q_id} 위치 유지</span>"
+            ),
+        )
+
+    st.markdown(card_html, unsafe_allow_html=True)
 
     if is_speech_issue:
         row = find_result_row(mx, int(q_id))
@@ -8328,6 +8318,9 @@ def _render_recovery_panel(mx: dict, q: dict, q_id: int, audio_key: str) -> None
             st.query_params.clear()
             st.query_params["nav"] = "HOME"
             st.rerun()
+
+    if not is_speech_issue:
+        st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
     preview = (pr.get("transcript_preview") or "").strip()
     if preview:

@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
-from components.smart_feedback import render_alternative_expressions, render_grammar_corrections
+from components.recovery_card import render_analysis_recovery_card
 from utils.daily_ai_usage import format_daily_ai_usage_label
 
 
@@ -56,29 +56,10 @@ def render_topic_report_pending_retry_screen(
     saved_count: int = 3,
     is_quota: bool = False,
 ) -> None:
-    if is_quota:
-        _tp_pending_title = "AI 분석 요청이 잠시 많아요"
-        _tp_pending_body = (
-            "3개 답변은 모두 안전하게 저장되어 있습니다.<br/>"
-            "현재 AI 분석 요청이 많아 리포트 생성이 잠시 지연되고 있어요.<br/>"
-            "잠시 후 다시 분석을 눌러 주제별 리포트를 받아보세요."
-        )
-    else:
-        _tp_pending_title = "AI 분석을 다시 시도해야 해요"
-        _tp_pending_body = (
-            "3개 답변은 모두 안전하게 저장되어 있습니다.<br/>"
-            "현재 AI 분석 요청이 정상적으로 완료되지 않았어요.<br/>"
-            "잠시 후 다시 분석을 눌러 풀 리포트를 받아보세요."
-        )
     st.markdown(
-        f"""
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">AI 분석</div>
-          <div class="rv-title">{html.escape(_tp_pending_title)}</div>
-          <div class="rv-body">{_tp_pending_body}</div>
-          <div class="rv-meta"><span>저장된 답변 {int(saved_count)}개</span></div>
-        </section>
-        """,
+        render_analysis_recovery_card(
+            meta_html=f"<span>저장된 답변 {int(saved_count)}개</span>",
+        ),
         unsafe_allow_html=True,
     )
 

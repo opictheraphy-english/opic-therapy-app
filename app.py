@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="OPIc Therapy Clinic",
+    page_icon="assets/branding/favicon.png",
     layout="wide",
     initial_sidebar_state="collapsed",
 )

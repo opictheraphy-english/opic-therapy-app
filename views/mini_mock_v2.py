@@ -27,6 +27,10 @@ from components.exam_question_screen import (
     render_exam_question_shell,
     render_exam_wave_mic_observer,
 )
+from components.recovery_card import (
+    render_analysis_recovery_card,
+    render_recovery_retry_caption_html,
+)
 from components.topbar import render_top_bar
 from utils.local_profile import iso_now
 
@@ -1640,17 +1644,7 @@ def _render_pending_step() -> None:
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
 
-    st.markdown(
-        """
-        <section class="recovery-card" role="alert" aria-live="polite">
-          <div class="rv-eyebrow">AI 분석</div>
-          <div class="rv-title">AI 분석이 잠시 지연되고 있어요.</div>
-          <div class="rv-body">답변은 안전하게 저장되어 있습니다.<br/>
-          잠시 후 다시 시도해 주세요.</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(render_analysis_recovery_card(), unsafe_allow_html=True)
 
     st.markdown("##### 저장된 답변")
     for i in range(_QUESTION_COUNT):
@@ -1665,6 +1659,7 @@ def _render_pending_step() -> None:
     ):
         _begin_v2_analysis(retry=True)
         st.rerun()
+    st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
     if st.button(
         "학습하기로 돌아가기",

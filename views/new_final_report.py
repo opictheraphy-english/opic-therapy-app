@@ -14,6 +14,10 @@ import streamlit as st
 
 from components.collapsible_section import render_collapsible_section
 from components.coaching_experience import render_structured_coaching_report
+from components.final_report_hero import (
+    collect_hero_display_metrics,
+    render_final_report_completion_hero_html,
+)
 from components.topbar import render_top_bar
 from services.exam_analytics import (
     detect_risk_flags,
@@ -263,51 +267,26 @@ def render_new_final_report(
             "실제 시험에서는 매우 낮은 평가로 이어질 수 있습니다."
         )
 
-    st.markdown(
-        """
-<div class="final-hero">
-  <div style="font-size:1.35rem;margin-bottom:0.35rem;">🎉 축하합니다!</div>
-  <div class="sub">실전 모의고사 15문항 AI 진단을 완료했습니다.<br/>
-  이제 에릭 노 강사의 전체 발화 분석 리포트를 확인하세요.</div>
-  <div class="sub" style="margin-top:1rem;">ERIC NO · OPIc Precision Lab</div>
-  <h1>최종 종합 진단 리포트</h1>
-  <p class="sub">Clinical-grade speaking analytics · Premium coaching insight</p>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     ov = agg.get("overall_display") or "측정 불가 · 응답 부족"
     conf = agg.get("confidence", 0)
     note = str(agg.get("confidence_note") or "")
     mock_summary = str(agg.get("mock_v2_summary") or report.get("summary") or "").strip()
     if mock_summary and mock_summary not in note:
         note = f"{mock_summary}\n\n{note}".strip() if note else mock_summary
+    if conf:
+        conf_line = f"신뢰도 {conf}%"
+        note = f"{note}\n\n{conf_line}".strip() if note else conf_line
 
+    hero_metrics = collect_hero_display_metrics(results, answers)
     st.markdown(
-        f"""
-<div class="section-card" style="text-align:center;">
-  <div style="font-size:0.85rem;color:#64748b;letter-spacing:0.12em;font-weight:700;">OVERALL PREDICTED OPIC LEVEL</div>
-  <div class="final-level">{html.escape(str(ov))} <span style="font-size:1.25rem;color:#64748b;font-weight:600;">(Estimated)</span></div>
-  <div class="final-confidence">Confidence · {conf}%</div>
-  <p class="final-note">{html.escape(note)}</p>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
-<div class="section-card">
-  <div style="font-size:0.85rem;color:#64748b;font-weight:700;letter-spacing:0.08em;">전체 요약</div>
-  <p style="margin:0.5rem 0 0;line-height:1.55;color:#334155;">
-    답변 저장 <b>{stats["answered"]}</b>문항 · 분석 완료 <b>{stats["completed"]}</b> · 분석 대기 <b>{stats.get("pending", 0)}</b> · 응답 부족 <b>{stats.get("no_speech", 0)}</b>
-  </p>
-  <p style="margin:0.35rem 0 0;color:#64748b;font-size:0.92rem;">
-    예상 레벨 <b>{html.escape(str(ov))}</b> · 신뢰도 {conf}%
-  </p>
-</div>
-        """,
+        render_final_report_completion_hero_html(
+            answered_count=hero_metrics["answered"],
+            overall_display=str(ov),
+            pending_count=int(stats.get("pending") or 0),
+            total_words=hero_metrics.get("total_words"),
+            total_duration=hero_metrics.get("total_duration"),
+            note=note,
+        ),
         unsafe_allow_html=True,
     )
 

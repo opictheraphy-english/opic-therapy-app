@@ -366,14 +366,14 @@ def render_mini_mock_report(report: Dict[str, Any]) -> None:
     st.markdown('<div class="mm-report-wrap">', unsafe_allow_html=True)
 
     if report.get("has_pending"):
+        from components.recovery_card import render_recovery_card_html
+
         st.markdown(
-            """
-            <section class="recovery-card" role="alert" aria-live="polite">
-              <div class="rv-eyebrow">AI 분석</div>
-              <div class="rv-title">일부 문항은 AI 분석이 지연되고 있어요</div>
-              <div class="rv-body">분석 완료된 문항을 기준으로 먼저 리포트를 보여드릴게요.</div>
-            </section>
-            """,
+            render_recovery_card_html(
+                eyebrow="AI 분석",
+                title="일부 문항은 AI 분석이 지연되고 있어요",
+                body_html="분석 완료된 문항을 기준으로 먼저 리포트를 보여드릴게요.",
+            ),
             unsafe_allow_html=True,
         )
 

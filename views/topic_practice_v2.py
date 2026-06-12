@@ -38,6 +38,13 @@ from components.exam_saved_screen import (
     render_saved_transcript,
 )
 from components.navigation import navigate_to
+from components.recovery_card import (
+    ANALYSIS_RECOVERY_EYEBROW,
+    ANALYSIS_RECOVERY_TITLE,
+    render_analysis_recovery_card,
+    render_recovery_card_html,
+    render_recovery_retry_caption_html,
+)
 from components.topbar import render_top_bar
 from data.opic_question_bank_v2 import (
     ROLEPLAY_PRACTICE_SETS,
@@ -2772,12 +2779,11 @@ def _render_pending_ui() -> None:
     fb = st.session_state.get(_KEY_FEEDBACK)
     last_row = _last_answer_row_for_q(q_idx)
     aid = _feedback_answer_id(last_row, topic=topic, q_idx=q_idx)
-    msg = _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE
+    cat = ""
+    em = ""
     if isinstance(fb, dict):
         cat = str(fb.get("error_category") or "")
         em = str(fb.get("error_message") or "").strip()
-        if cat in ("api_key", "insufficient_text") and em:
-            msg = em
 
     render_top_bar(
         "주제별 연습",
@@ -2797,7 +2803,23 @@ def _render_pending_ui() -> None:
         unsafe_allow_html=True,
     )
     render_feedback_label(accent=accent)
-    st.info(msg)
+    if cat in ("api_key", "insufficient_text") and em:
+        fail_body = html.escape(em).replace("\n\n", "<br/><br/>").replace("\n", "<br/>")
+        st.markdown(
+            render_recovery_card_html(
+                eyebrow=ANALYSIS_RECOVERY_EYEBROW,
+                title=ANALYSIS_RECOVERY_TITLE,
+                body_html=fail_body,
+                character_size=72,
+                compact=True,
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            render_analysis_recovery_card(compact=True, character_size=72),
+            unsafe_allow_html=True,
+        )
     _render_feedback_guard_notice()
     retry_disabled, retry_label = _feedback_request_button_state(aid)
     if not retry_disabled:
@@ -2838,6 +2860,7 @@ def _render_pending_ui() -> None:
             st.session_state[_KEY_FEEDBACK] = None
             _goto_topic_select()
             st.rerun()
+        st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
         return
 
     c1, c2, c3 = st.columns(3)
@@ -2876,6 +2899,7 @@ def _render_pending_ui() -> None:
                 st.session_state[_KEY_Q_INDEX] = 3
                 st.session_state[_KEY_STEP] = "saved"
             st.rerun()
+    st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
 
 def render_topic_practice_v2() -> None:
