@@ -46,6 +46,8 @@ def render_home() -> None:
     gid = st.session_state.get("guest_id") or ""
     um = st.session_state.get("user_mode") or ""
 
+    st.markdown('<div class="home-screen" aria-hidden="true"></div>', unsafe_allow_html=True)
+
     # 1) Greeting
     _render_greeting(gid, um)
 
@@ -75,26 +77,24 @@ def render_home() -> None:
 # 1) Greeting
 # ---------------------------------------------------------------------------
 
-def _render_greeting(gid: str, um: str) -> None:
-    """Warm, single-line hello. Profile mode shown as a soft pill chip."""
+def _render_greeting(_gid: str, _um: str) -> None:
+    """Warm hello — logged-in name or guest fallback."""
     ss = st.session_state
     if ss.get("user_authenticated") and not ss.get("is_guest"):
-        name = str(ss.get("user_name") or ss.get("user_email") or "회원").strip()
-        meta_html = (
-            f'<div class="gr-meta"><span class="gr-meta-dot"></span>👤 {html.escape(name)}</div>'
-        )
-    elif ss.get("is_guest") and gid:
-        meta_html = (
-            '<div class="gr-meta"><span class="gr-meta-dot"></span>게스트 모드</div>'
-        )
+        raw_name = str(ss.get("user_name") or "").strip()
+        if not raw_name:
+            email = str(ss.get("user_email") or "").strip()
+            raw_name = email.split("@")[0] if email else "회원"
+        hello = f"{html.escape(raw_name)}님, 안녕하세요"
+        sub = "오늘도 말하면서 고쳐볼까요?"
     else:
-        meta_html = ""
+        hello = "안녕하세요"
+        sub = "로그인하면 학습 기록이 저장돼요"
     st.markdown(
         f"""
         <section class="greeting" aria-label="환영 인사">
-          <h1 class="gr-hello">안녕하세요 <span class="gr-wave" aria-hidden="true">👋</span></h1>
-          <p class="gr-sub">오늘도 꾸준히 연습해볼까요?</p>
-          {meta_html}
+          <h1 class="gr-hello">{hello}</h1>
+          <p class="gr-sub">{html.escape(sub)}</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -153,20 +153,22 @@ def _render_v2_resume_card(offer: Dict[str, Any]) -> None:
     total = int(offer.get("total") or 0)
     q_label = html.escape(str(offer.get("question_label") or ""))
 
+    desc = q_label if q_label else "저장된 답변을 이어서 풀 수 있어요"
     st.markdown(
         f"""
         <section class="continue-card continue-card--resume" role="region"
                  aria-label="모의고사 이어하기">
           <div class="cc-row-top">
-            <div class="cc-eyebrow">이어하기 가능</div>
+            <div class="cc-eyebrow">이어하기</div>
           </div>
-          <div class="cc-title">진행 중인 {label}이 있어요</div>
-          <div class="cc-meta">{q_label} · {completed}/{total}문항 저장됨</div>
+          <div class="cc-title">{label} <span class="cc-muted-num">{completed}/{total}</span></div>
+          <div class="cc-desc">{desc}</div>
         </section>
         """,
         unsafe_allow_html=True,
     )
-    if st.button("이어서 계속하기", type="primary", use_container_width=True, key=f"home_v2_resume_{flow}"):
+    st.markdown('<div class="home-continue-actions-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    if st.button("이어서 풀기", type="primary", use_container_width=True, key=f"home_v2_resume_{flow}"):
         from utils.v2_flow_persistence import resume_v2_flow
 
         resume_v2_flow(st.session_state, flow=flow)
@@ -197,17 +199,18 @@ def _render_resume_card(snap: Dict[str, Any]) -> None:
     topic_safe = html.escape(topic) if topic else ""
 
     progress_pct = max(0, min(100, int(round((completed / total) * 100)))) if total else 0
+    desc = topic_safe if topic_safe else "저장된 답변부터 이어서 풀 수 있어요"
 
     st.markdown(
         f"""
         <section class="continue-card continue-card--resume" role="region"
                  aria-label="모의고사 이어하기">
           <div class="cc-row-top">
-            <div class="cc-eyebrow">이어하기 가능</div>
+            <div class="cc-eyebrow">이어하기</div>
             <div class="cc-time">{html.escape(last_label)}</div>
           </div>
-          <div class="cc-title">Q{completed} <span class="cc-of">/ {total}</span>까지 학습했어요</div>
-          {('<div class="cc-meta">' + topic_safe + '</div>') if topic_safe else ''}
+          <div class="cc-title">실전 모의고사 <span class="cc-muted-num">{completed}/{total}</span></div>
+          <div class="cc-desc">{desc}</div>
           <div class="cc-progress" aria-hidden="true">
             <span class="cc-progress-fill" style="width:{progress_pct}%"></span>
           </div>
@@ -215,13 +218,14 @@ def _render_resume_card(snap: Dict[str, Any]) -> None:
         """,
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="home-continue-actions-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("이어하기", type="primary", use_container_width=True, key="home_resume_continue"):
+        if st.button("이어서 풀기", type="primary", use_container_width=True, key="home_resume_continue"):
             navigate_to("MOCK", mock="TEST")
             st.rerun()
     with c2:
-        if st.button("처음부터 다시", use_container_width=True, key="home_resume_reset"):
+        if st.button("새로 시작", use_container_width=True, key="home_resume_reset"):
             navigate_to("MOCK", mock="SURVEY", reset=True)
             st.rerun()
 
@@ -240,24 +244,13 @@ def _render_start_card(
     diff = int(sett.get("difficulty", 5))
 
     if has_history:
-        eyebrow = "오늘의 학습"
-        title = "이어서 실력을 다져볼까요?"
-        sub_bits = [
-            f"최근 추정 <b>{html.escape(str(card.get('estimated_level')))}</b>",
-            f"목표 난이도 <b>Lv.{diff}</b>",
-        ]
-        sub_html = " · ".join(sub_bits)
-        primary_label = "모의고사 시작"
+        desc = f"목표 난이도 Lv.{diff} · 모의고사나 주제별 연습으로 이어가요"
+        primary_label = "연습 시작"
         primary_nav = ("MOCK", None, False)
         secondary_label = None
         secondary_nav = None
     else:
-        eyebrow = "환영합니다"
-        title = "5분이면 첫 진단을 끝낼 수 있어요"
-        sub_html = (
-            "먼저 가벼운 설문으로 난이도를 정해볼게요. "
-            f"목표 난이도 <b>Lv.{diff}</b>"
-        )
+        desc = f"5분 진단으로 난이도를 맞춘 뒤 연습을 시작해요 · 목표 Lv.{diff}"
         primary_label = "진단 시작"
         primary_nav = ("MOCK", None, False)
         secondary_label = "패턴 둘러보기"
@@ -268,14 +261,15 @@ def _render_start_card(
         <section class="continue-card continue-card--start" role="region"
                  aria-label="학습 시작">
           <div class="cc-row-top">
-            <div class="cc-eyebrow">{html.escape(eyebrow)}</div>
+            <div class="cc-eyebrow">시작하기</div>
           </div>
-          <div class="cc-title">{html.escape(title)}</div>
-          <div class="cc-meta">{sub_html}</div>
+          <div class="cc-title">오늘의 연습 시작하기</div>
+          <div class="cc-desc">{html.escape(desc)}</div>
         </section>
         """,
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="home-continue-actions-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     if secondary_nav:
         c1, c2 = st.columns(2)
         with c1:
@@ -395,7 +389,7 @@ def _render_quick_actions() -> None:
         ("LECTURES", "play", "강의 보기", "출제 유형 강의", "qa-card--lectures"),
         ("SCRIPT_COACHING", "chart", "스크립트 첨삭", "내 답변 등급 진단받기", "qa-card--coaching"),
     )
-    st.markdown('<div class="home-section-h">빠른 학습</div>', unsafe_allow_html=True)
+    st.markdown('<div class="home-section-h home-section-h--quick">빠른 실행</div>', unsafe_allow_html=True)
     row_a = st.columns(2, gap="small")
     row_b = st.columns(2, gap="small")
     for col, (action, ico, title, sub, variant) in zip(row_a + row_b, items):
@@ -439,35 +433,37 @@ def _render_simple_stats(prog_disk: Dict[str, Any], mx: Dict[str, Any]) -> None:
 
     completed_exams = 0
     last_at: Optional[str] = None
+    estimated_level = ""
     if isinstance(prog_disk, dict):
         card = prog_disk.get("last_activity_card") or {}
         if isinstance(card, dict):
             if card.get("exam_finished"):
                 completed_exams = 1
             last_at = card.get("activity_at")
+            estimated_level = str(card.get("estimated_level") or "").strip()
         last_at = last_at or prog_disk.get("updated_at")
 
     last_label = human_time_ago(last_at) if last_at else "—"
-    q_hint = "진행 중" if questions_done else "아직 시작 전"
+    level_cls = "st-value st-value--level" if estimated_level else "st-value"
+    level_value = html.escape(estimated_level) if estimated_level else "—"
+    q_value = str(questions_done) if questions_done > 0 else "—"
+    exam_value = str(completed_exams) if completed_exams > 0 else "—"
 
     st.markdown(
         f"""
-        <div class="home-section-h">학습 현황</div>
+        <div class="home-section-h home-section-h--stats">학습 통계</div>
         <div class="stats-row">
           <div class="stat-chip">
-            <div class="st-label">응시한 문항</div>
-            <div class="st-value">{questions_done}</div>
-            <div class="st-hint">{q_hint}</div>
+            <div class="st-label">추정 등급</div>
+            <div class="{level_cls}">{level_value}</div>
           </div>
           <div class="stat-chip">
-            <div class="st-label">완료한 모의고사</div>
-            <div class="st-value">{completed_exams}</div>
-            <div class="st-hint">전체 회차</div>
+            <div class="st-label">응시한 문항</div>
+            <div class="st-value">{q_value}</div>
           </div>
           <div class="stat-chip">
             <div class="st-label">마지막 학습</div>
             <div class="st-value st-value--time">{html.escape(last_label)}</div>
-            <div class="st-hint">로컬 기기 기준</div>
           </div>
         </div>
         """,

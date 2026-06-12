@@ -952,7 +952,11 @@ def _render_mock_v2_question() -> None:
 
     render_exam_question_shell(
         eyebrow="실전 모의고사",
-        progress_html=build_progress_segments_html(qnum, _QUESTION_COUNT),
+        progress_html=build_progress_segments_html(
+            qnum,
+            _QUESTION_COUNT,
+            badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
+        ),
         badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
         question_en=str(q.get("question_text") or ""),
         question_ko=str(q.get("ko_helper") or ""),

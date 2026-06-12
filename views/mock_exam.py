@@ -6103,20 +6103,17 @@ def _render_mock_question_audio_when_ready(
 
 def _render_mock_question_text_only(q: dict) -> None:
     """Text-only question body — live question TTS disabled until static mp3 is added."""
-    type_label = html.escape(str(q.get("type") or ""))
     question_en = html.escape(str(q.get("question") or q.get("question_en") or ""))
     question_ko = html.escape(
         str(q.get("question_ko") or q.get("question_hint") or q.get("helper_ko") or "")
     )
-    type_row = f'<p class="mx-rh-eyebrow">{type_label}</p>' if type_label else ""
-    ko_row = f'<div class="mx-rh-transcript">{question_ko}</div>' if question_ko else ""
+    ko_row = f'<p class="tq-question-ko">{question_ko}</p>' if question_ko else ""
     st.markdown(
         f"""
-        <section class="mx-report-hero mx-question-text-only" role="region" aria-label="문항">
-          {type_row}
-          <div class="mx-rh-title">{question_en or "—"}</div>
+        <div class="mx-question-card mx-question-text-only" role="region" aria-label="문항">
+          <p class="mx-question-topic">{question_en or "—"}</p>
           {ko_row}
-        </section>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -7322,10 +7319,9 @@ def _render_real_mock_question(mx: dict) -> None:
         f"""
         <div class="mx-progress">
           <div class="mx-progress-meta">
-            <span class="mx-progress-eyebrow">진행</span>
-            <span class="mx-progress-count">Q{q_id} <span class="mx-progress-of">/ {total}</span></span>
+            <span class="mx-progress-count">문항 <span class="mx-progress-num">{q_id}</span> <span class="mx-progress-of">/ {total}</span></span>
           </div>
-          {('<div class="mx-progress-chip">' + topic_safe + '</div>') if topic_safe else ''}
+          {('<div class="mx-progress-chip">' + type_safe + '</div>') if type_safe else (('<div class="mx-progress-chip">' + topic_safe + '</div>') if topic_safe else '')}
         </div>
         <div class="mx-progress-bar" aria-hidden="true">
           <span class="mx-progress-fill" style="width:{progress_pct}%"></span>
@@ -7337,7 +7333,6 @@ def _render_real_mock_question(mx: dict) -> None:
     st.markdown(
         f"""
         <div class="mx-question-card">
-          {('<span class="mx-question-type">' + type_safe + '</span>') if type_safe else ''}
           <div class="mx-question-topic">{topic_safe or '주제 안내'}</div>
         </div>
         """,
@@ -7504,10 +7499,9 @@ def _render_test(mx: dict) -> None:
         f"""
         <div class="mx-progress">
           <div class="mx-progress-meta">
-            <span class="mx-progress-eyebrow">진행</span>
-            <span class="mx-progress-count">Q{q_id} <span class="mx-progress-of">/ {total}</span></span>
+            <span class="mx-progress-count">문항 <span class="mx-progress-num">{q_id}</span> <span class="mx-progress-of">/ {total}</span></span>
           </div>
-          {('<div class="mx-progress-chip">' + topic_safe + '</div>') if topic_safe else ''}
+          {('<div class="mx-progress-chip">' + type_safe + '</div>') if type_safe else (('<div class="mx-progress-chip">' + topic_safe + '</div>') if topic_safe else '')}
         </div>
         <div class="mx-progress-bar" aria-hidden="true">
           <span class="mx-progress-fill" style="width:{progress_pct}%"></span>
@@ -7520,7 +7514,6 @@ def _render_test(mx: dict) -> None:
     st.markdown(
         f"""
         <div class="mx-question-card">
-          {('<span class="mx-question-type">' + type_safe + '</span>') if type_safe else ''}
           <div class="mx-question-topic">{topic_safe or '주제 안내'}</div>
         </div>
         """,

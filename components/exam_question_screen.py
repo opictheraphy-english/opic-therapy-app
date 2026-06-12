@@ -82,41 +82,38 @@ def _normalize_accent(accent: str) -> str:
     return key
 
 
-def build_progress_segments_html(current: int, total: int) -> str:
+def build_progress_segments_html(
+    current: int,
+    total: int,
+    *,
+    badge_label: str = "",
+) -> str:
     """
-    Progress block HTML for ``.tq-header`` (wraps in ``.tq-progress``).
+    Progress row + bar (``.mx-progress`` / ``.mx-progress-bar``).
 
-  - ``total <= 5``: segment bars (topic-practice style).
-  - ``total > 5``: ``current/total`` text + single thin track bar.
+    Optional ``badge_label`` renders the type pill on the right of row 1.
     """
     total_n = max(1, int(total))
     current_n = min(max(1, int(current)), total_n)
-    progress_text = html.escape(f"{current_n}/{total_n}")
-
-    if total_n <= 5:
-        segs = "".join(
-            (
-                f'<span class="tq-progress-seg'
-                f'{" tq-progress-seg--on" if i < current_n else ""}"></span>'
-            )
-            for i in range(total_n)
-        )
-        return (
-            f'<div class="tq-progress">'
-            f'<div class="tq-progress-bars">{segs}</div>'
-            f'<span class="tq-progress-text">{progress_text}</span>'
-            f"</div>"
-        )
-
     pct = int(round((current_n / total_n) * 100))
     pct = max(0, min(100, pct))
+    badge = html.escape(str(badge_label or "").strip())
+    chip_block = (
+        f'<div class="mx-progress-chip">{badge}</div>' if badge else ""
+    )
     return (
-        f'<div class="tq-progress tq-progress--bar">'
-        f'<span class="tq-progress-text">{progress_text}</span>'
-        f'<div class="tq-progress-track" role="progressbar" '
-        f'aria-valuenow="{current_n}" aria-valuemin="1" aria-valuemax="{total_n}">'
-        f'<div class="tq-progress-fill" style="width:{pct}%;"></div>'
+        f'<div class="mx-progress">'
+        f'<div class="mx-progress-meta">'
+        f'<span class="mx-progress-count">'
+        f'문항 <span class="mx-progress-num">{current_n}</span> '
+        f'<span class="mx-progress-of">/ {total_n}</span>'
+        f"</span>"
         f"</div>"
+        f"{chip_block}"
+        f"</div>"
+        f'<div class="mx-progress-bar" role="progressbar" '
+        f'aria-valuenow="{current_n}" aria-valuemin="1" aria-valuemax="{total_n}">'
+        f'<span class="mx-progress-fill" style="width:{pct}%;"></span>'
         f"</div>"
     )
 
@@ -135,6 +132,8 @@ def build_exam_answer_card_top_html(*, accent: str = "teal") -> str:
     mic_svg = TOPIC_ICONS.get("microphone-2", TOPIC_ICONS["circle"])
     desc = html.escape(_DEFAULT_ANSWER_DESC)
     return (
+        f'<div class="mx-record-stage mx-record-stage--v2">'
+        f'<p class="mx-record-eyebrow">답변 녹음</p>'
         f'<div class="tq-answer-card-top">'
         f'<div class="tq-answer-head">'
         f'<span class="tq-answer-ico tq-answer-ico--{accent_key}">{mic_svg}</span>'
@@ -143,6 +142,7 @@ def build_exam_answer_card_top_html(*, accent: str = "teal") -> str:
         f'<p class="tq-answer-desc">{desc}</p>'
         f'<div class="tq-wave-slot tq-wave-slot--{accent_key}">'
         f"{_wave_bars_html()}"
+        f"</div>"
         f"</div>"
         f"</div>"
     )
@@ -170,42 +170,29 @@ def build_exam_question_shell_html(
     )
 
     title_s = str(title or "").strip()
-    eyebrow_s = str(eyebrow or "").strip()
+    topic_header = ""
     if title_s:
         icon_name = str(chip_icon or "circle").strip() or "circle"
         svg = TOPIC_ICONS.get(icon_name, TOPIC_ICONS["circle"])
-        left_block = (
+        topic_header = (
+            f'<div class="tq-header">'
             f'<div class="tq-topic-chip tq-topic-chip--{accent_esc}">'
             f'<span class="tq-topic-chip-ico">{svg}</span>'
             f'<span class="tq-topic-chip-name">{html.escape(title_s)}</span>'
             f"</div>"
+            f"</div>"
         )
-    elif eyebrow_s:
-        left_block = (
-            f'<span class="tq-header-eyebrow">{html.escape(eyebrow_s)}</span>'
-        )
-    else:
-        left_block = ""
 
     progress_block = str(progress_html or "").strip()
-    if progress_block and "tq-progress" not in progress_block:
-        progress_block = f'<div class="tq-progress">{progress_block}</div>'
-
-    badge_block = (
-        f'<span class="tq-type-badge tq-type-badge--{accent_esc}">{badge}</span>'
-        if badge
-        else ""
-    )
+    if not progress_block:
+        progress_block = build_progress_segments_html(1, 1, badge_label=badge)
 
     return (
         '<div class="tq-screen-marker" aria-hidden="true"></div>'
-        f'<div class="tq-header">'
-        f"{left_block}"
+        f"{topic_header}"
         f"{progress_block}"
-        f"</div>"
-        f'<div class="tq-card">'
-        f"{badge_block}"
-        f'<p class="tq-question">{en}</p>'
+        f'<div class="mx-question-card tq-card">'
+        f'<p class="mx-question-topic tq-question">{en}</p>'
         f"{ko_block}"
         f"</div>"
     )

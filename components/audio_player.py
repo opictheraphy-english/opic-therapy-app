@@ -28,6 +28,14 @@ _PAUSE_SVG = (
     '<svg viewBox="0 0 24 24" width="14" height="14" fill="#ffffff" aria-hidden="true">'
     '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>'
 )
+_SPEAKER_SVG = (
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+    'stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M11 5L6 9H2v6h4l5 4V5z"/>'
+    '<path d="M15.54 8.46a5 5 0 010 7.07"/>'
+    '<path d="M19.07 4.93a10 10 0 010 14.14"/>'
+    "</svg>"
+)
 
 
 def _resolve_accent_hex(accent: str) -> str:
@@ -71,75 +79,58 @@ def render_exam_question_audio_player(
           }}
           .opic-listen-wrap {{
             width: 100%;
+            margin: 0 0 14px 0;
           }}
           .opic-listen-player {{
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 12px;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
             border: 0.5px solid rgba(17, 24, 39, 0.08);
-            background: #ffffff;
-          }}
-          .opic-listen-btn {{
-            flex-shrink: 0;
-            width: 36px;
-            height: 36px;
-            border: none;
-            border-radius: 50%;
-            background: {accent_hex};
-            color: #ffffff;
+            background: #FAFAF9;
             cursor: pointer;
+            width: auto;
+            max-width: 100%;
+            font: inherit;
+            text-align: left;
+          }}
+          .opic-listen-player:disabled {{
+            opacity: 0.55;
+            cursor: not-allowed;
+          }}
+          .opic-listen-ico {{
+            flex-shrink: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0;
-            line-height: 1;
-          }}
-          .opic-listen-btn:disabled {{
-            background: #d1d5db !important;
-            cursor: not-allowed;
-          }}
-          .opic-listen-meta {{
-            flex: 1 1 auto;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
+            line-height: 0;
           }}
           .opic-listen-label {{
             font-size: 13px;
-            font-weight: 600;
-            color: #0f172a;
-            line-height: 1.3;
-          }}
-          .opic-listen-hint {{
-            font-size: 11px;
-            color: #6b7280;
-            line-height: 1.35;
-          }}
-          .opic-listen-time {{
-            flex-shrink: 0;
-            font-size: 11px;
-            color: #6b7280;
+            font-weight: 500;
+            color: #444441;
             line-height: 1.3;
             white-space: nowrap;
-            min-width: 2.5em;
-            text-align: right;
+          }}
+          .opic-listen-hint {{
+            font-size: 12px;
+            color: #888780;
+            line-height: 1.35;
+            white-space: nowrap;
+          }}
+          .opic-listen-time {{
+            display: none;
           }}
         </style>
         <div class="opic-listen-wrap">
           <audio id="{uid}" preload="metadata" src="{src}" style="display:none"></audio>
-          <div class="opic-listen-player">
-            <button type="button" class="opic-listen-btn" id="{uid}_btn" aria-label="질문 듣기 재생">
-              {_PLAY_SVG}
-            </button>
-            <div class="opic-listen-meta">
-              <div class="opic-listen-label">질문 듣기</div>
-              <div class="opic-listen-hint" id="{uid}_hint"></div>
-            </div>
-            <div class="opic-listen-time" id="{uid}_time">0:00</div>
-          </div>
+          <button type="button" class="opic-listen-player" id="{uid}_btn" aria-label="질문 듣기 재생">
+            <span class="opic-listen-ico">{_SPEAKER_SVG}</span>
+            <span class="opic-listen-label">질문 듣기</span>
+            <span class="opic-listen-hint" id="{uid}_hint"></span>
+          </button>
+          <div class="opic-listen-time" id="{uid}_time" aria-hidden="true">0:00</div>
         </div>
         <script>
         (function() {{
@@ -175,21 +166,21 @@ def render_exam_question_audio_player(
           function syncHint() {{
             const n = playCount();
             if (n >= maxPlays) {{
-              hint.textContent = "재생 한도에 도달했어요";
+              hint.textContent = "재생 한도 도달";
             }} else {{
-              hint.textContent = "남은 재생 " + (maxPlays - n) + "회";
+              hint.textContent = "남은 " + (maxPlays - n) + "회";
             }}
           }}
 
           function syncBtn() {{
             if (isExhausted()) {{
               btn.disabled = true;
-              btn.innerHTML = playIcon;
               isPlaying = false;
+              btn.setAttribute("aria-pressed", "false");
               return;
             }}
             btn.disabled = false;
-            btn.innerHTML = isPlaying ? pauseIcon : playIcon;
+            btn.setAttribute("aria-pressed", isPlaying ? "true" : "false");
           }}
 
           function syncTime() {{

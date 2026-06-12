@@ -1291,7 +1291,11 @@ def _render_question_step(q_idx: int) -> None:
     question = _question_at(q_idx)
     render_exam_question_shell(
         eyebrow="5분 모의고사",
-        progress_html=build_progress_segments_html(q_idx + 1, _QUESTION_COUNT),
+        progress_html=build_progress_segments_html(
+            q_idx + 1,
+            _QUESTION_COUNT,
+            badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
+        ),
         badge_label=str(question.get("type_label") or ""),
         question_en=str(question.get("question_en") or ""),
         question_ko=str(question.get("question_ko") or ""),

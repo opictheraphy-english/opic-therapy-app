@@ -1923,8 +1923,9 @@ def build_topic_practice_header_html(
     total_questions: int = 3,
     include_screen_marker: bool = False,
     chip_title: Optional[str] = None,
+    badge_label: str = "",
 ) -> str:
-    """Topic chip + Q progress row (``.tq-header``) — question and saved screens."""
+    """Topic chip row + ``.mx-progress`` strip — question and saved screens."""
     from components.exam_question_screen import build_progress_segments_html
 
     visual = _topic_visual_for_id(topic_id)
@@ -1934,7 +1935,11 @@ def build_topic_practice_header_html(
     title_ko = html.escape((chip_title or visual["title_ko"]).strip() or visual["title_ko"])
     total = max(int(total_questions), 1)
     current = min(int(q_idx) + 1, total)
-    progress_html = build_progress_segments_html(current, total)
+    progress_html = build_progress_segments_html(
+        current,
+        total,
+        badge_label=badge_label,
+    )
     marker = (
         '<div class="tq-screen-marker" aria-hidden="true"></div>'
         if include_screen_marker
@@ -1947,8 +1952,8 @@ def build_topic_practice_header_html(
         + f'<span class="tq-topic-chip-ico">{svg}</span>'
         + f'<span class="tq-topic-chip-name">{title_ko}</span>'
         + "</div>"
-        + progress_html
         + "</div>"
+        + progress_html
     )
 
 
@@ -1960,8 +1965,7 @@ def _render_topic_question_shell_html(
     total_questions: int,
 ) -> str:
     visual = _topic_visual_for_id(topic_id)
-    accent = html.escape(visual["accent"])
-    badge = html.escape(_opic_type_badge_label(str(q.get("opic_type") or "")))
+    badge = _opic_type_badge_label(str(q.get("opic_type") or ""))
     en = html.escape(str(q.get("en") or ""))
     ko_raw = str(q.get("ko") or "").strip()
     ko_block = (
@@ -1973,12 +1977,12 @@ def _render_topic_question_shell_html(
         total_questions=total_questions,
         include_screen_marker=True,
         chip_title=_practice_chip_title(topic_id),
+        badge_label=badge,
     )
     return (
         header
-        + f'<div class="tq-card">'
-        + f'<span class="tq-type-badge tq-type-badge--{accent}">{badge}</span>'
-        + f'<p class="tq-question">{en}</p>'
+        + f'<div class="mx-question-card tq-card">'
+        + f'<p class="mx-question-topic tq-question">{en}</p>'
         f"{ko_block}"
         f"</div>"
     )
@@ -2086,6 +2090,8 @@ def _render_topic_answer_card_top_html(topic_id: str) -> str:
         "녹음이 끝나면 AI가 텍스트로 인식합니다."
     )
     return (
+        f'<div class="mx-record-stage mx-record-stage--v2">'
+        f'<p class="mx-record-eyebrow">답변 녹음</p>'
         f'<div class="tq-answer-card-top">'
         f'<div class="tq-answer-head">'
         f'<span class="tq-answer-ico tq-answer-ico--{accent}">{mic_svg}</span>'
@@ -2094,6 +2100,7 @@ def _render_topic_answer_card_top_html(topic_id: str) -> str:
         f'<p class="tq-answer-desc">{html.escape(desc)}</p>'
         f'<div class="tq-wave-slot tq-wave-slot--{accent}">'
         f"{_topic_wave_bars_html()}"
+        f"</div>"
         f"</div>"
         f"</div>"
     )
