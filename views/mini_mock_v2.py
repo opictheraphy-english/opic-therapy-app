@@ -22,6 +22,7 @@ from components.answer_countdown_timer import (
 )
 from components.exam_question_screen import (
     build_progress_segments_html,
+    opic_type_badge_label,
     render_exam_answer_card_top,
     render_exam_question_shell,
     render_exam_wave_mic_observer,
@@ -1294,7 +1295,7 @@ def _render_question_step(q_idx: int) -> None:
         progress_html=build_progress_segments_html(
             q_idx + 1,
             _QUESTION_COUNT,
-            badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
+            badge_label=opic_type_badge_label(str(question.get("opic_type") or "")),
         ),
         badge_label=str(question.get("type_label") or ""),
         question_en=str(question.get("question_en") or ""),
