@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v5_detailed_correction"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v6_content_words_fillers"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -37,6 +37,10 @@ advanced_function_gate(과거·현재 시간틀 통제 + 문단 담화의 지속
 
 평가 원칙:
 - transcript(텍스트)만 평가. 발음·억양·강세·연음은 평가하지 않는다.
+- transcript는 STT 전사라 필러(uh, um 등)와 더듬기 반복이 포함될 수 있다. 이는 구어의
+  자연스러운 특성이므로 문법 오류나 감점 요소로 취급하지 말 것. correction_focus에서
+  필러 자체를 교정 대상으로 인용하지 말 것. 레벨 판정은 내용어 기준의 기능·텍스트 타입으로
+  한다(anchor_usage).
 - speech_rate_metrics.words_normalized_90s / speech_rate_level / wpm 이 있으면, 위 JSON의
   speech_rate_90s 밴드와 비교해 summary·correction_focus에서 안내한다. 발화량이 목표 레벨보다
   적으면 더 길게 말하라고, 많으면 구조·디테일을 보강하라고 안내한다. 발화 속도는 하향 전용

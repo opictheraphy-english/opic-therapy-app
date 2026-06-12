@@ -201,20 +201,28 @@ def _invoke_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[
     return None, err or "json_parse_failed"
 
 
-def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
-    from services.speech_rate_scoring import build_per_answer_speech_metrics
+def _speech_metrics_for_transcript(transcript: str, duration_seconds: float) -> Dict[str, Any]:
+    from services.speech_rate_scoring import build_per_answer_speech_metrics, count_content_words
 
+    try:
+        dur = float(duration_seconds or 0.0)
+    except (TypeError, ValueError):
+        dur = 0.0
+    content_wc = count_content_words(transcript)
+    return build_per_answer_speech_metrics(content_wc, dur)
+
+
+def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
     rubric = build_topic_practice_v2_feedback_rubric()
     q_en = _coerce_str(answer.get("en"))
     q_ko = _coerce_str(answer.get("ko"))
     topic = _coerce_str(answer.get("topic"))
     opic_type = _coerce_str(answer.get("opic_type"))
-    wc = int(answer.get("word_count") or 0) or count_english_words(transcript)
     try:
         dur = float(answer.get("duration_seconds") or 0.0)
     except (TypeError, ValueError):
         dur = 0.0
-    speech = build_per_answer_speech_metrics(wc, dur)
+    speech = _speech_metrics_for_transcript(transcript, dur)
     payload = {
         "rubric_version": RUBRIC_VERSION,
         "topic": topic,
@@ -228,33 +236,10 @@ def _build_prompt(answer: Dict[str, Any], transcript: str) -> str:
     return rubric + "\n\nAnswer data JSON:\n" + body
 
 
-def _append_speech_rate_note(summary: str, speech: Dict[str, Any]) -> str:
-    if not speech.get("wpm_available") and not int(speech.get("word_count") or 0):
-        return summary
-    w90 = speech.get("words_normalized_90s")
-    lv = speech.get("speech_rate_level")
-    wpm = speech.get("wpm")
-    note = (
-        f"발화량(90초 환산 약 {w90}어, 추정 {lv} 밴드"
-        + (f", WPM {wpm})" if wpm else ")")
-        + "."
-    )
-    base = _coerce_str(summary)
-    if note[:12] in base:
-        return base
-    return f"{base} {note}".strip() if base else note
-
-
-def _normalize_success(
-    parsed: Dict[str, Any],
-    *,
-    speech: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+def _normalize_success(parsed: Dict[str, Any]) -> Dict[str, Any]:
     """Map model JSON to payload; missing new fields get safe defaults (backward compatible)."""
     drills = _coerce_keyword_drill(parsed.get("keyword_drill"))
     summary = _coerce_str(parsed.get("summary"))
-    if isinstance(speech, dict):
-        summary = _append_speech_rate_note(summary, speech)
     return _ok_payload(
         summary=summary,
         strength=_coerce_str(parsed.get("strength")),
@@ -296,14 +281,6 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
             )
         )
 
-    from services.speech_rate_scoring import build_per_answer_speech_metrics
-
-    try:
-        dur = float(answer.get("duration_seconds") or 0.0)
-    except (TypeError, ValueError):
-        dur = 0.0
-    speech = build_per_answer_speech_metrics(wc, dur)
-
     prompt = _build_prompt(answer, transcript)
     models = build_topic_feedback_model_candidates()
     saw_model_not_found = False
@@ -323,7 +300,7 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
                 pass
             parsed, err = _invoke_model(api_key, prompt, model_name)
             if parsed:
-                norm = _normalize_success(parsed, speech=speech)
+                norm = _normalize_success(parsed)
                 if not norm["summary"]:
                     norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
                 if not norm["strength"]:

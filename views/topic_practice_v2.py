@@ -1210,9 +1210,9 @@ def _build_topic_v2_row_from_mic(
         dur = float(duration_seconds or 0.0)
     except (TypeError, ValueError):
         dur = 0.0
-    from services.speech_rate_scoring import build_per_answer_speech_metrics
+    from services.speech_rate_scoring import build_per_answer_speech_metrics, count_content_words
 
-    speech = build_per_answer_speech_metrics(wc, dur)
+    speech = build_per_answer_speech_metrics(count_content_words(transcript or raw_transcript), dur)
     return {
         "answer_id": str(uuid.uuid4()),
         "topic": topic,

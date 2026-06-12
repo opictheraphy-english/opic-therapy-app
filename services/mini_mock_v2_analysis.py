@@ -33,6 +33,7 @@ from services.mini_mock_v2_level_rules import (
 from services.speech_rate_scoring import (
     apply_speech_rate_to_report,
     build_per_answer_speech_metrics,
+    count_content_words,
 )
 from services.mini_mock_v2_rubric import (
     RUBRIC_VERSION,
@@ -473,7 +474,8 @@ def build_mini_mock_v2_report_payload(answers: List[Dict[str, Any]]) -> List[Dic
             "connector_count": 0,
             "repetition_hint": "low",
         }
-        speech_row = build_per_answer_speech_metrics(effective_word_count, duration_seconds)
+        speech_wc = count_content_words(text) if status == "saved" else 0
+        speech_row = build_per_answer_speech_metrics(speech_wc, duration_seconds)
         payload.append(
             {
                 "question_index": q_idx + 1,

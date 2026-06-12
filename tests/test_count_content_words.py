@@ -1,0 +1,51 @@
+"""Unit tests for content-word counting (speech-rate metrics)."""
+
+import unittest
+
+from services.speech_rate_scoring import count_content_words
+from services.topic_practice_v2_analysis import _normalize_success
+
+
+class TestCountContentWords(unittest.TestCase):
+    def test_fillers_and_stutter_repeats_excluded(self):
+        text = "uh um I think I think movies are are fun"
+        self.assertEqual(count_content_words(text), 5)
+
+    def test_discourse_markers_preserved(self):
+        text = "well you know I like movies so actually it is fun"
+        self.assertEqual(count_content_words(text), 11)
+
+    def test_like_preserved_not_treated_as_filler(self):
+        text = "I like like action movies"
+        # adjacent duplicate "like" collapses to one; discourse "like" kept when not repeated
+        self.assertEqual(count_content_words(text), 4)
+
+    def test_separated_repeats_not_collapsed(self):
+        text = "I think movies are fun and I think again"
+        self.assertEqual(count_content_words(text), 9)
+
+    def test_punctuation_stripped_for_fillers(self):
+        text = "Uh, um... I think."
+        self.assertEqual(count_content_words(text), 2)
+
+
+class TestTopicV2FeedbackSummary(unittest.TestCase):
+    def test_normalize_success_does_not_append_speech_band(self):
+        parsed = {
+            "summary": "문법과 어휘가 자연스럽습니다.",
+            "strength": "좋아요.",
+            "correction_focus": "괜찮습니다.",
+            "better_expression": "ok",
+            "upgrade_sample": "Sample.",
+            "keyword_drill": ["because"],
+            "practice_mission": "연습하세요.",
+        }
+        result = _normalize_success(parsed)
+        summary = result.get("summary") or ""
+        self.assertNotIn("추정", summary)
+        self.assertNotIn("밴드", summary)
+        self.assertEqual(summary, "문법과 어휘가 자연스럽습니다.")
+
+
+if __name__ == "__main__":
+    unittest.main()

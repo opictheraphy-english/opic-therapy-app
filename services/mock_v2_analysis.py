@@ -23,6 +23,7 @@ from services.speech_rate_scoring import (
     apply_speech_rate_to_report,
     build_exam_aggregate_speech_metrics,
     build_per_answer_speech_metrics,
+    count_content_words,
 )
 from services.stt_service import count_english_words
 
@@ -155,7 +156,7 @@ def build_mock_v2_report_payload(
         except (TypeError, ValueError):
             dur_sec = 0.0
         wpm_avail = wpm > 0 and dur_sec > 0
-        speech_row = build_per_answer_speech_metrics(wc, dur_sec)
+        speech_row = build_per_answer_speech_metrics(count_content_words(text), dur_sec)
         payload_answers.append(
             {
                 "question_index": idx,

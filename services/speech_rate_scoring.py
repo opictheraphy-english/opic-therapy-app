@@ -11,9 +11,73 @@ SINGLE SOURCE OF TRUTH for speech-rate bands:
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Tuple
 
 from services.evaluation.eval_config import LEVEL_ORDER
+from services.stt_service import count_english_words
+
+# Standalone STT fillers — not discourse markers (like, you know, well, …).
+_CONTENT_FILLERS = frozenset(
+    {
+        "uh",
+        "uhh",
+        "uhm",
+        "um",
+        "umm",
+        "er",
+        "erm",
+        "eh",
+        "mm",
+        "mmm",
+        "hmm",
+        "hm",
+        "ah",
+        "aah",
+    }
+)
+
+
+def _normalize_content_token(token: str) -> str:
+    return re.sub(r"[^a-zA-Z']", "", str(token or "")).lower()
+
+
+def _collapse_adjacent_duplicates(tokens: List[str]) -> List[str]:
+    if not tokens:
+        return []
+    out = [tokens[0]]
+    for tok in tokens[1:]:
+        if tok != out[-1]:
+            out.append(tok)
+    return out
+
+
+def _collapse_adjacent_bigram_duplicates(tokens: List[str]) -> List[str]:
+    out = list(tokens)
+    changed = True
+    while changed:
+        changed = False
+        i = 0
+        while i + 3 < len(out):
+            if out[i : i + 2] == out[i + 2 : i + 4]:
+                out = out[: i + 2] + out[i + 4 :]
+                changed = True
+            else:
+                i += 1
+    return out
+
+
+def count_content_words(text: str) -> int:
+    """Content-word count for speech-rate metrics (fillers + stutter repeats removed)."""
+    tokens: List[str] = []
+    for raw in re.findall(r"[a-zA-Z']+", text or ""):
+        norm = _normalize_content_token(raw)
+        if not norm or norm in _CONTENT_FILLERS:
+            continue
+        tokens.append(norm)
+    tokens = _collapse_adjacent_duplicates(tokens)
+    tokens = _collapse_adjacent_bigram_duplicates(tokens)
+    return len(tokens)
 
 # Reference speaking window (user spec: "일반적으로 1분 30초")
 REFERENCE_SPEECH_SECONDS = 90.0
