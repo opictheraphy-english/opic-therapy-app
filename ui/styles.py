@@ -14,8 +14,8 @@ GLOBAL_CSS = """
       --navy: #0f172a;
       --navy-soft: #1e293b;
       --bg-warm: #fafaf9;
-      --bg-page: linear-gradient(180deg, #fafaf9 0%, #f4f4f5 48%, #f1f5f9 100%);
-      --surface: rgba(255, 255, 255, 0.72);
+      --bg-page: #FAFAF9;
+      --surface: #ffffff;
       --border-subtle: rgba(17, 24, 39, 0.08);
       --text: #111827;
       --text-secondary: #4b5563;
@@ -27,14 +27,14 @@ GLOBAL_CSS = """
       --color-text-tertiary: #9ca3af;
       --danger-soft: #fecaca;
       --danger-text: #b91c1c;
-      --radius-lg: 20px;
-      --radius-md: 14px;
+      --radius-lg: 16px;
+      --radius-md: 10px;
       --radius-sm: 10px;
-      --shadow-float: 0 8px 32px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
-      --shadow-card: 0 1px 0 rgba(15, 23, 42, 0.04), 0 12px 40px rgba(15, 23, 42, 0.06);
+      --shadow-float: 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
       --space-1: 8px;
       --space-2: 16px;
-      --space-3: 24px;
+      --space-3: 20px;
       --space-4: 40px;
       --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     }
@@ -75,14 +75,14 @@ GLOBAL_CSS = """
      * (?nav=...) don't flash white between the old page unload and the new
      * Streamlit shell paint. */
     html, body {
-      background: #f8faf9 !important;
-      background-color: #f8faf9 !important;
+      background: #FAFAF9 !important;
+      background-color: #FAFAF9 !important;
       color: #111827 !important;
       color-scheme: light only !important;
     }
 
     [data-testid="stAppViewContainer"] {
-      background: #f8faf9 !important;
+      background: #FAFAF9 !important;
       color: #111827 !important;
       color-scheme: light only !important;
     }
@@ -150,9 +150,7 @@ GLOBAL_CSS = """
       padding: 10px 12px;
       margin: 0 0 12px 0;
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.78);
-      backdrop-filter: saturate(160%) blur(14px);
-      -webkit-backdrop-filter: saturate(160%) blur(14px);
+      background: #ffffff;
       border: 1px solid rgba(15, 23, 42, 0.06);
       box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
     }
@@ -162,7 +160,7 @@ GLOBAL_CSS = """
       justify-content: center;
       width: 36px;
       height: 36px;
-      border-radius: 12px;
+      border-radius: 10px;
       color: #0f172a;
       text-decoration: none !important;
       background: transparent;
@@ -187,7 +185,7 @@ GLOBAL_CSS = """
     }
     .topbar .tb-eyebrow {
       font-size: 0.65rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #94a3b8;
@@ -195,7 +193,7 @@ GLOBAL_CSS = """
     }
     .topbar .tb-title {
       font-size: 1rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #0f172a;
       letter-spacing: -0.01em;
       line-height: 1.25;
@@ -208,7 +206,7 @@ GLOBAL_CSS = """
     /* Typography system */
     .ds-display {
       font-size: clamp(2rem, 4.5vw, 2.75rem);
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: -0.03em;
       color: var(--navy);
       line-height: 1.15;
@@ -216,7 +214,7 @@ GLOBAL_CSS = """
     }
     .ds-hero-tag {
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--mint);
@@ -231,7 +229,7 @@ GLOBAL_CSS = """
     }
     .ds-section-title {
       font-size: 0.8125rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -239,7 +237,7 @@ GLOBAL_CSS = """
     }
     .ds-h2 {
       font-size: 1.35rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.02em;
       margin: 0 0 var(--space-2) 0;
@@ -264,23 +262,19 @@ GLOBAL_CSS = """
     /* Glass cards */
     .glass-card {
       background: var(--surface);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
       padding: var(--space-3);
       border-radius: var(--radius-lg);
       border: 1px solid var(--border-subtle);
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       margin-bottom: var(--space-2);
-      transition: transform 0.22s var(--ease-out), box-shadow 0.22s var(--ease-out), border-color 0.2s ease;
+      transition: border-color 0.2s ease;
     }
     .glass-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 48px rgba(15, 23, 42, 0.1);
       border-color: rgba(13, 148, 136, 0.15);
     }
 
     .glass-card-quiet {
-      background: rgba(255, 255, 255, 0.55);
+      background: #ffffff;
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       padding: var(--space-2) var(--space-3);
@@ -925,12 +919,9 @@ GLOBAL_CSS = """
       border-radius: var(--radius-lg);
       padding: var(--space-4) var(--space-3);
       margin-bottom: var(--space-3);
-      background:
-        radial-gradient(ellipse 120% 80% at 100% 0%, rgba(13, 148, 136, 0.14) 0%, transparent 55%),
-        radial-gradient(ellipse 90% 70% at 0% 100%, rgba(15, 23, 42, 0.06) 0%, transparent 50%),
-        linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+      background: #ffffff;
       border: 1px solid var(--border-subtle);
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       /* Single global page settle animation handles fade-in; hero no longer
        * animates per-rerun so HOME doesn't visibly re-appear each time. */
     }
@@ -945,14 +936,14 @@ GLOBAL_CSS = """
       .home-metrics { grid-template-columns: 1fr; }
     }
     .metric-tile {
-      background: rgba(255, 255, 255, 0.65);
+      background: #ffffff;
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       padding: var(--space-2);
       text-align: left;
     }
-    .metric-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
-    .metric-value { font-size: 1.35rem; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
+    .metric-label { font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+    .metric-value { font-size: 1.35rem; font-weight: 500; color: var(--navy); letter-spacing: -0.02em; }
     .metric-hint { font-size: 0.8rem; color: var(--text-soft); margin-top: 4px; }
 
     .feature-grid {
@@ -971,10 +962,9 @@ GLOBAL_CSS = """
       transition: transform 0.2s var(--ease-out), border-color 0.2s;
     }
     .feature-tile:hover {
-      transform: translateY(-3px);
       border-color: rgba(13, 148, 136, 0.2);
     }
-    .feature-tile .ft-title { font-weight: 700; font-size: 1rem; color: var(--navy); margin-bottom: 8px; }
+    .feature-tile .ft-title { font-weight: 500; font-size: 1rem; color: var(--navy); margin-bottom: 8px; }
     .feature-tile .ft-body { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; }
 
     /* ------------------------------------------------------------------
@@ -985,23 +975,22 @@ GLOBAL_CSS = """
       flex-direction: column;
       gap: 10px;
       padding: 18px 20px;
-      border-radius: 18px;
-      background:
-        linear-gradient(135deg, rgba(13, 148, 136, 0.10) 0%, rgba(255, 255, 255, 0.6) 100%);
+      border-radius: 16px;
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.22);
-      box-shadow: 0 6px 22px rgba(13, 148, 136, 0.08);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       margin: 0 0 var(--space-3) 0;
     }
     .resume-card .rc-eyebrow {
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
     }
     .resume-card .rc-title {
       font-size: 1.05rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.01em;
     }
@@ -1019,20 +1008,19 @@ GLOBAL_CSS = """
       display: inline-block;
       text-align: center;
       padding: 12px 14px;
-      border-radius: 12px;
+      border-radius: 10px;
       text-decoration: none !important;
-      font-weight: 700;
+      font-weight: 500;
       font-size: 0.95rem;
       transition: transform 0.12s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
     .resume-card .rc-action.rc-primary {
       background: var(--mint);
       color: #ffffff !important;
-      box-shadow: 0 2px 10px rgba(13, 148, 136, 0.25);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .resume-card .rc-action.rc-primary:hover {
       background: #0b8076;
-      box-shadow: 0 6px 18px rgba(13, 148, 136, 0.32);
     }
     .resume-card .rc-action.rc-secondary {
       background: rgba(15, 23, 42, 0.04);
@@ -1056,7 +1044,7 @@ GLOBAL_CSS = """
     /* --- Section label -------------------------------------------------- */
     .home-section-h {
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.005em;
       margin: 22px 4px 10px 4px;
@@ -1078,7 +1066,7 @@ GLOBAL_CSS = """
       align-items: baseline;
       gap: 10px;
       font-size: clamp(1.6rem, 5vw, 2.05rem);
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: -0.025em;
       color: var(--navy);
       line-height: 1.15;
@@ -1111,7 +1099,7 @@ GLOBAL_CSS = """
       align-items: center;
       gap: 6px;
       font-size: 0.72rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-muted);
       background: rgba(255, 255, 255, 0.7);
       border: 1px solid var(--border-subtle);
@@ -1124,7 +1112,7 @@ GLOBAL_CSS = """
       height: 6px;
       border-radius: 50%;
       background: var(--mint);
-      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
 
     /* --- 2) Continue Study Card (primary CTA) --------------------------- */
@@ -1134,7 +1122,7 @@ GLOBAL_CSS = """
       flex-direction: column;
       gap: 10px;
       padding: 22px 22px 20px 22px;
-      border-radius: 22px;
+      border-radius: 16px;
       margin: 4px 0 22px 0;
       overflow: hidden;
     }
@@ -1147,22 +1135,18 @@ GLOBAL_CSS = """
       width: 160px;
       height: 160px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(13, 148, 136, 0.18) 0%, transparent 65%);
+      background: #ffffff;
       pointer-events: none;
     }
     .continue-card--resume {
-      background:
-        linear-gradient(135deg, rgba(13, 148, 136, 0.14) 0%, rgba(255, 255, 255, 0.65) 100%),
-        linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.22);
       box-shadow:
         0 1px 0 rgba(15, 23, 42, 0.03),
         0 12px 32px rgba(13, 148, 136, 0.10);
     }
     .continue-card--start {
-      background:
-        linear-gradient(135deg, rgba(13, 148, 136, 0.08) 0%, rgba(255, 255, 255, 0.6) 100%),
-        linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+      background: #ffffff;
       border: 1px solid rgba(15, 23, 42, 0.06);
       box-shadow:
         0 1px 0 rgba(15, 23, 42, 0.02),
@@ -1178,7 +1162,7 @@ GLOBAL_CSS = """
     }
     .continue-card .cc-eyebrow {
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
@@ -1186,11 +1170,11 @@ GLOBAL_CSS = """
     .continue-card .cc-time {
       font-size: 0.78rem;
       color: var(--text-muted);
-      font-weight: 600;
+      font-weight: 500;
     }
     .continue-card .cc-title {
       font-size: 1.2rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.015em;
       line-height: 1.35;
@@ -1198,7 +1182,7 @@ GLOBAL_CSS = """
       z-index: 1;
     }
     .continue-card .cc-title .cc-of {
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-muted);
       letter-spacing: -0.005em;
     }
@@ -1211,7 +1195,7 @@ GLOBAL_CSS = """
     }
     .continue-card .cc-meta b {
       color: var(--navy);
-      font-weight: 700;
+      font-weight: 500;
     }
     .continue-card .cc-progress {
       height: 6px;
@@ -1226,7 +1210,7 @@ GLOBAL_CSS = """
       display: block;
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, var(--mint) 0%, #14b8a6 100%);
+      background: #1D9E75;
       transition: width 0.4s var(--ease-out);
     }
     .continue-card .cc-actions {
@@ -1241,9 +1225,9 @@ GLOBAL_CSS = """
       display: inline-block;
       text-align: center;
       padding: 13px 14px;
-      border-radius: 14px;
+      border-radius: 10px;
       text-decoration: none !important;
-      font-weight: 700;
+      font-weight: 500;
       font-size: 0.95rem;
       letter-spacing: -0.005em;
       transition:
@@ -1254,11 +1238,10 @@ GLOBAL_CSS = """
     .continue-card .cc-action.cc-primary {
       color: #ffffff !important;
       background: var(--mint);
-      box-shadow: 0 6px 18px rgba(13, 148, 136, 0.30);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .continue-card .cc-action.cc-primary:hover {
       background: #0b8076;
-      box-shadow: 0 8px 22px rgba(13, 148, 136, 0.36);
     }
     .continue-card .cc-action.cc-secondary {
       color: var(--navy) !important;
@@ -1289,8 +1272,8 @@ GLOBAL_CSS = """
       flex-direction: column;
       gap: 8px;
       padding: 16px 16px 14px 16px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.78);
+      border-radius: 16px;
+      background: #ffffff;
       border: 1px solid var(--border-subtle);
       box-shadow:
         0 1px 0 rgba(15, 23, 42, 0.02),
@@ -1305,7 +1288,6 @@ GLOBAL_CSS = """
       min-height: 104px;
     }
     .qa-card:hover {
-      transform: translateY(-2px);
       border-color: rgba(13, 148, 136, 0.22);
       background: rgba(255, 255, 255, 0.92);
       box-shadow:
@@ -1320,7 +1302,7 @@ GLOBAL_CSS = """
     .qa-card .qa-ico {
       width: 36px;
       height: 36px;
-      border-radius: 12px;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1335,7 +1317,7 @@ GLOBAL_CSS = """
     }
     .qa-card .qa-title {
       font-size: 0.97rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.01em;
       line-height: 1.25;
@@ -1384,12 +1366,12 @@ GLOBAL_CSS = """
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.7);
       border: 1px solid var(--border-subtle);
-      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       text-align: left;
     }
     .stat-chip .st-label {
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -1397,7 +1379,7 @@ GLOBAL_CSS = """
     .stat-chip .st-value {
       margin-top: 4px;
       font-size: 1.4rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.025em;
       line-height: 1.15;
@@ -1420,10 +1402,8 @@ GLOBAL_CSS = """
     .recovery-card {
       position: relative;
       padding: 20px 22px 18px 22px;
-      border-radius: 20px;
-      background:
-        linear-gradient(135deg, rgba(245, 158, 11, 0.10) 0%, rgba(255, 255, 255, 0.6) 100%),
-        linear-gradient(180deg, #fffbeb 0%, #fefce8 100%);
+      border-radius: 16px;
+      background: #ffffff;
       border: 1px solid rgba(245, 158, 11, 0.28);
       box-shadow:
         0 1px 0 rgba(15, 23, 42, 0.03),
@@ -1439,12 +1419,12 @@ GLOBAL_CSS = """
       width: 150px;
       height: 150px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, transparent 65%);
+      background: #ffffff;
       pointer-events: none;
     }
     .recovery-card .rv-eyebrow {
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: #b45309;
@@ -1454,7 +1434,7 @@ GLOBAL_CSS = """
     .recovery-card .rv-title {
       margin-top: 8px;
       font-size: 1.15rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.015em;
       line-height: 1.35;
@@ -1491,23 +1471,23 @@ GLOBAL_CSS = """
     .coach-gf-card {
       background: rgba(255, 255, 255, 0.88);
       border: 1px solid var(--border-subtle);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 12px 14px;
       margin: 6px 0;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     /* Script-coaching report — text sections wrapped in the same boxed style. */
     .sc-report-card {
       background: rgba(255, 255, 255, 0.88);
       border: 1px solid var(--border-subtle);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 13px 15px;
       margin: 8px 0;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .sc-report-card .sc-card-title {
       font-size: 0.82rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #0f766e;
       margin: 0 0 8px 0;
       letter-spacing: -0.01em;
@@ -1521,7 +1501,7 @@ GLOBAL_CSS = """
     .sc-report-card .sc-card-body p:last-child { margin-bottom: 0; }
     .sc-report-card .sc-card-body ul { margin: 0; padding-left: 18px; }
     .sc-report-card .sc-card-body li { margin: 4px 0; }
-    .sc-report-card .sc-q { font-weight: 600; color: #0f172a; }
+    .sc-report-card .sc-q { font-weight: 500; color: #0f172a; }
     .sc-report-card .sc-script { color: #334155; white-space: pre-wrap; }
     .grammar-fix .gf-line {
       display: flex;
@@ -1548,7 +1528,7 @@ GLOBAL_CSS = """
     }
     .grammar-fix .gf-good-line .gf-text.gf-good {
       color: var(--mint);
-      font-weight: 700;
+      font-weight: 500;
     }
     .grammar-fix .gf-note {
       margin-top: 4px;
@@ -1559,7 +1539,7 @@ GLOBAL_CSS = """
     .grammar-fix .gf-label,
     .coach-alt-card .gf-label {
       font-size: 0.7rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -1585,7 +1565,7 @@ GLOBAL_CSS = """
     }
     .grammar-fix .gf-val.gf-good {
       color: var(--mint);
-      font-weight: 700;
+      font-weight: 500;
     }
     section.main:has(.mx-marker) .mx-coach-empty-note {
       font-size: 0.86rem;
@@ -1602,7 +1582,7 @@ GLOBAL_CSS = """
     }
     section.main:has(.mx-marker) .mx-coach-struct-label {
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--mint);
       margin: 10px 0 4px 0;
       text-transform: uppercase;
@@ -1627,7 +1607,7 @@ GLOBAL_CSS = """
       color: var(--text);
       padding: 14px 16px;
       border-radius: var(--radius-md);
-      background: linear-gradient(125deg, rgba(224, 242, 254, 0.55) 0%, rgba(255, 255, 255, 0.95) 100%);
+      background: #ffffff;
       border: 1px solid rgba(59, 130, 246, 0.15);
       margin: 0 0 8px 0;
       white-space: normal;
@@ -1649,10 +1629,10 @@ GLOBAL_CSS = """
     .coach-alt-card {
       background: rgba(255, 255, 255, 0.88);
       border: 1px solid var(--border-subtle);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 12px 14px;
       margin: 6px 0;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .alt-card .alt-header {
       font-size: 0.95rem;
@@ -1668,7 +1648,7 @@ GLOBAL_CSS = """
     .alt-card .alt-chip {
       display: inline-block;
       font-size: 0.82rem;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: -0.005em;
       color: var(--mint);
       background: var(--mint-muted);
@@ -1708,7 +1688,7 @@ GLOBAL_CSS = """
     }
     .lecture-curriculum-head {
       font-size: 0.7rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -1731,7 +1711,7 @@ GLOBAL_CSS = """
     .lecture-idx {
       flex-shrink: 0;
       font-size: 0.7rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--mint);
       width: 28px;
       height: 28px;
@@ -1777,13 +1757,9 @@ GLOBAL_CSS = """
       gap: 2px;
       padding: 8px 10px;
       box-sizing: border-box;
-      background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.95) 0%,
-        rgba(255, 255, 255, 0.86) 100%);
-      backdrop-filter: saturate(180%) blur(24px);
-      -webkit-backdrop-filter: saturate(180%) blur(24px);
+      background: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.75);
-      border-radius: 28px;
+      border-radius: 16px;
       box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.06),
         0 8px 28px rgba(15, 23, 42, 0.10),
@@ -1802,13 +1778,13 @@ GLOBAL_CSS = """
       padding: 8px 2px 7px 2px;
       min-height: 56px;
       border: none;
-      border-radius: 18px;
+      border-radius: 16px;
       background: transparent;
       cursor: pointer;
       font-family: inherit;
       color: var(--text-soft);
       font-size: 0.58rem;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: 0.01em;
       text-align: center;
       text-decoration: none !important;
@@ -1897,7 +1873,7 @@ GLOBAL_CSS = """
     /* Streamlit widgets — calmer defaults */
     .stButton > button {
       border-radius: var(--radius-md) !important;
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       border: 1px solid var(--border-subtle) !important;
       background: rgba(255,255,255,0.9) !important;
       color: var(--navy) !important;
@@ -1905,15 +1881,14 @@ GLOBAL_CSS = """
     }
     .stButton > button:hover {
       border-color: rgba(13, 148, 136, 0.35) !important;
-      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.12) !important;
     }
 
     [data-testid="stTabs"] button[data-baseweb="tab"] {
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       letter-spacing: -0.01em;
     }
 
-    .survey-label { font-size: 1.05rem; font-weight: 600; color: var(--navy); margin-top: var(--space-3); }
+    .survey-label { font-size: 1.05rem; font-weight: 500; color: var(--navy); margin-top: var(--space-3); }
 
     .wave {
       display: flex;
@@ -1959,16 +1934,16 @@ GLOBAL_CSS = """
 
     /* --- Hero (greeting + subtitle) ----------------------------------- */
     .pat-hero {
-      background: linear-gradient(140deg, rgba(204, 251, 241, 0.55) 0%, rgba(255, 255, 255, 0.9) 60%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.14);
       border-radius: var(--radius-lg);
       padding: 18px 20px;
       margin: 4px 0 16px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-hero .pat-eyebrow {
       font-size: 0.7rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
@@ -1976,7 +1951,7 @@ GLOBAL_CSS = """
     }
     .pat-hero .pat-title {
       font-size: 1.6rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.025em;
       line-height: 1.15;
@@ -1996,7 +1971,7 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.72);
       border: 1px solid var(--border-subtle);
       border-radius: 999px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-screen .pat-tab-radio [data-testid="stRadio"] {
       margin: 0 !important;
@@ -2020,7 +1995,7 @@ GLOBAL_CSS = """
     .pat-screen .pat-tab-radio [data-testid="stRadio"] label p,
     .pat-screen .pat-tab-radio [data-testid="stRadio"] label span {
       font-size: 0.88rem !important;
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       color: #4b5563 !important;
       line-height: 1.2 !important;
     }
@@ -2029,10 +2004,10 @@ GLOBAL_CSS = """
       color: #ffffff !important;
     }
     .pat-screen .pat-tab-radio [data-testid="stRadio"] label:has(input:checked) {
-      background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
+      background: #ffffff;
       border-radius: 999px !important;
       padding: 8px 14px !important;
-      box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-screen .pat-tab-radio [data-testid="stRadio"] label:not(:has(input:checked)) {
       padding: 8px 14px !important;
@@ -2061,7 +2036,7 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.72);
       border: 1px solid var(--border-subtle);
       border-radius: 999px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       overflow-x: auto;
       flex-wrap: nowrap;
       scrollbar-width: none;
@@ -2073,7 +2048,7 @@ GLOBAL_CSS = """
       flex: 0 0 auto;
       padding: 8px 16px !important;
       border-radius: 999px !important;
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       font-size: 0.88rem !important;
       color: var(--text-secondary) !important;
       background: transparent !important;
@@ -2087,8 +2062,8 @@ GLOBAL_CSS = """
     }
     .pat-screen [data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
       color: #ffffff !important;
-      background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
-      box-shadow: 0 6px 16px rgba(13, 148, 136, 0.25);
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     /* Kill the default Streamlit bottom underline / highlight bar. */
     .pat-screen [data-testid="stTabs"] [data-baseweb="tab-highlight"],
@@ -2113,7 +2088,7 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.92);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-screen .pat-sec-head--open {
       border-color: rgba(13, 148, 136, 0.22);
@@ -2123,7 +2098,7 @@ GLOBAL_CSS = """
     }
     .pat-screen .pat-sec-title {
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #111827 !important;
       letter-spacing: -0.01em;
       line-height: 1.35;
@@ -2131,7 +2106,7 @@ GLOBAL_CSS = """
     .pat-screen .pat-sec-count {
       flex-shrink: 0;
       font-size: 0.78rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #0f766e;
       background: rgba(204, 251, 241, 0.65);
       border: 1px solid rgba(13, 148, 136, 0.18);
@@ -2145,7 +2120,7 @@ GLOBAL_CSS = """
       border: 1px solid rgba(13, 148, 136, 0.22);
       border-top: none;
       border-radius: 0 0 var(--radius-md) var(--radius-md);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] {
       margin: -2px 0 10px 0 !important;
@@ -2153,7 +2128,7 @@ GLOBAL_CSS = """
     .pat-screen .pat-sec-toggle-wrap div[data-testid="stButton"] > button {
       min-height: 2.4rem !important;
       font-size: 0.82rem !important;
-      border-radius: 12px !important;
+      border-radius: 10px !important !important;
       color: #0f766e !important;
       background: rgba(240, 253, 250, 0.9) !important;
       border: 1px solid rgba(13, 148, 136, 0.22) !important;
@@ -2171,13 +2146,13 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.92);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .mx-survey-title,
     .mx-col-title,
     .pat-sec-title {
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #111827 !important;
       letter-spacing: -0.01em;
       line-height: 1.35;
@@ -2187,7 +2162,7 @@ GLOBAL_CSS = """
     .pat-sec-count {
       flex-shrink: 0;
       font-size: 0.78rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #0f766e;
       background: rgba(204, 251, 241, 0.65);
       border: 1px solid rgba(13, 148, 136, 0.18);
@@ -2212,12 +2187,12 @@ GLOBAL_CSS = """
     /* --- Pattern detail stack (UI redesign step 5) -------------------- */
     .pat-detail-hero {
       position: relative;
-      background: linear-gradient(155deg, rgba(13, 148, 136, 0.12) 0%, rgba(255, 255, 255, 0.96) 55%, rgba(204, 251, 241, 0.35) 100%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.2);
       border-radius: var(--radius-lg);
       padding: 20px 18px 18px 20px;
       margin: 0 0 14px 0;
-      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.07);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       overflow: hidden;
     }
     .pat-detail-hero::after {
@@ -2226,12 +2201,12 @@ GLOBAL_CSS = """
       right: -24px; top: -24px;
       width: 120px; height: 120px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(45, 212, 191, 0.18) 0%, transparent 70%);
+      background: #ffffff;
       pointer-events: none;
     }
     .pat-detail-eyebrow {
       font-size: 0.68rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--mint);
@@ -2239,7 +2214,7 @@ GLOBAL_CSS = """
     }
     .pat-detail-pattern {
       font-size: 1.22rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       line-height: 1.35;
       letter-spacing: -0.02em;
@@ -2247,7 +2222,7 @@ GLOBAL_CSS = """
     }
     .pat-detail-meaning {
       font-size: 0.95rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text);
       line-height: 1.5;
       margin: 0 0 10px 0;
@@ -2260,7 +2235,7 @@ GLOBAL_CSS = """
     }
     .pat-detail-usage .pat-usage-meta {
       color: var(--mint);
-      font-weight: 600;
+      font-weight: 500;
     }
 
     .pat-learn-card {
@@ -2269,11 +2244,11 @@ GLOBAL_CSS = """
       border-radius: var(--radius-md);
       padding: 14px 16px 14px 16px;
       margin: 0 0 10px 0;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-learn-eyebrow {
       font-size: 0.62rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: rgba(13, 148, 136, 0.75);
@@ -2281,7 +2256,7 @@ GLOBAL_CSS = """
     }
     .pat-learn-title {
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       margin: 0 0 8px 0;
       letter-spacing: -0.02em;
@@ -2289,7 +2264,7 @@ GLOBAL_CSS = """
     .pat-learn-body { margin: 0; }
     .pat-learn-en {
       font-size: 0.9rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--navy);
       line-height: 1.55;
       margin: 0;
@@ -2322,13 +2297,13 @@ GLOBAL_CSS = """
       border-left: 3px solid rgba(13, 148, 136, 0.45);
     }
     .pat-learn-card--opic {
-      background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, #ffffff 100%);
+      background: #ffffff;
       border-color: rgba(15, 23, 42, 0.06);
     }
     .pat-learn-card--ih {
-      background: linear-gradient(125deg, rgba(204, 251, 241, 0.55) 0%, rgba(255, 255, 255, 0.98) 100%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.28);
-      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.1);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .pat-learn-card--tip {
       background: rgba(255, 251, 235, 0.65);
@@ -2344,7 +2319,7 @@ GLOBAL_CSS = """
     }
     .pat-practice-eyebrow {
       font-size: 0.62rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
@@ -2352,7 +2327,7 @@ GLOBAL_CSS = """
     }
     .pat-practice-title {
       font-size: 1rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       margin: 0 0 0 0;
     }
@@ -2374,7 +2349,7 @@ GLOBAL_CSS = """
       border-radius: var(--radius-md);
       padding: 14px 14px 14px 18px;
       margin: 0 0 10px 0;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       transition: box-shadow 0.18s var(--ease-out), transform 0.18s var(--ease-out);
     }
     .pat-screen .pat-card::before {
@@ -2383,16 +2358,14 @@ GLOBAL_CSS = """
       left: 0; top: 14px; bottom: 14px;
       width: 3px;
       border-radius: 3px;
-      background: linear-gradient(180deg, var(--mint) 0%, rgba(13, 148, 136, 0.4) 100%);
+      background: #ffffff;
       opacity: 0.85;
     }
     .pat-screen .pat-card:hover {
-      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
-      transform: translateY(-1px);
     }
     .pat-screen .pat-en {
       font-size: 0.98rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--navy);
       line-height: 1.4;
       letter-spacing: -0.005em;
@@ -2415,7 +2388,7 @@ GLOBAL_CSS = """
     .pat-screen .pat-ex-label {
       display: inline-block;
       font-size: 0.66rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--mint);
@@ -2459,11 +2432,11 @@ GLOBAL_CSS = """
       padding: 4px 14px !important;
       border-radius: 999px !important;
       font-size: 0.78rem !important;
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       color: var(--mint) !important;
       background: rgba(204, 251, 241, 0.55) !important;
       border: 1px solid rgba(13, 148, 136, 0.25) !important;
-      box-shadow: none !important;
+      box-shadow: none;
     }
     .pat-screen div[data-testid="stButton"]:has(button[key*="pat_detail"]) > button:hover,
     .pat-screen div[data-testid="stButton"]:has(button[key*="pat_ex_toggle"]) > button:hover {
@@ -2492,7 +2465,7 @@ GLOBAL_CSS = """
     .tp-select-summary {
       margin: 10px 0 0 0;
       font-size: 0.84rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-muted);
       letter-spacing: -0.01em;
     }
@@ -2500,15 +2473,15 @@ GLOBAL_CSS = """
     .mx-fr-preview {
       margin: 16px 0 18px 0;
       padding: 16px 18px;
-      border-radius: 18px;
-      background: linear-gradient(165deg, rgba(204, 251, 241, 0.55) 0%, #ffffff 72%);
+      border-radius: 16px;
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.18);
-      box-shadow: 0 10px 28px rgba(13, 148, 136, 0.08);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .mx-frp-eyebrow {
       margin: 0 0 12px 0;
       font-size: 1.05rem;
-      font-weight: 800;
+      font-weight: 500;
       color: #0f766e;
       letter-spacing: -0.02em;
     }
@@ -2527,10 +2500,10 @@ GLOBAL_CSS = """
       color: var(--text-secondary);
     }
     .mx-frp-label {
-      font-weight: 600;
+      font-weight: 500;
     }
     .mx-frp-val {
-      font-weight: 800;
+      font-weight: 500;
       color: var(--mint);
     }
     .mx-frp-pending {
@@ -2542,7 +2515,7 @@ GLOBAL_CSS = """
     .mx-frp-insights-title {
       margin: 14px 0 8px 0;
       font-size: 0.8rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -2563,14 +2536,14 @@ GLOBAL_CSS = """
     .mx-fr-progress {
       margin: 0 0 14px 0;
       padding: 10px 14px;
-      border-radius: 14px;
+      border-radius: 10px;
       background: var(--mint-muted);
       border: 1px solid rgba(13, 148, 136, 0.12);
     }
     .mx-fr-progress-title {
       margin: 0;
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -2578,7 +2551,7 @@ GLOBAL_CSS = """
     .mx-fr-progress-line {
       margin: 4px 0 0 0;
       font-size: 1rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--mint);
     }
     .mx-fr-progress-meta {
@@ -2593,11 +2566,11 @@ GLOBAL_CSS = """
     }
     .tp-select-visible b {
       color: var(--mint);
-      font-weight: 700;
+      font-weight: 500;
     }
     .tp-filter-label {
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -2609,11 +2582,11 @@ GLOBAL_CSS = """
       border-radius: var(--radius-md);
       padding: 12px 14px 10px 14px;
       margin: 0 0 6px 0;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .tp-topic-title {
       font-size: 1.02rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.02em;
       margin: 0 0 4px 0;
@@ -2628,7 +2601,7 @@ GLOBAL_CSS = """
     .tp-topic-meta {
       margin: 0;
       font-size: 0.74rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--mint);
       letter-spacing: -0.01em;
     }
@@ -2655,7 +2628,7 @@ GLOBAL_CSS = """
     section.main:has(.mx-landing-marker) .mx-portal-section-title {
       margin: 0;
       font-size: 1.05rem;
-      font-weight: 700;
+      font-weight: 500;
       color: #111827;
       letter-spacing: -0.02em;
     }
@@ -2700,7 +2673,7 @@ GLOBAL_CSS = """
       background: rgba(37, 99, 235, 0.12);
       color: #2563eb !important;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 500;
       line-height: 1.4;
     }
     /* Title shouldn't run under the pinned badge (only the badge card). */
@@ -2744,7 +2717,7 @@ GLOBAL_CSS = """
       background: rgba(37, 99, 235, 0.12);
       color: #2563eb !important;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 500;
       line-height: 1.4;
     }
     .mx-portal-mode-card:has(.mx-mode-badge) .cc-title {
@@ -2795,20 +2768,20 @@ GLOBAL_CSS = """
     }
     .mx-progress-eyebrow {
       font-size: 0.66rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
     }
     .mx-progress-count {
       font-size: 1.1rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: -0.02em;
       color: var(--navy);
     }
     .mx-progress-count .mx-progress-of {
       color: var(--text-soft);
-      font-weight: 700;
+      font-weight: 500;
     }
     .mx-progress-chip {
       align-self: center;
@@ -2817,7 +2790,7 @@ GLOBAL_CSS = """
       background: var(--mint-muted);
       color: var(--mint);
       font-size: 0.74rem;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: -0.005em;
       max-width: 56vw;
       overflow: hidden;
@@ -2835,7 +2808,7 @@ GLOBAL_CSS = """
     .mx-progress-fill {
       display: block;
       height: 100%;
-      background: linear-gradient(90deg, #14b8a6 0%, var(--mint) 100%);
+      background: #1D9E75;
       border-radius: 999px;
       transition: width 0.35s var(--ease-out);
     }
@@ -2847,7 +2820,7 @@ GLOBAL_CSS = """
       border-radius: var(--radius-lg);
       padding: 22px 22px;
       margin: 0 0 18px 0;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .mx-question-type {
       display: inline-block;
@@ -2856,13 +2829,13 @@ GLOBAL_CSS = """
       background: rgba(13, 148, 136, 0.08);
       color: var(--mint);
       font-size: 0.66rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
     .mx-question-topic {
       font-size: 1.15rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.015em;
       margin: 10px 0 6px 0;
@@ -2876,7 +2849,7 @@ GLOBAL_CSS = """
     }
     .mx-question-hint strong {
       color: var(--navy);
-      font-weight: 600;
+      font-weight: 500;
     }
 
     /* --- Listen stage (TTS player wrapper) --------------------------- */
@@ -2889,7 +2862,7 @@ GLOBAL_CSS = """
     }
     .mx-stage-eyebrow {
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -2905,21 +2878,21 @@ GLOBAL_CSS = """
     }
     .mx-listen-ready-label {
       font-size: 0.88rem;
-      font-weight: 600;
+      font-weight: 500;
       color: #0f766e;
       margin: 0 0 8px 0;
     }
     .mx-listen-compact {
       margin: 0 0 14px 0;
       padding: 12px 14px;
-      border-radius: 14px;
+      border-radius: 10px;
       background: #f8fafc;
       border: 1px solid rgba(17, 24, 39, 0.08);
     }
     .mx-listen-compact-label {
       margin: 0 0 8px 0;
       font-size: 0.78rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: #64748b;
@@ -2936,7 +2909,7 @@ GLOBAL_CSS = """
       background: #ffffff !important;
       color: #0f766e !important;
       border: 1px solid rgba(13, 148, 136, 0.35) !important;
-      box-shadow: none !important;
+      box-shadow: none;
     }
     section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[kind="primary"],
     section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
@@ -2947,12 +2920,12 @@ GLOBAL_CSS = """
     /* --- Record stage (the screen's emotional center) ---------------- */
     .mx-record-stage {
       position: relative;
-      background: linear-gradient(160deg, #0f172a 0%, #134e4a 55%, #0d9488 130%);
+      background: #0f172a;
       border-radius: var(--radius-lg);
       padding: 24px 22px 18px 22px;
       margin: 0 0 18px 0;
       color: #ffffff !important;
-      box-shadow: 0 14px 36px rgba(13, 148, 136, 0.18), 0 2px 8px rgba(15, 23, 42, 0.18);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       overflow: hidden;
     }
     /* Dark studio panel: always light text (never inherit page dark text). */
@@ -2972,12 +2945,13 @@ GLOBAL_CSS = """
       top: -40px; right: -30px;
       width: 180px; height: 180px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(204, 251, 241, 0.28) 0%, transparent 70%);
+      background: none;
       pointer-events: none;
+      opacity: 0;
     }
     .mx-record-eyebrow {
       font-size: 0.66rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: rgba(204, 251, 241, 0.9) !important;
@@ -2985,7 +2959,7 @@ GLOBAL_CSS = """
     }
     .mx-record-title {
       font-size: 1.15rem;
-      font-weight: 700;
+      font-weight: 500;
       margin: 6px 0 6px 0;
       color: #ffffff !important;
       letter-spacing: -0.015em;
@@ -2999,17 +2973,17 @@ GLOBAL_CSS = """
     .mx-record-stage .mx-rec-timer {
       margin: 0 0 16px 0;
       padding: 16px 18px;
-      border-radius: 20px;
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 250, 0.96) 100%);
+      border-radius: 16px;
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.22);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       color: #0f172a !important;
       text-align: center;
     }
     .mx-record-stage .mx-rec-timer-label,
     .mx-record-stage .mx-answer-timer-label {
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #0f766e !important;
@@ -3028,7 +3002,7 @@ GLOBAL_CSS = """
       padding: 2px 8px;
       border-radius: 999px;
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.02em;
       background: rgba(13, 148, 136, 0.12);
       color: #0f766e !important;
@@ -3044,13 +3018,13 @@ GLOBAL_CSS = """
     }
     .mx-record-title--live {
       font-size: 1.15rem;
-      font-weight: 700;
+      font-weight: 500;
       margin: 0 0 8px 0;
       color: #ffffff !important;
     }
     .mx-record-stage .mx-rec-timer-value {
       font-size: 2rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.06em;
       color: #0f766e !important;
       margin: 0 0 10px 0;
@@ -3070,7 +3044,7 @@ GLOBAL_CSS = """
       display: block;
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, #14b8a6 0%, #0d9488 100%);
+      background: #1D9E75;
       transition: width 0.35s ease;
     }
     .mx-record-stage .mx-rec-timer-helper {
@@ -3090,31 +3064,31 @@ GLOBAL_CSS = """
     }
     .mx-record-stage .mx-rec-timer--warn {
       border-color: rgba(234, 88, 12, 0.5);
-      background: linear-gradient(165deg, rgba(255, 251, 235, 0.98) 0%, rgba(255, 247, 237, 0.98) 100%);
+      background: #ffffff;
     }
     .mx-record-stage .mx-rec-timer--warn .mx-rec-timer-value {
       color: #c2410c !important;
     }
     .mx-record-stage .mx-rec-timer--warn .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #fb923c 0%, #ea580c 100%);
+      background: #1D9E75;
     }
     .mx-record-stage .mx-rec-timer--warn .mx-rec-timer-helper {
       color: #c2410c !important;
-      font-weight: 600;
+      font-weight: 500;
     }
     .mx-record-stage .mx-rec-timer--up {
       border-color: rgba(220, 38, 38, 0.45);
-      background: linear-gradient(165deg, rgba(254, 242, 242, 0.98) 0%, rgba(255, 247, 247, 0.98) 100%);
+      background: #ffffff;
     }
     .mx-record-stage .mx-rec-timer--up .mx-rec-timer-value {
       color: #b91c1c !important;
     }
     .mx-record-stage .mx-rec-timer--up .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #f87171 0%, #dc2626 100%);
+      background: #1D9E75;
     }
     .mx-record-stage .mx-rec-timer--up .mx-rec-timer-helper {
       color: #b91c1c !important;
-      font-weight: 600;
+      font-weight: 500;
     }
     /* V2 exam screens — client-side answer countdown (topic / mini / real mock) */
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer {
@@ -3123,12 +3097,12 @@ GLOBAL_CSS = """
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.98);
       border: 1px solid rgba(13, 148, 136, 0.2);
-      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       text-align: center;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer .mx-rec-timer-value {
       font-size: 1.85rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.04em;
       font-variant-numeric: tabular-nums;
       margin: 0 0 8px 0;
@@ -3147,7 +3121,7 @@ GLOBAL_CSS = """
       color: #c2410c !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--warn .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #fb923c 0%, #ea580c 100%);
+      background: #1D9E75;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--up {
       border-color: rgba(220, 38, 38, 0.45);
@@ -3161,42 +3135,42 @@ GLOBAL_CSS = """
       color: #0f766e !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-teal .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #14b8a6 0%, #0d9488 100%);
+      background: #1D9E75;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-blue .mx-rec-timer-label,
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-blue.mx-rec-timer--normal .mx-rec-timer-value {
       color: #185FA5 !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-blue .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #378ADD 0%, #185FA5 100%);
+      background: #1D9E75;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-purple .mx-rec-timer-label,
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-purple.mx-rec-timer--normal .mx-rec-timer-value {
       color: #534AB7 !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-purple .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #7B6CF0 0%, #534AB7 100%);
+      background: #1D9E75;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-pink .mx-rec-timer-label,
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-pink.mx-rec-timer--normal .mx-rec-timer-value {
       color: #993556 !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-pink .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #E85A8A 0%, #993556 100%);
+      background: #1D9E75;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-amber .mx-rec-timer-label,
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-amber.mx-rec-timer--normal .mx-rec-timer-value {
       color: #854F0B !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-amber .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #D4A017 0%, #854F0B 100%);
+      background: #1D9E75;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-coral .mx-rec-timer-label,
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-coral.mx-rec-timer--normal .mx-rec-timer-value {
       color: #993C1D !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .opic-answer-timer.mx-rec-timer--accent-coral .mx-rec-timer-progress-fill {
-      background: linear-gradient(90deg, #E86A45 0%, #993C1D 100%);
+      background: #1D9E75;
     }
     @keyframes opic-answer-timer-pulse {
       0%, 100% { box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08); }
@@ -3248,7 +3222,7 @@ GLOBAL_CSS = """
       border: 1px solid rgba(204, 251, 241, 0.25);
       color: #d1fae5 !important;
       font-size: 0.78rem;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: -0.005em;
     }
     .mx-record-saved::before {
@@ -3257,7 +3231,7 @@ GLOBAL_CSS = """
       width: 7px; height: 7px;
       border-radius: 50%;
       background: #34d399;
-      box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .mx-record-empty {
       margin-top: 12px;
@@ -3317,30 +3291,28 @@ GLOBAL_CSS = """
     section.main:has(.mx-marker) .stButton > button {
       min-height: 3rem !important;
       padding: 0.65rem 1.2rem !important;
-      border-radius: 14px !important;
+      border-radius: 10px !important !important;
       font-size: 0.95rem !important;
-      font-weight: 700 !important;
+      font-weight: 500 !important;
       letter-spacing: -0.005em;
       border: 1px solid var(--border-subtle) !important;
       background: rgba(255, 255, 255, 0.92) !important;
       color: var(--navy) !important;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       transition: transform 0.16s var(--ease-out), box-shadow 0.2s var(--ease-out),
                   background 0.2s var(--ease-out) !important;
     }
     section.main:has(.mx-marker) .stButton > button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(13, 148, 136, 0.18) !important;
       border-color: rgba(13, 148, 136, 0.35) !important;
     }
     section.main:has(.mx-marker) .stButton > button[kind="primary"] {
-      background: linear-gradient(135deg, #14b8a6 0%, var(--mint) 100%) !important;
+      background: #0F6E56 !important;
       color: #ffffff !important;
       border-color: transparent !important;
-      box-shadow: 0 10px 24px rgba(13, 148, 136, 0.28) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     section.main:has(.mx-marker) .stButton > button[kind="primary"]:hover:not(:disabled) {
-      box-shadow: 0 14px 32px rgba(13, 148, 136, 0.35) !important;
+      background: #0b5c47 !important;
     }
     section.main:has(.mx-marker) .stButton > button:disabled {
       opacity: 0.55 !important;
@@ -3356,15 +3328,15 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.94);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md) !important;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     section.main:has(.mx-marker) div[data-testid="stExpander"] details[open] {
       border-color: rgba(13, 148, 136, 0.22);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     section.main:has(.mx-marker) div[data-testid="stExpander"] summary {
       padding: 12px 14px !important;
-      font-weight: 600 !important;
+      font-weight: 500 !important;
       font-size: 0.92rem !important;
       color: var(--navy) !important;
     }
@@ -3374,7 +3346,7 @@ GLOBAL_CSS = """
       border-radius: var(--radius-md) !important;
       border: 1px solid var(--border-subtle) !important;
       background: rgba(255, 255, 255, 0.92) !important;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
 
     /* --- AI analysis waiting screen -------------------------------- */
@@ -3386,9 +3358,9 @@ GLOBAL_CSS = """
       margin: 8px auto 20px auto;
       padding: 24px 20px 20px 20px;
       border-radius: var(--radius-lg);
-      background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 253, 245, 0.55) 100%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.16);
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       text-align: center;
     }
     .mx-ai-wait-anim {
@@ -3457,7 +3429,7 @@ GLOBAL_CSS = """
     }
     .mx-ai-wait-title {
       font-size: 1.2rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       margin: 0 0 8px 0;
       letter-spacing: -0.02em;
@@ -3471,7 +3443,7 @@ GLOBAL_CSS = """
     .mx-ai-wait-stage {
       font-size: 0.8rem;
       color: var(--mint);
-      font-weight: 600;
+      font-weight: 500;
       margin: 0 0 14px 0;
     }
     .mx-ai-wait-tip {
@@ -3484,7 +3456,7 @@ GLOBAL_CSS = """
     }
     .mx-ai-wait-tip-eyebrow {
       font-size: 0.72rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--mint);
@@ -3492,7 +3464,7 @@ GLOBAL_CSS = """
     }
     .mx-ai-wait-tip-label {
       font-size: 0.68rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -3503,7 +3475,7 @@ GLOBAL_CSS = """
     }
     .mx-ai-wait-tip-pattern {
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       margin: 0;
       line-height: 1.4;
@@ -3531,7 +3503,7 @@ GLOBAL_CSS = """
       color: var(--text-muted);
     }
     .mx-speech-debug-label {
-      font-weight: 700;
+      font-weight: 500;
       margin: 0 0 4px 0;
       color: var(--text-secondary);
     }
@@ -3542,16 +3514,16 @@ GLOBAL_CSS = """
 
     /* --- Report screen --------------------------------------------- */
     .mx-report-hero {
-      background: linear-gradient(140deg, rgba(204, 251, 241, 0.5) 0%, rgba(255, 255, 255, 0.92) 65%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.14);
       border-radius: var(--radius-lg);
       padding: 22px 22px;
       margin: 4px 0 18px 0;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     .mx-report-hero .mx-rh-eyebrow {
       font-size: 0.7rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
@@ -3559,7 +3531,7 @@ GLOBAL_CSS = """
     }
     .mx-report-hero .mx-rh-title {
       font-size: 1.25rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.02em;
       margin: 6px 0 0 0;
@@ -3587,22 +3559,22 @@ GLOBAL_CSS = """
       background: rgba(255, 255, 255, 0.7);
       border: 1px solid var(--border-subtle);
       font-size: 0.74rem;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-secondary);
     }
 
     /* --- Coaching experience (mock report, step 6) ------------------- */
     section.main:has(.mx-marker) .mx-coach-hero {
-      background: linear-gradient(135deg, rgba(240, 253, 250, 0.95) 0%, rgba(255, 255, 255, 0.98) 55%, rgba(204, 251, 241, 0.45) 100%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.18);
       border-radius: var(--radius-lg);
       padding: 20px 20px 18px 20px;
       margin: 0 0 14px 0;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     section.main:has(.mx-marker) .mx-coach-eyebrow {
       font-size: 0.68rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--mint);
@@ -3610,7 +3582,7 @@ GLOBAL_CSS = """
     }
     section.main:has(.mx-marker) .mx-coach-hero-title {
       font-size: 1.28rem;
-      font-weight: 800;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.025em;
       line-height: 1.3;
@@ -3627,7 +3599,7 @@ GLOBAL_CSS = """
     }
     section.main:has(.mx-marker) .mx-coach-sec-eyebrow {
       font-size: 0.62rem;
-      font-weight: 800;
+      font-weight: 500;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: rgba(13, 148, 136, 0.75);
@@ -3635,7 +3607,7 @@ GLOBAL_CSS = """
     }
     section.main:has(.mx-marker) .mx-coach-sec-title {
       font-size: 1rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
       margin: 0 0 10px 0;
       letter-spacing: -0.02em;
@@ -3653,13 +3625,13 @@ GLOBAL_CSS = """
       border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.95);
       border: 1px solid rgba(13, 148, 136, 0.14);
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       max-width: 100%;
     }
     section.main:has(.mx-marker) .mx-coach-chip-ico {
       flex: 0 0 auto;
       color: var(--mint);
-      font-weight: 800;
+      font-weight: 500;
       font-size: 0.85rem;
       line-height: 1.4;
     }
@@ -3677,7 +3649,7 @@ GLOBAL_CSS = """
       color: var(--text);
       padding: 14px 16px;
       border-radius: var(--radius-md);
-      background: linear-gradient(125deg, rgba(224, 242, 254, 0.55) 0%, rgba(255, 255, 255, 0.95) 100%);
+      background: #ffffff;
       border: 1px solid rgba(59, 130, 246, 0.15);
       margin: 0 0 4px 0;
     }
@@ -3694,7 +3666,7 @@ GLOBAL_CSS = """
     }
     section.main:has(.mx-marker) .mx-coach-flow-title {
       font-size: 0.78rem;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--mint);
       margin: 0 0 6px 0;
     }
@@ -3725,7 +3697,7 @@ GLOBAL_CSS = """
       border-radius: 999px;
       background: rgba(204, 251, 241, 0.45);
       border: 1px solid rgba(13, 148, 136, 0.2);
-      font-weight: 700;
+      font-weight: 500;
       color: var(--navy);
     }
     section.main:has(.mx-marker) .mx-coach-mini-rest {
@@ -3742,7 +3714,7 @@ GLOBAL_CSS = """
       justify-content: space-between;
       align-items: center;
       padding: 8px 12px;
-      border-radius: 12px;
+      border-radius: 10px;
       background: rgba(248, 250, 252, 0.9);
       border: 1px solid var(--border-subtle);
       font-size: 0.8rem;
@@ -3752,7 +3724,7 @@ GLOBAL_CSS = """
       font-weight: 500;
     }
     section.main:has(.mx-marker) .mx-coach-pron-score {
-      font-weight: 700;
+      font-weight: 500;
       font-size: 0.85rem;
     }
     section.main:has(.mx-marker) .mx-coach-pron-feedback {
@@ -3770,7 +3742,7 @@ GLOBAL_CSS = """
       margin: 20px 0 8px 0;
       padding: 16px 14px;
       border-radius: 16px;
-      background: linear-gradient(135deg, rgba(204, 251, 241, 0.55) 0%, rgba(236, 253, 245, 0.9) 100%);
+      background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.22);
       font-size: 0.92rem;
       line-height: 1.55;
@@ -3781,7 +3753,7 @@ GLOBAL_CSS = """
 
     .mx-section-h {
       font-size: 0.74rem;
-      font-weight: 700;
+      font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-muted);
@@ -3811,7 +3783,7 @@ GLOBAL_CSS = """
       main,
       section.main,
       .block-container {
-        background-color: #f8faf9 !important;
+        background-color: #FAFAF9 !important;
         color: #111827 !important;
         color-scheme: light only !important;
       }
@@ -3933,15 +3905,14 @@ GLOBAL_CSS = """
     .continue-card--start,
     .mx-mode-card,
     .mx-landing-card {
-      background:
-        linear-gradient(135deg, rgba(13, 148, 136, 0.15) 0%, #ffffff 100%) !important;
+      background: #ffffff !important;
       border: 1px solid rgba(13, 148, 136, 0.24) !important;
     }
 
     .mx-mode-badge {
       margin: 10px 0 0;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       color: #2563eb !important;
       letter-spacing: -0.01em;
     }
@@ -3985,9 +3956,13 @@ GLOBAL_CSS = """
 
     div[data-testid="stButton"] > button[kind="primary"],
     div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
+      background: #0F6E56 !important;
       color: #ffffff !important;
       border-color: rgba(13, 148, 136, 0.35) !important;
+    }
+    div[data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled),
+    div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
+      background: #0b5c47 !important;
     }
 
     /* Topic-practice primary buttons follow the selected topic's accent
@@ -3996,32 +3971,32 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-accent-scope) .tq-accent-scope { display: none !important; }
     [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[kind="primary"],
     [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%) !important;
+      background: #0F6E56 !important;
       border-color: rgba(13, 148, 136, 0.35) !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[kind="primary"],
     [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #3b8ae0 0%, #2c6fb8 100%) !important;
+      background: #2c6fb8 !important;
       border-color: rgba(55, 138, 221, 0.35) !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[kind="primary"],
     [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #6a5fd0 0%, #534ab7 100%) !important;
+      background: #534ab7 !important;
       border-color: rgba(83, 74, 183, 0.35) !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[kind="primary"],
     [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #d9537e 0%, #b83f66 100%) !important;
+      background: #b83f66 !important;
       border-color: rgba(217, 83, 126, 0.35) !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[kind="primary"],
     [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #be7b18 0%, #8a560f 100%) !important;
+      background: #8a560f !important;
       border-color: rgba(186, 117, 23, 0.40) !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[kind="primary"],
     [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: linear-gradient(180deg, #d85a30 0%, #b23f1c 100%) !important;
+      background: #b23f1c !important;
       border-color: rgba(216, 90, 48, 0.35) !important;
     }
 
@@ -4125,7 +4100,7 @@ GLOBAL_CSS = """
       border-radius: 16px;
       background: #ffffff;
       border: 0.5px solid rgba(17, 24, 39, 0.08);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       color: inherit !important;
       margin: 0;
       pointer-events: none;
@@ -4136,7 +4111,7 @@ GLOBAL_CSS = """
       flex-shrink: 0;
       width: 36px;
       height: 36px;
-      border-radius: 11px;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -4284,9 +4259,9 @@ GLOBAL_CSS = """
       margin: 0 !important;
       padding: 0 !important;
       border: none !important;
-      border-radius: 16px !important;
+      border-radius: 16px !important !important;
       background: transparent !important;
-      box-shadow: none !important;
+      box-shadow: none;
       color: transparent !important;
       cursor: pointer !important;
       pointer-events: auto !important;
@@ -4300,9 +4275,7 @@ GLOBAL_CSS = """
       div[data-testid="stColumn"]:has(.tp-card)
       > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
       .tp-card {
-      transform: translateY(-2px);
       border-color: rgba(13, 148, 136, 0.35) !important;
-      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06), 0 10px 24px rgba(13, 148, 136, 0.16) !important;
     }
     /* Hover: nudge the arrow right + fill its circle a touch. */
     [data-testid="stMain"]:has(.tp-cards-marker)
@@ -4310,7 +4283,6 @@ GLOBAL_CSS = """
       > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
       .tp-card-chevron {
       transform: translateX(2px);
-      filter: brightness(0.96);
     }
     /* Tap feedback (mobile + desktop): press the card in slightly. */
     [data-testid="stMain"]:has(.tp-cards-marker)
@@ -4318,7 +4290,7 @@ GLOBAL_CSS = """
       > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
       .tp-card {
       transform: translateY(0) scale(0.985);
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     [data-testid="stMain"]:has(.tp-cards-marker)
       div[data-testid="stColumn"]:has(.tp-card)
@@ -4391,7 +4363,7 @@ GLOBAL_CSS = """
       flex-shrink: 0;
       width: 36px;
       height: 36px;
-      border-radius: 11px;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -4437,7 +4409,7 @@ GLOBAL_CSS = """
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-progress-text {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-muted);
       letter-spacing: 0.02em;
     }
@@ -4462,7 +4434,7 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-header-eyebrow {
       font-family: var(--font-display) !important;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--text-secondary);
       letter-spacing: -0.01em;
       line-height: 1.25;
@@ -4482,10 +4454,10 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-type-badge {
       display: inline-block;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       line-height: 1.2;
       padding: 5px 10px;
-      border-radius: 20px;
+      border-radius: 16px;
       margin: 0 0 10px 0;
       letter-spacing: -0.01em;
     }
@@ -4568,7 +4540,7 @@ GLOBAL_CSS = """
       min-height: 56px;
       padding: 12px 14px;
       margin: 0;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #f4f4f5;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-wave-bars {
@@ -4657,7 +4629,7 @@ GLOBAL_CSS = """
       padding-top: 0 !important;
       border: 0.5px solid rgba(17, 24, 39, 0.08) !important;
       border-top: none !important;
-      border-radius: 0 0 16px 16px !important;
+      border-radius: 0 0 16px !important 16px !important;
       background: rgba(255, 255, 255, 0.98) !important;
       overflow: hidden;
       box-shadow:
@@ -4672,7 +4644,7 @@ GLOBAL_CSS = """
       div[data-testid="stElementContainer"]:has(.tq-answer-card-top)
       + div[data-testid="stElementContainer"]
       iframe {
-      border-radius: 0 0 16px 16px !important;
+      border-radius: 0 0 16px !important 16px !important;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-answer-ico--teal {
       background: rgba(13, 148, 136, 0.12);
@@ -4777,7 +4749,7 @@ GLOBAL_CSS = """
       flex-shrink: 0;
       width: 40px;
       height: 40px;
-      border-radius: 12px;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -4791,7 +4763,7 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-saved-status-text {
       font-family: var(--font-display) !important;
       font-size: 18px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.02em;
       line-height: 1.25;
@@ -4838,7 +4810,7 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-saved-label {
       font-family: var(--font-display) !important;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
       color: var(--navy);
       letter-spacing: -0.01em;
       line-height: 1.25;
@@ -4868,7 +4840,7 @@ GLOBAL_CSS = """
       padding: 8px 14px 12px 14px !important;
       border: 0.5px solid rgba(17, 24, 39, 0.08) !important;
       border-top: none !important;
-      border-radius: 0 0 16px 16px !important;
+      border-radius: 0 0 16px !important 16px !important;
       background: #ffffff !important;
       box-shadow:
         0 1px 0 rgba(15, 23, 42, 0.02),
@@ -4886,7 +4858,7 @@ GLOBAL_CSS = """
       display: block;
       width: 100%;
       border: none;
-      border-radius: 0 0 12px 12px;
+      border-radius: 0 0 10px 12px;
       min-height: 88px;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-saved-status-ico--teal {
@@ -4967,7 +4939,7 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-label-text {
       font-family: var(--font-display) !important;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
       color: #111827;
       letter-spacing: -0.01em;
     }
@@ -4992,14 +4964,14 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary {
       background: rgba(13, 148, 136, 0.06);
       border: 1px solid rgba(13, 148, 136, 0.25);
-      border-radius: 14px;
+      border-radius: 10px;
       padding: 14px;
       margin: 0 0 8px 0;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-label {
       display: block;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: 0.02em;
       color: #0F6E56;
       margin: 0 0 4px 0;
@@ -5039,7 +5011,7 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section {
       background: #ffffff;
       border: 0.5px solid rgba(17, 24, 39, 0.10);
-      border-radius: 14px;
+      border-radius: 10px;
       padding: 12px;
       margin: 0 0 8px 0;
       height: 100%;
@@ -5067,7 +5039,7 @@ GLOBAL_CSS = """
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-section-label {
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: -0.01em;
       color: #0F6E56;
     }
@@ -5116,7 +5088,7 @@ GLOBAL_CSS = """
       border-radius: 999px;
       padding: 4px 10px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       line-height: 1.2;
       background: #ffffff;
       border: 1px solid rgba(13, 148, 136, 0.40);
@@ -5203,15 +5175,15 @@ GLOBAL_CSS = """
       border-radius: 0.5rem;
       font-family: var(--font-sans) !important;
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 500;
       color: #ffffff !important;
-      background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+      background: #0F6E56;
       border: 1px solid rgba(15, 118, 110, 0.35);
-      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.22);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
     section.main:has(.scripts-store-marker) a.scripts-store-cta:hover,
     [data-testid="stMain"]:has(.scripts-store-marker) a.scripts-store-cta:hover {
-      filter: brightness(1.04);
+      background: #0b5c47;
       color: #ffffff !important;
     }
 """
