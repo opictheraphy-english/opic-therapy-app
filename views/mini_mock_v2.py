@@ -31,6 +31,11 @@ from components.recovery_card import (
     render_analysis_recovery_card,
     render_recovery_retry_caption_html,
 )
+from components.final_report_hero import (
+    collect_hero_display_metrics,
+    render_final_report_completion_hero_html,
+)
+from components.score_donut_bars import render_score_donut_bars_html
 from components.topbar import render_top_bar
 from utils.local_profile import iso_now
 
@@ -1691,11 +1696,6 @@ def _render_report_step() -> None:
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
 
-    from components.final_report_hero import (
-        collect_hero_display_metrics,
-        render_final_report_completion_hero_html,
-    )
-
     hero_metrics = collect_hero_display_metrics([], _answers())
     st.markdown(
         render_final_report_completion_hero_html(
@@ -1711,15 +1711,14 @@ def _render_report_step() -> None:
     )
 
     breakdown = report.get("score_breakdown")
-    if isinstance(breakdown, dict) and breakdown:
+    score_html = render_score_donut_bars_html(
+        breakdown if isinstance(breakdown, dict) else {},
+        _SCORE_LABELS,
+        str(report.get("overall_level") or ""),
+    )
+    if score_html:
         st.markdown("##### 점수 요약")
-        for key, label in _SCORE_LABELS.items():
-            try:
-                score = int(breakdown.get(key) or 0)
-            except (TypeError, ValueError):
-                score = 0
-            st.progress(max(0, min(100, score)) / 100.0)
-            st.caption(f"{label}: {score}/100")
+        st.markdown(score_html, unsafe_allow_html=True)
 
     st.markdown("##### 문항별 피드백")
     for item in report.get("question_feedback") or []:

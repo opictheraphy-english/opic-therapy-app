@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
+from components.score_donut_bars import render_score_donut_bars_html
 from components.smart_feedback import (
     render_alternative_expressions,
     render_grammar_corrections,
@@ -278,15 +279,14 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
     )
 
     breakdown = report.get("score_breakdown")
-    if isinstance(breakdown, dict) and breakdown:
+    score_html = render_score_donut_bars_html(
+        breakdown if isinstance(breakdown, dict) else {},
+        _SCORE_LABELS,
+        str(report.get("overall_level") or ""),
+    )
+    if score_html:
         st.markdown("##### 점수 요약")
-        for key, label in _SCORE_LABELS.items():
-            try:
-                score = int(breakdown.get(key) or 0)
-            except (TypeError, ValueError):
-                score = 0
-            st.progress(max(0, min(100, score)) / 100.0)
-            st.caption(f"{label}: {score}/100")
+        st.markdown(score_html, unsafe_allow_html=True)
 
     strengths = report.get("strengths") or []
     _sc_card(

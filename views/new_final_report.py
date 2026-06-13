@@ -18,6 +18,7 @@ from components.final_report_hero import (
     collect_hero_display_metrics,
     render_final_report_completion_hero_html,
 )
+from components.score_donut_bars import render_score_donut_bars_html
 from components.topbar import render_top_bar
 from services.exam_analytics import (
     detect_risk_flags,
@@ -28,7 +29,6 @@ from services.exam_analytics import (
 )
 from services.exam_analytics import compute_exam_aggregates
 from services.new_final_report_data import (
-    _MOCK_BREAKDOWN_KEYS,
     build_mock_v2_final_bundle,
     merge_report_into_aggregates,
 )
@@ -376,21 +376,15 @@ def render_new_final_report(
             unsafe_allow_html=True,
         )
 
-    breakdown = report.get("score_breakdown")
-    if isinstance(breakdown, dict) and breakdown:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    breakdown = report.get("shared_score_breakdown") or report.get("score_breakdown")
+    score_html = render_score_donut_bars_html(
+        breakdown if isinstance(breakdown, dict) else {},
+        _MOCK_SCORE_LABELS,
+        str(report.get("overall_level") or ""),
+    )
+    if score_html:
         st.subheader("실전 모의고사 6축 점수 (AI 종합)")
-        cols = st.columns(3)
-        for i, key in enumerate(_MOCK_BREAKDOWN_KEYS):
-            label = _MOCK_SCORE_LABELS.get(key, key)
-            try:
-                val = int(breakdown.get(key) or 0)
-            except (TypeError, ValueError):
-                val = 0
-            with cols[i % 3]:
-                st.progress(max(0, min(100, val)) / 100.0)
-                st.caption(f"{label}: {val}/100")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(score_html, unsafe_allow_html=True)
 
     st.divider()
     st.caption(f"{attempt_no}회 모의고사 · 종합 리포트")
