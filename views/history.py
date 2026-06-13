@@ -674,11 +674,85 @@ def _render_score_breakdown(breakdown: Any) -> None:
     )
 
 
+def _render_script_coaching_before_after(content: Dict[str, Any]) -> None:
+    original = str(content.get("original_script") or "").strip()
+    upgraded = str(content.get("upgraded_script") or "").strip()
+    has_feedback = bool(
+        str(content.get("summary") or content.get("overall_feedback") or "").strip()
+        or content.get("strengths")
+        or content.get("weaknesses")
+    )
+
+    if not original and (upgraded or has_feedback):
+        st.markdown(
+            '<p class="hist-sc-legacy-note">이전 기록이라 원문이 저장되지 않았어요.</p>',
+            unsafe_allow_html=True,
+        )
+
+    if original:
+        st.markdown(
+            '<div class="sc-ba-block">'
+            '<div class="sc-ba-label">내 원래 스크립트</div>'
+            f'<div class="sc-ba-original"><p>{html.escape(original)}</p></div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    if upgraded:
+        st.markdown(
+            '<div class="sc-ba-block">'
+            '<div class="sc-ba-label sc-ba-label--accent">업그레이드</div>'
+            f'<div class="sc-ba-upgraded"><p>{html.escape(upgraded)}</p></div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _render_script_coaching_text_sections(
+    content: Dict[str, Any], subtype: str
+) -> None:
+    st.markdown('<div class="hist-script-screen" aria-hidden="true"></div>', unsafe_allow_html=True)
+
+    question = str(content.get("question_en") or "").strip()
+    if question:
+        st.markdown(
+            f'<p class="hist-sc-question">Q. {html.escape(question)}</p>',
+            unsafe_allow_html=True,
+        )
+
+    _render_script_coaching_before_after(content)
+
+    summary = str(
+        content.get("summary") or content.get("overall_feedback") or ""
+    ).strip()
+    if summary:
+        st.markdown('<div class="home-section-h">총평</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="glass-card-quiet" style="padding:12px 14px;color:#334155;font-size:14px;line-height:1.6;">{html.escape(summary)}</div>',
+            unsafe_allow_html=True,
+        )
+
+    _render_bullets("강점", content.get("strengths"))
+    _render_bullets("보완점", content.get("weaknesses"))
+
+    mission = content.get("practice_mission") or content.get("mission")
+    if isinstance(mission, str) and mission.strip():
+        st.markdown('<div class="home-section-h">연습 미션</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="glass-card-quiet" style="padding:12px 14px;color:#334155;font-size:14px;line-height:1.6;">{html.escape(mission.strip())}</div>',
+            unsafe_allow_html=True,
+        )
+
+
 def _render_text_sections(
     content: Dict[str, Any], subtype: str, practice_type: str = ""
 ) -> None:
     if _is_topic_practice_record(practice_type, content):
         return
+    if str(practice_type or "").strip() == "script_coaching":
+        _render_script_coaching_text_sections(content, subtype)
+        return
+
     summary = str(
         content.get("summary") or content.get("overall_feedback") or ""
     ).strip()

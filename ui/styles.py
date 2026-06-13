@@ -476,14 +476,26 @@ GLOBAL_CSS = """
       flex-shrink: 0;
       background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23FFC107' d='M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z'/%3E%3Cpath fill='%23FF3D00' d='M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z'/%3E%3Cpath fill='%234CAF50' d='M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z'/%3E%3Cpath fill='%231976D2' d='M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z'/%3E%3C/svg%3E");
     }
-    section.main:has(.onb-marker) div[data-testid="stButton"] {
+    section.main:has(.onb-marker) div[data-testid="stButton"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] {
       width: 100%;
     }
     section.main:has(.onb-marker) div[data-testid="stButton"]:has(> button[kind="secondary"]),
-    section.main:has(.onb-marker) div[data-testid="stButton"]:has(> button[data-testid="baseButton-secondary"]) {
+    section.main:has(.onb-marker) div[data-testid="stButton"]:has(> button[data-testid="baseButton-secondary"]),
+    section.main:has(.onb-marker) div[data-testid="stButton"]:has(> button[data-testid="stBaseButton-secondary"]),
+    section.main:has(.onb-marker) div[data-testid="stButton"]:has(button[data-testid="stBaseButton-secondary"]),
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"]:has(> button[kind="secondary"]),
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"]:has(> button[data-testid="baseButton-secondary"]),
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"]:has(> button[data-testid="stBaseButton-secondary"]),
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"]:has(button[data-testid="stBaseButton-secondary"]) {
       margin-top: 10px;
     }
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button {
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button,
+    section.main:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-primary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-primary"] {
       width: 100% !important;
       box-sizing: border-box !important;
       border-radius: 8px !important;
@@ -493,7 +505,13 @@ GLOBAL_CSS = """
       box-shadow: none !important;
     }
     section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="primary"],
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-primary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-primary"] {
       padding: 14px !important;
       background: #0F6E56 !important;
       color: #ffffff !important;
@@ -502,7 +520,13 @@ GLOBAL_CSS = """
       font-weight: 500 !important;
     }
     section.main:has(.onb-marker) div[data-testid="stButton"] > button[kind="secondary"],
-    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-secondary"] {
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-secondary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="stBaseButton-secondary"],
+    section.main:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button[kind="secondary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="baseButton-secondary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] > button[data-testid="stBaseButton-secondary"],
+    [data-testid="stMain"]:has(.onb-marker) div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"] {
       padding: 12px !important;
       background: transparent !important;
       color: var(--color-text-secondary) !important;
@@ -1504,10 +1528,13 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
       background: #0b5c47 !important;
     }
-    [data-testid="stMain"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
-      background: #ffffff !important;
+    [data-testid="stMain"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]):not([data-testid="stBaseButton-primary"]) {
+      background: rgba(136, 135, 128, 0.10) !important;
       color: #444441 !important;
-      border: 0.5px solid #D3D1C7 !important;
+      border: 0.5px solid rgba(17, 24, 39, 0.06) !important;
+    }
+    [data-testid="stMain"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]):not([data-testid="stBaseButton-primary"]):hover:not(:disabled) {
+      background: rgba(136, 135, 128, 0.16) !important;
     }
     [data-testid="stMain"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid="stElementContainer"] div[data-testid="stButton"] > button {
       border-radius: 10px !important;
@@ -1854,6 +1881,54 @@ GLOBAL_CSS = """
     .sc-report-card .sc-card-body li { margin: 4px 0; }
     .sc-report-card .sc-q { font-weight: 500; color: #0f172a; }
     .sc-report-card .sc-script { color: #334155; white-space: pre-wrap; }
+    /* Script coaching upgrade — before/after script blocks */
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-block {
+      margin: 0 0 14px 0;
+    }
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #888780;
+      margin: 0 0 6px 0;
+    }
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-label--accent {
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-original {
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-original p {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #5F5E5A;
+    }
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-upgraded {
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-left: 2px solid #5DCAA5;
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    [data-testid="stMain"]:has(.sc-upgrade-ba-marker) .sc-ba-upgraded p {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #111827;
+    }
     .grammar-fix .gf-line {
       display: flex;
       gap: 8px;
@@ -2224,16 +2299,20 @@ GLOBAL_CSS = """
     }
 
     /* Streamlit widgets — calmer defaults */
-    .stButton > button {
+    .stButton > button,
+    .stButton button[data-testid="stBaseButton-secondary"] {
       border-radius: var(--radius-md) !important;
       font-weight: 500 !important;
-      border: 1px solid var(--border-subtle) !important;
-      background: rgba(255,255,255,0.9) !important;
-      color: var(--navy) !important;
-      transition: transform 0.15s ease, box-shadow 0.2s ease !important;
+      border: 0.5px solid rgba(17, 24, 39, 0.06) !important;
+      background: rgba(136, 135, 128, 0.10) !important;
+      color: #444441 !important;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease !important;
     }
-    .stButton > button:hover {
-      border-color: rgba(13, 148, 136, 0.35) !important;
+    .stButton > button:hover:not(:disabled),
+    .stButton button[data-testid="stBaseButton-secondary"]:hover:not(:disabled) {
+      background: rgba(136, 135, 128, 0.16) !important;
+      color: #444441 !important;
+      border-color: rgba(17, 24, 39, 0.06) !important;
     }
 
     [data-testid="stTabs"] button[data-baseweb="tab"] {
@@ -3432,7 +3511,11 @@ GLOBAL_CSS = """
       box-shadow: none;
     }
     section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[kind="primary"],
-    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"],
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[kind="secondary"],
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="baseButton-secondary"],
+    section.main:has(.mx-marker) .mx-listen-compact div[data-testid="stButton"] > button[data-testid="stBaseButton-secondary"] {
       background: #ffffff !important;
       color: #0f766e !important;
     }
@@ -3821,15 +3904,17 @@ GLOBAL_CSS = """
       font-size: 0.95rem !important;
       font-weight: 500 !important;
       letter-spacing: -0.005em;
-      border: 1px solid var(--border-subtle) !important;
-      background: rgba(255, 255, 255, 0.92) !important;
-      color: var(--navy) !important;
+      border: 0.5px solid rgba(17, 24, 39, 0.06) !important;
+      background: rgba(136, 135, 128, 0.10) !important;
+      color: #444441 !important;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       transition: transform 0.16s var(--ease-out), box-shadow 0.2s var(--ease-out),
                   background 0.2s var(--ease-out) !important;
     }
     section.main:has(.mx-marker) .stButton > button:hover:not(:disabled) {
-      border-color: rgba(13, 148, 136, 0.35) !important;
+      background: rgba(136, 135, 128, 0.16) !important;
+      color: #444441 !important;
+      border-color: rgba(17, 24, 39, 0.06) !important;
     }
     section.main:has(.mx-marker) .stButton > button[kind="primary"] {
       background: #0F6E56 !important;
@@ -4129,6 +4214,70 @@ GLOBAL_CSS = """
       color: #ffffff !important;
       text-decoration: none !important;
       opacity: 0.92;
+    }
+
+    /* History — script coaching before/after */
+    [data-testid="stMain"]:has(.hist-script-screen) .hist-sc-question {
+      font-size: 14px;
+      font-weight: 500;
+      color: #111827;
+      line-height: 1.55;
+      margin: 0 0 14px 0;
+      word-break: break-word;
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .hist-sc-legacy-note {
+      font-size: 13px;
+      font-weight: 400;
+      color: #888780;
+      margin: 0 0 12px 0;
+      line-height: 1.5;
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-block {
+      margin: 0 0 14px 0;
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #888780;
+      margin: 0 0 6px 0;
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-label--accent {
+      color: #0F6E56;
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-original {
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-original p {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #5F5E5A;
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-upgraded {
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.10);
+      border-left: 2px solid #5DCAA5;
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    [data-testid="stMain"]:has(.hist-script-screen) .sc-ba-upgraded p {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #111827;
     }
 
     .mx-speech-debug {
@@ -4603,17 +4752,31 @@ GLOBAL_CSS = """
       color: inherit !important;
     }
 
-    /* Streamlit widgets — keep buttons readable on light surfaces */
+    /* Streamlit widgets — secondary (default) buttons: light gray tone.
+       Streamlit 1.50 nests <button> under tooltip wrappers inside stButton,
+       so use descendant + stBaseButton-* selectors (not only > button). */
     .stButton > button,
-    div[data-testid="stButton"] > button {
-      background: rgba(255, 255, 255, 0.95) !important;
-      color: #111827 !important;
-      border-color: rgba(17, 24, 39, 0.12) !important;
+    .stButton button[data-testid="stBaseButton-secondary"],
+    div[data-testid="stButton"] > button,
+    div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"] {
+      background: rgba(136, 135, 128, 0.10) !important;
+      color: #444441 !important;
+      border: 0.5px solid rgba(17, 24, 39, 0.06) !important;
+      font-weight: 500 !important;
+    }
+    .stButton > button:hover:not(:disabled),
+    .stButton button[data-testid="stBaseButton-secondary"]:hover:not(:disabled),
+    div[data-testid="stButton"] > button:hover:not(:disabled),
+    div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"]:hover:not(:disabled) {
+      background: rgba(136, 135, 128, 0.16) !important;
+      color: #444441 !important;
+      border-color: rgba(17, 24, 39, 0.06) !important;
     }
 
     div[data-testid="stButton"] > button[kind="primary"],
     div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
-    div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+    div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"],
+    div[data-testid="stButton"] button[data-testid="stBaseButton-primary"] {
       background: rgba(15, 110, 86, 0.12) !important;
       color: #085041 !important;
       border: none !important;
@@ -4621,7 +4784,8 @@ GLOBAL_CSS = """
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled),
     div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover:not(:disabled),
-    div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+    div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled),
+    div[data-testid="stButton"] button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
       background: rgba(15, 110, 86, 0.18) !important;
       color: #085041 !important;
     }
@@ -4767,9 +4931,11 @@ GLOBAL_CSS = """
       color: #9FE1CB !important;
     }
     /* Mic recorder sits below the card; keep Streamlit buttons outside the panel readable */
-    section.main:has(.mx-record-stage) div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
-      background: rgba(255, 255, 255, 0.95) !important;
-      color: #111827 !important;
+    section.main:has(.mx-record-stage) div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]):not([data-testid="stBaseButton-primary"]),
+    section.main:has(.mx-record-stage) div[data-testid="stButton"] button[data-testid="stBaseButton-secondary"] {
+      background: rgba(136, 135, 128, 0.10) !important;
+      color: #444441 !important;
+      border: 0.5px solid rgba(17, 24, 39, 0.06) !important;
     }
 
     /* Headings in Streamlit markdown beat .stMarkdown { font-family: sans } */
