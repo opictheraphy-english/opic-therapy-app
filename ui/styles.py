@@ -323,8 +323,8 @@ GLOBAL_CSS = """
     }
     section.main:has(.onb-marker) .onb-brand-icon,
     [data-testid="stMain"]:has(.onb-marker) .onb-brand-icon {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: #E1F5EE;
       color: #0F6E56;
@@ -332,12 +332,13 @@ GLOBAL_CSS = """
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      overflow: hidden;
     }
     section.main:has(.onb-marker) .onb-brand-icon svg,
     [data-testid="stMain"]:has(.onb-marker) .onb-brand-icon svg {
       display: block;
-      width: 20px;
-      height: 20px;
+      width: 40px;
+      height: 40px;
     }
     section.main:has(.onb-marker) .onb-brand-text,
     [data-testid="stMain"]:has(.onb-marker) .onb-brand-text {
@@ -5667,11 +5668,12 @@ GLOBAL_CSS = """
     }
     .onb-brand { display: flex; align-items: center; gap: 10px; }
     .onb-brand-icon {
-      width: 36px; height: 36px; border-radius: 50%;
+      width: 40px; height: 40px; border-radius: 50%;
       background: #E1F5EE; color: #0F6E56;
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      overflow: hidden;
     }
-    .onb-brand-icon svg { display: block; width: 20px; height: 20px; }
+    .onb-brand-icon svg { display: block; width: 40px; height: 40px; }
     .onb-brand-text {
       font-family: var(--font-sans) !important;
       font-size: 14px; font-weight: 500; color: #0F6E56;

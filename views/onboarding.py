@@ -9,9 +9,12 @@ from typing import Any, MutableMapping
 import streamlit as st
 import streamlit.components.v1 as components
 
+from components.brand_character import render_character_svg
 from services.supabase_client import supabase_configured
 from utils.auth import google_login_url, is_authenticated, start_guest
 from utils.local_profile import persist_onboarding_completion
+
+_BRAND_CHAR_SVG = render_character_svg("default", 40, bg="transparent")
 
 _MIC_SVG = (
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -79,7 +82,7 @@ def _render_onboarding_card_html() -> str:
 <section class="onb-wrap" aria-label="앱 소개">
   <div class="onb-card">
     <div class="onb-brand">
-      <span class="onb-brand-icon">{_MIC_SVG}</span>
+      <span class="onb-brand-icon">{_BRAND_CHAR_SVG}</span>
       <span class="onb-brand-text">오픽치료사 · AI 스피킹 코치</span>
     </div>
     <div class="onb-copy">
