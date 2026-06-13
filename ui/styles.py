@@ -4612,14 +4612,18 @@ GLOBAL_CSS = """
     }
 
     div[data-testid="stButton"] > button[kind="primary"],
-    div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #0F6E56 !important;
-      color: #ffffff !important;
-      border-color: rgba(13, 148, 136, 0.35) !important;
+    div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(15, 110, 86, 0.12) !important;
+      color: #085041 !important;
+      border: none !important;
+      font-weight: 500 !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled),
-    div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover:not(:disabled) {
-      background: #0b5c47 !important;
+    div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover:not(:disabled),
+    div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(15, 110, 86, 0.18) !important;
+      color: #085041 !important;
     }
 
     /* Topic-practice primary buttons follow the selected topic's accent
@@ -4627,34 +4631,76 @@ GLOBAL_CSS = """
        Mock exams plant no marker, so they keep the teal default. */
     [data-testid="stMain"]:has(.tq-accent-scope) .tq-accent-scope { display: none !important; }
     [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[kind="primary"],
-    [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #0F6E56 !important;
-      border-color: rgba(13, 148, 136, 0.35) !important;
+    [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(15, 110, 86, 0.12) !important;
+      color: #085041 !important;
+      border: none !important;
+      font-weight: 500 !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--teal) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(15, 110, 86, 0.18) !important;
+      color: #085041 !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[kind="primary"],
-    [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #2c6fb8 !important;
-      border-color: rgba(55, 138, 221, 0.35) !important;
+    [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(24, 95, 165, 0.12) !important;
+      color: #0C447C !important;
+      border: none !important;
+      font-weight: 500 !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--blue) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(24, 95, 165, 0.18) !important;
+      color: #0C447C !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[kind="primary"],
-    [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #534ab7 !important;
-      border-color: rgba(83, 74, 183, 0.35) !important;
+    [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(83, 74, 183, 0.12) !important;
+      color: #3C3489 !important;
+      border: none !important;
+      font-weight: 500 !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--purple) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(83, 74, 183, 0.18) !important;
+      color: #3C3489 !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[kind="primary"],
-    [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #b83f66 !important;
-      border-color: rgba(217, 83, 126, 0.35) !important;
+    [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(217, 83, 126, 0.12) !important;
+      color: #72243E !important;
+      border: none !important;
+      font-weight: 500 !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--pink) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(217, 83, 126, 0.18) !important;
+      color: #72243E !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[kind="primary"],
-    [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #8a560f !important;
-      border-color: rgba(186, 117, 23, 0.40) !important;
+    [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(133, 79, 11, 0.12) !important;
+      color: #633806 !important;
+      border: none !important;
+      font-weight: 500 !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--amber) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(133, 79, 11, 0.18) !important;
+      color: #633806 !important;
     }
     [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[kind="primary"],
-    [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
-      background: #b23f1c !important;
-      border-color: rgba(216, 90, 48, 0.35) !important;
+    [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[data-testid="baseButton-primary"],
+    [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+      background: rgba(216, 90, 48, 0.12) !important;
+      color: #712B13 !important;
+      border: none !important;
+      font-weight: 500 !important;
+    }
+    [data-testid="stMain"]:has(.tq-accent-scope--coral) div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"]:hover:not(:disabled) {
+      background: rgba(216, 90, 48, 0.18) !important;
+      color: #712B13 !important;
     }
 
     /* Expanders, alerts, captions */

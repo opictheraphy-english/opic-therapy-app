@@ -8,7 +8,7 @@ showSidebarNavigation = false
 # Launch: always use light theme (ignore OS/browser dark mode for Streamlit chrome).
 [theme]
 base = "light"
-primaryColor = "#14B8A6"
+primaryColor = "#0F6E56"
 backgroundColor = "#F8FAF9"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#111827"
