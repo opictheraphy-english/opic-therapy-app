@@ -27,12 +27,28 @@ def _grade_pill_visible(overall_display: str, pending: int) -> bool:
     return bool(label) and label != "분석 대기"
 
 
+def _is_valid_answer_row(row: Dict[str, Any]) -> bool:
+    if not isinstance(row, dict):
+        return False
+    if str(row.get("status") or "").strip() == "saved":
+        return True
+    wc = row.get("word_count")
+    if isinstance(wc, (int, float)) and wc > 0:
+        return True
+    for key in ("transcript", "raw_transcript", "student_answer"):
+        if str(row.get(key) or "").strip():
+            return True
+    return False
+
+
 def collect_hero_display_metrics(
     results: List[Dict[str, Any]],
     answers: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
     """Read already-computed row fields for hero stat chips (no scoring changes)."""
     answered = len([row for row in results if isinstance(row, dict)])
+    if answered == 0:
+        answered = len([row for row in answers if _is_valid_answer_row(row)])
 
     total_words = 0
     words_available = False
@@ -92,11 +108,13 @@ def render_final_report_completion_hero_html(
     total_words: Optional[int] = None,
     total_duration: Optional[float] = None,
     note: str = "",
+    eyebrow: str = "오늘의 진료 완료",
 ) -> str:
     """Two-zone celebration hero card for mock final report completion."""
     n = max(0, int(answered_count))
     title = f"{n}문항을 끝까지 해냈어요!"
     scene = render_celebration_scene(240)
+    eyebrow_text = str(eyebrow or "오늘의 진료 완료").strip() or "오늘의 진료 완료"
 
     if _grade_pill_visible(overall_display, pending_count):
         grade_block = (
@@ -151,7 +169,7 @@ def render_final_report_completion_hero_html(
 <section class="mx-fr-hero" role="region" aria-label="모의고사 완료">
   <div class="mx-fr-hero-stage">{scene}</div>
   <div class="mx-fr-hero-body">
-    <p class="mx-fr-hero-eyebrow">오늘의 진료 완료</p>
+    <p class="mx-fr-hero-eyebrow">{html.escape(eyebrow_text)}</p>
     <h2 class="mx-fr-hero-title">{html.escape(title)}</h2>
     {grade_block}
     {chips_block}

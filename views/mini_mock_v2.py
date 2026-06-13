@@ -1691,28 +1691,24 @@ def _render_report_step() -> None:
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
 
-    level = html.escape(str(report.get("overall_level") or "—"))
-    summary = html.escape(str(report.get("summary") or ""))
+    from components.final_report_hero import (
+        collect_hero_display_metrics,
+        render_final_report_completion_hero_html,
+    )
+
+    hero_metrics = collect_hero_display_metrics([], _answers())
     st.markdown(
-        f"""
-        <section class="continue-card continue-card--start mx-landing-card" role="region">
-          <div class="cc-eyebrow">5분 진단</div>
-          <div class="cc-title">5분 진단 AI 리포트</div>
-          <div class="cc-meta">예상 등급: <strong>{level}</strong></div>
-        </section>
-        """,
+        render_final_report_completion_hero_html(
+            answered_count=hero_metrics["answered"],
+            overall_display=str(report.get("overall_level") or ""),
+            pending_count=0,
+            total_words=hero_metrics.get("total_words"),
+            total_duration=hero_metrics.get("total_duration"),
+            note=str(report.get("summary") or ""),
+            eyebrow="5분 진단 완료",
+        ),
         unsafe_allow_html=True,
     )
-    if summary:
-        st.markdown(
-            f"""
-            <section class="continue-card" role="region">
-              <div class="cc-eyebrow">요약</div>
-              <div class="cc-meta">{summary}</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
 
     breakdown = report.get("score_breakdown")
     if isinstance(breakdown, dict) and breakdown:
