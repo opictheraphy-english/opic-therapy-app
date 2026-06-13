@@ -1565,6 +1565,102 @@ GLOBAL_CSS = """
       font-size: 12px;
       color: #888780;
     }
+    /* Home quick-action + history entry buttons — st-key classes (Streamlit 1.50+). */
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-home_open_history {
+      margin-top: 5px;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-home_open_history
+      div[data-testid="stButton"] > button {
+      border-radius: 10px !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      padding: 11px 12px !important;
+      min-height: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
+      div[data-testid="stButton"] > button {
+      background: rgba(15, 110, 86, 0.10) !important;
+      color: #0F6E56 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
+      div[data-testid="stButton"] > button:hover:not(:disabled) {
+      background: rgba(15, 110, 86, 0.16) !important;
+      color: #0F6E56 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
+      div[data-testid="stButton"] > button {
+      background: rgba(24, 95, 165, 0.10) !important;
+      color: #185FA5 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
+      div[data-testid="stButton"] > button:hover:not(:disabled) {
+      background: rgba(24, 95, 165, 0.16) !important;
+      color: #185FA5 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
+      div[data-testid="stButton"] > button {
+      background: rgba(83, 74, 183, 0.10) !important;
+      color: #534AB7 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
+      div[data-testid="stButton"] > button:hover:not(:disabled) {
+      background: rgba(83, 74, 183, 0.16) !important;
+      color: #534AB7 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
+      div[data-testid="stButton"] > button {
+      background: rgba(133, 79, 11, 0.12) !important;
+      color: #854F0B !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
+      div[data-testid="stButton"] > button:hover:not(:disabled) {
+      background: rgba(133, 79, 11, 0.18) !important;
+      color: #854F0B !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-home_open_history
+      div[data-testid="stButton"] > button {
+      background: rgba(15, 110, 86, 0.10) !important;
+      color: #0F6E56 !important;
+    }
+    [data-testid="stMain"]:has(.home-screen)
+      div[data-testid="stElementContainer"].st-key-home_open_history
+      div[data-testid="stButton"] > button:hover:not(:disabled) {
+      background: rgba(15, 110, 86, 0.16) !important;
+      color: #0F6E56 !important;
+    }
     [data-testid="stMain"]:has(.home-screen) .stats-row {
       gap: 8px;
       margin: 0 0 8px 0;
