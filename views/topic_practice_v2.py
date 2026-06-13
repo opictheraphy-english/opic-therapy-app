@@ -2430,6 +2430,7 @@ def _run_topic_v2_feedback_request(
             pass
         result = {
             "ok": False,
+            "answer_level": "",
             "summary": "",
             "strength": "",
             "correction_focus": "",
@@ -2465,6 +2466,7 @@ def _stash_topic_v2_feedback_for_q(q_idx: int, result: Dict[str, Any]) -> None:
         log = {}
     log[int(q_idx)] = {
         "ok": True,
+        "answer_level": result.get("answer_level"),
         "summary": result.get("summary"),
         "strength": result.get("strength"),
         "correction_focus": result.get("correction_focus"),
@@ -2679,8 +2681,9 @@ def _render_feedback_ui() -> None:
     upgrade_disp = upgrade if upgrade else _EMPTY_FIELD_PLACEHOLDER
     mission = _topic_v2_fb_text(fb, "practice_mission", _FB_FALLBACK_PRACTICE_MISSION)
     kwords = _topic_v2_fb_keywords(fb)
+    answer_level = str(fb.get("answer_level") or "").strip()
 
-    render_feedback_summary(summary, accent=accent)
+    render_feedback_summary(summary, accent=accent, answer_level=answer_level)
 
     fb_c1, fb_c2 = st.columns(2)
     with fb_c1:

@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v6_content_words_fillers"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v7_answer_level"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -42,9 +42,9 @@ advanced_function_gate(과거·현재 시간틀 통제 + 문단 담화의 지속
   필러 자체를 교정 대상으로 인용하지 말 것. 레벨 판정은 내용어 기준의 기능·텍스트 타입으로
   한다(anchor_usage).
 - speech_rate_metrics.words_normalized_90s / speech_rate_level / wpm 이 있으면, 위 JSON의
-  speech_rate_90s 밴드와 비교해 summary·correction_focus에서 안내한다. 발화량이 목표 레벨보다
-  적으면 더 길게 말하라고, 많으면 구조·디테일을 보강하라고 안내한다. 발화 속도는 하향 전용
-  신호다 — 빠르다고 레벨을 올리지 않는다.
+  speech_rate_90s 밴드와 비교해 summary·correction_focus에서 **발화량 안내**를 할 수 있다.
+  (더 길게/구조 보강 등). 단, **레벨 토큰(NL, IM2, IH 등)은 텍스트 필드에 쓰지 말 것.**
+  발화 속도는 하향 전용 신호다 — 빠르다고 레벨을 올리지 않는다.
 - score_axis_philosophy와 structure_gate를 적용한다: 문법·어휘가 좋아도 구조가 단편적이면
   높은 레벨로 보지 않는다.
 
@@ -86,6 +86,14 @@ relevance(관련성) 판단 — 느슨하게 적용할 것:
   원문에 없던 새 문법 구조는 도입하지 않는다. (학생이 따라 말할 수 있는 수준으로만 다듬는다.)
 - keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 금지.
 
+answer_level (이 답변 1개에 대한 OPIc 레벨 — 학생의 최종·종합 등급이 아님):
+- 위 level_rules 앵커·게이트·anchor_usage 기준으로 **이 transcript 한 건**이 도달한 레벨을
+  NL, NM, NH, IL, IM1, IM2, IM3, IH, AL 중 **정확히 1개**만 JSON 문자열로 넣는다.
+- 단어 수만으로 올리지 말고, 기능·텍스트 타입·게이트(roleplay, structure 등)로 판정한다.
+- **summary, strength, correction_focus, better_expression, practice_mission 등 다른
+  텍스트 필드에는 레벨 토큰(IM2, IH, AL 등)을 절대 쓰지 말 것.** 레벨은 오직 answer_level
+  필드로만 보고한다.
+
 길이 규칙:
 - summary, strength, practice_mission: 한국어 1~2문장.
 - correction_focus: 한국어 2~3문장 (원문 인용 포함).
@@ -93,7 +101,8 @@ relevance(관련성) 판단 — 느슨하게 적용할 것:
 - upgrade_sample은 2~4 English sentences만.
 - keyword_drill은 3~6개 짧은 항목.
 
-출력 형식: **JSON만** (마크다운 코드펜스 없음). 키는 정확히 이 일곱 개:
-"summary","strength","correction_focus","better_expression","upgrade_sample","keyword_drill","practice_mission"
-- 처음 여섯은 적절히 채우고, practice_mission도 비우지 말 것.
+출력 형식: **JSON만** (마크다운 코드펜스 없음). 키는 정확히 이 여덟 개:
+"answer_level","summary","strength","correction_focus","better_expression","upgrade_sample","keyword_drill","practice_mission"
+- answer_level은 반드시 채운다(위 허용 토큰 1개). 나머지 텍스트 필드는 적절히 채우고,
+  practice_mission도 비우지 말 것.
 - keyword_drill 값은 반드시 **문자열 배열** (예: ["because","actually","in my case"])."""

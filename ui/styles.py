@@ -5527,7 +5527,32 @@ GLOBAL_CSS = """
       font-weight: 500;
       letter-spacing: 0.02em;
       color: #0F6E56;
+      margin: 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       margin: 0 0 4px 0;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-level-pill {
+      flex-shrink: 0;
+      background: #E1F5EE;
+      color: #04342C;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+    [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-scope {
+      margin: 0 0 6px 0;
+      font-size: 11px;
+      font-weight: 400;
+      color: #888780;
+      line-height: 1.35;
     }
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-feedback-summary-text {
       margin: 0;

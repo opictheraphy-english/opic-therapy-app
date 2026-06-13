@@ -30,6 +30,10 @@ _STUDENT_FEEDBACK_UNAVAILABLE = (
 
 _FEEDBACK_MODEL_ATTEMPTS = 2  # one automatic retry per model on transient errors
 
+_ALLOWED_ANSWER_LEVELS = frozenset(
+    {"NL", "NM", "NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"}
+)
+
 
 def _failure(
     *,
@@ -45,6 +49,7 @@ def _failure(
         "upgrade_sample": "",
         "keyword_drill": [],
         "practice_mission": "",
+        "answer_level": "",
         "error_category": category,
         "error_message": message,
     }
@@ -58,9 +63,11 @@ def _ok_payload(
     upgrade_sample: str,
     keyword_drill: List[str],
     practice_mission: str,
+    answer_level: str = "",
 ) -> Dict[str, Any]:
     return {
         "ok": True,
+        "answer_level": answer_level,
         "summary": summary,
         "strength": strength,
         "correction_focus": correction_focus,
@@ -75,6 +82,13 @@ def _ok_payload(
 
 def _coerce_str(val: Any) -> str:
     return str(val or "").strip()
+
+
+def _coerce_answer_level(val: Any) -> str:
+    raw = _coerce_str(val).upper().replace(" ", "")
+    if raw in _ALLOWED_ANSWER_LEVELS:
+        return raw
+    return ""
 
 
 def _coerce_keyword_drill(val: Any) -> List[str]:
@@ -239,6 +253,7 @@ def _normalize_success(parsed: Dict[str, Any]) -> Dict[str, Any]:
     drills = _coerce_keyword_drill(parsed.get("keyword_drill"))
     summary = _coerce_str(parsed.get("summary"))
     return _ok_payload(
+        answer_level=_coerce_answer_level(parsed.get("answer_level")),
         summary=summary,
         strength=_coerce_str(parsed.get("strength")),
         correction_focus=_coerce_str(parsed.get("correction_focus")),
@@ -360,6 +375,7 @@ def _stringify_result(d: Dict[str, Any]) -> dict:
 
     return {
         "ok": ok,
+        "answer_level": _coerce_answer_level(d.get("answer_level")),
         "summary": _coerce_str(d.get("summary")),
         "strength": _coerce_str(d.get("strength")),
         "correction_focus": _coerce_str(d.get("correction_focus")),

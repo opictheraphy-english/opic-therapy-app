@@ -96,14 +96,29 @@ def build_feedback_label_html(*, accent: str = "teal") -> str:
     )
 
 
-def build_feedback_summary_html(summary: str, *, accent: str = "teal") -> str:
+def build_feedback_summary_html(
+    summary: str,
+    *,
+    accent: str = "teal",
+    answer_level: str = "",
+) -> str:
     """Emphasized one-line summary card (accent-tinted background + border)."""
     accent_key = html.escape(_normalize_accent(accent))
     text = html.escape(str(summary or "").strip())
+    level = html.escape(str(answer_level or "").strip())
+    pill = ""
+    scope = ""
+    if level:
+        pill = f'<span class="tq-feedback-summary-level-pill">{level}</span>'
+        scope = '<p class="tq-feedback-summary-scope">이 답변 기준</p>'
     return (
         f'<div class="tq-feedback-summary tq-feedback-summary--{accent_key}" '
         f'role="region" aria-label="한 줄 총평">'
+        f'<div class="tq-feedback-summary-head">'
         f'<span class="tq-feedback-summary-label">한 줄 총평</span>'
+        f"{pill}"
+        f"</div>"
+        f"{scope}"
         f'<p class="tq-feedback-summary-text">{text}</p>'
         f"</div>"
     )
@@ -189,8 +204,17 @@ def render_feedback_keyword_chips(keywords, *, accent: str = "teal") -> None:
     )
 
 
-def render_feedback_summary(summary: str, *, accent: str = "teal") -> None:
+def render_feedback_summary(
+    summary: str,
+    *,
+    accent: str = "teal",
+    answer_level: str = "",
+) -> None:
     st.markdown(
-        build_feedback_summary_html(summary, accent=accent),
+        build_feedback_summary_html(
+            summary,
+            accent=accent,
+            answer_level=answer_level,
+        ),
         unsafe_allow_html=True,
     )

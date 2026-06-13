@@ -307,6 +307,7 @@ def _estimated_level_from_item(
         if not isinstance(src, dict):
             continue
         for key in (
+            "answer_level",
             "estimated_level_display",
             "estimated_level",
             "level",
@@ -405,6 +406,7 @@ def _resolve_short_feedback(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if sf.get("ok") is False:
             return None
         keys = (
+            "answer_level",
             "summary",
             "strength",
             "correction_focus",
