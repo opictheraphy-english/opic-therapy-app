@@ -147,11 +147,24 @@ def save_topic_report(report: Dict[str, Any], *, topic_title: str, sig: str) -> 
     )
 
 
+def _script_coaching_content(result: Dict[str, Any], *, question: str = "") -> Dict[str, Any]:
+    """Ensure user-typed question/script are persisted in history content JSON."""
+    content = dict(result)
+    q_en = str(content.get("question_en") or question or "").strip()
+    original = str(content.get("original_script") or "").strip()
+    if q_en:
+        content["question_en"] = q_en
+    if original:
+        content["original_script"] = original
+    return content
+
+
 def save_script_diagnose(result: Dict[str, Any], *, question: str, sig: str) -> None:
     """Script coaching — diagnose result."""
     if not isinstance(result, dict) or not result.get("ok"):
         return
-    title = str(question or "").strip() or "스크립트 첨삭"
+    q_en = str(result.get("question_en") or question or "").strip()
+    title = q_en or "스크립트 첨삭"
     if len(title) > 80:
         title = title[:77] + "…"
     _save_once(
@@ -161,7 +174,7 @@ def save_script_diagnose(result: Dict[str, Any], *, question: str, sig: str) -> 
         title=title,
         overall_level=str(result.get("overall_level") or "") or None,
         score=_avg_score(result.get("score_breakdown")),
-        content=result,
+        content=_script_coaching_content(result, question=question),
     )
 
 
@@ -178,5 +191,5 @@ def save_script_upgrade(result: Dict[str, Any], *, sig: str) -> None:
         title=title,
         overall_level=str(result.get("target_level") or "") or None,
         score=None,
-        content=result,
+        content=_script_coaching_content(result),
     )

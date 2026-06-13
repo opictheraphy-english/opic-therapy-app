@@ -97,6 +97,8 @@ def _render_input_form() -> None:
         s = str(script_text or "").strip()
         with st.spinner("AI가 스크립트를 진단하고 있어요…"):
             result = diagnose_script(q, s)
+        if result.get("ok"):
+            result = _merge_user_script_fields(result)
         st.session_state[_KEY_DIAGNOSE_RESULT] = result
         if result.get("ok"):
             st.session_state[_KEY_STEP] = "result"
@@ -118,6 +120,25 @@ def _sc_card(title: str, body_html: str) -> None:
         f"</section>",
         unsafe_allow_html=True,
     )
+
+
+def _merge_user_script_fields(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Attach session question/script to a result dict for save & display (no AI changes)."""
+    if not isinstance(result, dict):
+        return result
+    merged = dict(result)
+    merged["question_en"] = str(st.session_state.get(_KEY_QUESTION_EN) or "").strip()
+    merged["original_script"] = str(st.session_state.get(_KEY_SCRIPT_TEXT) or "").strip()
+    return merged
+
+
+def _resolve_original_script(report: Dict[str, Any]) -> str:
+    """Original script from saved report fields or live session."""
+    if isinstance(report, dict):
+        saved = str(report.get("original_script") or "").strip()
+        if saved:
+            return saved
+    return str(st.session_state.get(_KEY_SCRIPT_TEXT) or "").strip()
 
 
 def _sc_bullets_html(items: Any) -> str:
@@ -142,6 +163,8 @@ def _run_upgrade(current_level: str, target_level: str = "") -> None:
             target_level=target_level,
             question_ko="",
         )
+    if result.get("ok"):
+        result = _merge_user_script_fields(result)
     st.session_state[_KEY_UPGRADE_RESULT] = result
     if result.get("ok"):
         st.session_state[_KEY_STEP] = "upgrade_result"
@@ -375,7 +398,10 @@ def _level_transition_label(report: Dict[str, Any]) -> str:
 
 def _render_upgrade_result(report: Dict[str, Any]) -> None:
     render_top_bar("스크립트 첨삭", back_href="?nav=MOCK", eyebrow="스크립트 첨삭 · 변환 결과")
-    st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="mx-marker sc-upgrade-ba-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
 
     transition = _level_transition_label(report)
     st.markdown(
@@ -389,13 +415,28 @@ def _render_upgrade_result(report: Dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
+    original = _resolve_original_script(report)
     upgraded = str(report.get("upgraded_script") or "").strip()
-    _sc_card(
-        "업그레이드된 스크립트",
-        f'<p class="sc-script">{html.escape(upgraded)}</p>'
-        if upgraded
-        else "<p>변환된 스크립트를 불러오지 못했어요.</p>",
-    )
+
+    if original:
+        st.markdown(
+            '<div class="sc-ba-block">'
+            '<div class="sc-ba-label">내 원래 스크립트</div>'
+            f'<div class="sc-ba-original"><p>{html.escape(original)}</p></div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    if upgraded:
+        st.markdown(
+            '<div class="sc-ba-block">'
+            '<div class="sc-ba-label sc-ba-label--accent">업그레이드</div>'
+            f'<div class="sc-ba-upgraded"><p>{html.escape(upgraded)}</p></div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    elif not original:
+        _sc_card("업그레이드된 스크립트", "<p>변환된 스크립트를 불러오지 못했어요.</p>")
 
     change_notes = report.get("change_notes") or []
     if change_notes:
