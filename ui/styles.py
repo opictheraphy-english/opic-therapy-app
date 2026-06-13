@@ -4067,6 +4067,21 @@ GLOBAL_CSS = """
     .hist-list-marker {
       display: none !important;
     }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-date-header {
+      font-size: 13px;
+      font-weight: 500;
+      color: #888780;
+      margin: 16px 0 8px 0;
+      padding-top: 6px;
+      border-top: 0.5px solid rgba(17, 24, 39, 0.08);
+      text-align: left;
+      line-height: 1.4;
+    }
+    [data-testid="stMain"]:has(.hist-list-marker) .hist-date-header--first {
+      margin-top: 4px;
+      padding-top: 0;
+      border-top: none;
+    }
     [data-testid="stMain"]:has(.hist-list-marker) .hist-empty-card {
       max-width: 420px;
       margin: 20px auto 0 auto;

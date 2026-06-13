@@ -9,7 +9,7 @@ from __future__ import annotations
 import html
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
@@ -21,8 +21,11 @@ from utils.auth import is_authenticated
 
 _KEY_SELECTED = "history_selected_id"
 _KEY_FILTER = "history_filter"
+_KEY_SORT = "history_sort"
 
 _KST = timezone(timedelta(hours=9))
+
+_WEEKDAY_KO = ("월", "화", "수", "목", "금", "토", "일")
 
 _SCORE_AXES = (
     ("fluency", "유창성"),
@@ -246,18 +249,89 @@ def _type_label(practice_type: str, subtype: str) -> str:
     return pt or "기록"
 
 
-def _format_dt(raw: Any) -> str:
+def _parse_created_at_kst(raw: Any) -> Optional[datetime]:
+    """Parse ``created_at`` (ISO from PostgREST) into a KST-aware datetime."""
     s = str(raw or "").strip()
     if not s:
-        return "—"
+        return None
     try:
         iso = s.replace("Z", "+00:00")
         dt = datetime.fromisoformat(iso)
         if dt.tzinfo is not None:
             dt = dt.astimezone(_KST)
-        return dt.strftime("%Y.%m.%d %H:%M")
+        else:
+            dt = dt.replace(tzinfo=_KST)
+        return dt
     except Exception:
-        return s[:16]
+        return None
+
+
+def _format_dt(raw: Any) -> str:
+    dt = _parse_created_at_kst(raw)
+    if dt is None:
+        s = str(raw or "").strip()
+        return "—" if not s else s[:16]
+    return dt.strftime("%Y.%m.%d %H:%M")
+
+
+def _date_bucket_label(created_at: Any) -> str:
+    """KST date group label for history list headers."""
+    dt = _parse_created_at_kst(created_at)
+    if dt is None:
+        return "—"
+    now = datetime.now(_KST)
+    day = dt.date()
+    today = now.date()
+    yesterday = today - timedelta(days=1)
+    if day == today:
+        return "오늘"
+    if day == yesterday:
+        return "어제"
+    if day.year == today.year:
+        wd = _WEEKDAY_KO[day.weekday()]
+        return f"{day.month}월 {day.day}일 ({wd})"
+    return dt.strftime("%Y.%m.%d")
+
+
+def _sort_history_rows(rows: List[Dict[str, Any]], sort_dir: str) -> List[Dict[str, Any]]:
+    reverse = sort_dir != "asc"
+
+    def _sort_key(row: Dict[str, Any]) -> datetime:
+        dt = _parse_created_at_kst(row.get("created_at"))
+        if dt is not None:
+            return dt
+        return (
+            datetime.min.replace(tzinfo=_KST)
+            if reverse
+            else datetime.max.replace(tzinfo=_KST)
+        )
+
+    return sorted(
+        [row for row in rows if isinstance(row, dict)],
+        key=_sort_key,
+        reverse=reverse,
+    )
+
+
+def _group_rows_by_date_bucket(
+    rows: List[Dict[str, Any]],
+) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    groups: List[Tuple[str, List[Dict[str, Any]]]] = []
+    for row in rows:
+        label = _date_bucket_label(row.get("created_at"))
+        if groups and groups[-1][0] == label:
+            groups[-1][1].append(row)
+        else:
+            groups.append((label, [row]))
+    return groups
+
+
+def _render_date_header(label: str, *, first: bool = False) -> None:
+    extra = " hist-date-header--first" if first else ""
+    st.markdown(
+        f'<p class="hist-date-header{extra}">{html.escape(label)}</p>',
+        unsafe_allow_html=True,
+    )
 
 
 def _level_badge(level: Any) -> str:
@@ -539,6 +613,9 @@ def _render_empty_list() -> None:
 def _render_list() -> None:
     ss = st.session_state
     active = str(ss.get(_KEY_FILTER) or "all")
+    sort_dir = str(ss.get(_KEY_SORT) or "desc")
+    if sort_dir not in ("desc", "asc"):
+        sort_dir = "desc"
 
     cols = st.columns(len(_FILTERS), gap="small")
     for col, (key, label) in zip(cols, _FILTERS):
@@ -553,6 +630,26 @@ def _render_list() -> None:
                 ss[_KEY_FILTER] = key
                 st.rerun()
 
+    sort_cols = st.columns(2, gap="small")
+    with sort_cols[0]:
+        if st.button(
+            "최신순",
+            key="history_sort_desc",
+            use_container_width=True,
+            type="primary" if sort_dir == "desc" else "secondary",
+        ):
+            ss[_KEY_SORT] = "desc"
+            st.rerun()
+    with sort_cols[1]:
+        if st.button(
+            "오래된순",
+            key="history_sort_asc",
+            use_container_width=True,
+            type="primary" if sort_dir == "asc" else "secondary",
+        ):
+            ss[_KEY_SORT] = "asc"
+            st.rerun()
+
     practice_type = None if active == "all" else active
     rows = list_history(practice_type=practice_type, limit=100)
 
@@ -560,10 +657,14 @@ def _render_list() -> None:
         _render_empty_list()
         return
 
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        _render_list_row(row)
+    sorted_rows = _sort_history_rows(rows, sort_dir)
+    groups = _group_rows_by_date_bucket(sorted_rows)
+
+    st.markdown('<div class="hist-list-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    for idx, (bucket_label, group_rows) in enumerate(groups):
+        _render_date_header(bucket_label, first=(idx == 0))
+        for row in group_rows:
+            _render_list_row(row)
 
 
 def _render_list_row(row: Dict[str, Any]) -> None:
