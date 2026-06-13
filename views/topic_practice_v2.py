@@ -53,6 +53,10 @@ from data.opic_question_bank_v2 import (
     get_topic_practice_set,
     get_topic_title,
 )
+from services.mock_exam.mock_exam_test_set_generator import (
+    get_advanced_practice_set,
+    list_advanced_sets,
+)
 from services.stt_service import count_english_words
 from utils.session_state import ensure_mock, mock_session
 from views.topic_icons import TOPIC_ICONS
@@ -75,6 +79,7 @@ _KEY_CURRENT_Q = "topic_v2_current_question"
 _KEY_QUESTIONS = "topic_v2_questions"
 _KEY_MODE = "topic_v2_mode"
 _KEY_ROLEPLAY_SET_ID = "topic_v2_roleplay_set_id"
+_KEY_ADVANCED_SET_ID = "topic_v2_advanced_set_id"
 _KEY_ANSWERS = "topic_v2_answers"
 _KEY_FEEDBACK = "topic_v2_feedback"
 _KEY_DRAFT_TRANSCRIPT = "topic_v2_practice_transcript"
@@ -115,6 +120,7 @@ _VALID_STEPS = frozenset(
 _KEY_TOPIC_SEARCH = "topic_v2_topic_search"
 _KEY_TOPIC_CATEGORY = "topic_v2_topic_category"
 _KEY_ROLEPLAY_EXPAND = "topic_v2_roleplay_expand"
+_KEY_ADVANCED_EXPAND = "topic_v2_advanced_expand"
 
 _RECOMMENDED_TOPIC_IDS: Tuple[str, ...] = (
     "home",
@@ -287,6 +293,8 @@ _OPIC_TYPE_LABELS: Dict[str, str] = {
     "Q6": "Q6 유형 · 질문하기",
     "Q7": "Q7 유형 · 문제 해결",
     "Q8": "Q8 유형 · 관련 경험",
+    "COMPARISON": "Comparison · 비교·변화",
+    "NEWS/ISSUE": "News/Issue · 사회 이슈",
 }
 
 _OPIC_TYPE_BADGE_LABELS: Dict[str, str] = {
@@ -297,6 +305,8 @@ _OPIC_TYPE_BADGE_LABELS: Dict[str, str] = {
     "Q6": "Q6 · 질문하기",
     "Q7": "Q7 · 문제 해결",
     "Q8": "Q8 · 관련 경험",
+    "COMPARISON": "Comparison · 비교·변화",
+    "NEWS/ISSUE": "News/Issue · 사회 이슈",
 }
 
 _TOPIC_ACCENT_NAMES: Tuple[str, ...] = (
@@ -557,6 +567,7 @@ def clear_topic_v2_session() -> None:
         _KEY_QUESTIONS,
         _KEY_MODE,
         _KEY_ROLEPLAY_SET_ID,
+        _KEY_ADVANCED_SET_ID,
         _KEY_ANSWERS,
         _KEY_FEEDBACK,
         _KEY_FEEDBACK_BY_Q,
@@ -576,7 +587,14 @@ def _topic_id_valid(topic_id: str) -> bool:
 def _topic_display_title(topic_id: str) -> str:
     tid = str(topic_id or "").strip()
     title = get_topic_title(tid)
-    return title if title else tid
+    if title:
+        return title
+    for ent in list_advanced_sets():
+        if str(ent.get("set_id") or "").strip() == tid:
+            adv = str(ent.get("title_ko") or "").strip()
+            if adv:
+                return adv
+    return tid
 
 
 def _opic_type_label(opic_type: str) -> str:
@@ -605,7 +623,7 @@ def _topic_visual_for_id(topic_id: str) -> Dict[str, str]:
             "accent": accent,
         }
     return {
-        "title_ko": get_topic_title(tid) or tid,
+        "title_ko": _topic_display_title(tid),
         "title_en": "",
         "icon": "circle",
         "accent": "teal",
@@ -614,11 +632,56 @@ def _topic_visual_for_id(topic_id: str) -> Dict[str, str]:
 
 def _topic_v2_mode() -> str:
     raw = str(st.session_state.get(_KEY_MODE) or "topic").strip()
-    return raw if raw in ("topic", "roleplay") else "topic"
+    return raw if raw in ("topic", "roleplay", "advanced") else "topic"
 
 
 def _is_roleplay_mode() -> bool:
     return _topic_v2_mode() == "roleplay"
+
+
+def _is_advanced_mode() -> bool:
+    return _topic_v2_mode() == "advanced"
+
+
+def _session_question_total() -> int:
+    qs = _session_question_set()
+    if qs:
+        return len(qs)
+    if _is_advanced_mode():
+        return 2
+    return 3
+
+
+def _last_question_index() -> int:
+    return max(0, _session_question_total() - 1)
+
+
+def _is_at_practice_complete(q_idx: int) -> bool:
+    return int(q_idx) >= _session_question_total()
+
+
+def _session_min_questions() -> int:
+    if _is_single_question_retry():
+        return 1
+    if _is_advanced_mode():
+        return 2
+    return 3
+
+
+def _advance_after_question(topic: str, q_idx: int) -> None:
+    """Move to the next question or the completion sentinel index."""
+    last_idx = _last_question_index()
+    if q_idx < last_idx:
+        nxt = q_idx + 1
+        _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=nxt)
+        st.session_state[_KEY_Q_INDEX] = nxt
+        _sync_current_question(nxt)
+        st.session_state[_KEY_STEP] = "question"
+        return
+    done_idx = _session_question_total()
+    _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=done_idx)
+    st.session_state[_KEY_Q_INDEX] = done_idx
+    st.session_state[_KEY_STEP] = "saved"
 
 
 def _is_single_question_retry() -> bool:
@@ -753,10 +816,22 @@ def _roleplay_set_title() -> str:
     return ""
 
 
+def _advanced_set_title() -> str:
+    sid = str(st.session_state.get(_KEY_ADVANCED_SET_ID) or "").strip()
+    if not sid:
+        return ""
+    for ent in list_advanced_sets():
+        if str(ent.get("set_id") or "").strip() == sid:
+            return str(ent.get("title_ko") or "").strip()
+    return sid
+
+
 def _practice_chip_title(topic_id: str) -> str:
-    """Header chip label — roleplay shows the set name, topic shows catalog title."""
+    """Header chip label — roleplay/advanced show set name, topic shows catalog title."""
     if _is_roleplay_mode():
         return _roleplay_set_title() or _topic_display_title(topic_id)
+    if _is_advanced_mode():
+        return _advanced_set_title() or _topic_display_title(topic_id)
     return _topic_display_title(topic_id)
 
 
@@ -767,17 +842,28 @@ def _practice_eyebrow(suffix: str) -> str:
 
 
 def _back_to_select_label() -> str:
-    return "롤플레이·주제 선택" if _is_roleplay_mode() else "주제 선택으로 돌아가기"
+    if _is_roleplay_mode():
+        return "롤플레이·주제 선택"
+    if _is_advanced_mode():
+        return "AL 고난도·주제 선택"
+    return "주제 선택으로 돌아가기"
 
 
 def _other_practice_label() -> str:
-    return "다른 롤플레이 선택" if _is_roleplay_mode() else "다른 주제 선택"
+    if _is_roleplay_mode():
+        return "다른 롤플레이 선택"
+    if _is_advanced_mode():
+        return "다른 AL 세트 선택"
+    return "다른 주제 선택"
 
 
 def _practice_screen_title() -> str:
     if _is_roleplay_mode():
         rp_title = _roleplay_set_title()
         return f"롤플레이 연습 · {rp_title}" if rp_title else "롤플레이 연습"
+    if _is_advanced_mode():
+        adv_title = _advanced_set_title()
+        return f"AL 고난도 · {adv_title}" if adv_title else "AL 고난도"
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     return f"주제별 연습 · {_topic_display_title(topic_id)}"
 
@@ -786,10 +872,13 @@ def _session_valid_for_practice() -> bool:
     qs = _session_question_set()
     if _is_single_question_retry():
         return len(qs) >= 1
-    if len(qs) < 3:
+    min_q = _session_min_questions()
+    if len(qs) < min_q:
         return False
     if _is_roleplay_mode():
         return bool(str(st.session_state.get(_KEY_ROLEPLAY_SET_ID) or "").strip())
+    if _is_advanced_mode():
+        return bool(str(st.session_state.get(_KEY_ADVANCED_SET_ID) or "").strip())
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     return _topic_id_valid(topic_id)
 
@@ -811,7 +900,12 @@ def _bank_row_to_current_q(row: Dict[str, Any]) -> Dict[str, str]:
 
 def _question_for_index(topic_id: str, q_index: int) -> Optional[Dict[str, str]]:
     qs = _session_question_set()
-    if not qs and not _is_roleplay_mode() and _topic_id_valid(topic_id):
+    if (
+        not qs
+        and not _is_roleplay_mode()
+        and not _is_advanced_mode()
+        and _topic_id_valid(topic_id)
+    ):
         qs = get_topic_practice_set(topic_id)
         if len(qs) >= 3:
             st.session_state[_KEY_QUESTIONS] = qs
@@ -860,6 +954,21 @@ def _log_topic_v2_roleplay_set(set_id: str, questions: List[Dict[str, Any]]) -> 
         pass
 
 
+def _log_topic_v2_advanced_set(set_id: str, questions: List[Dict[str, Any]]) -> None:
+    try:
+        types = ",".join(
+            str((q or {}).get("opic_type") or "-") for q in questions if isinstance(q, dict)
+        )
+        logger.info(
+            "[TOPIC_V2_ADVANCED_SET] set_id=%s question_count=%s types=%s",
+            set_id,
+            len(questions),
+            types or "-",
+        )
+    except Exception:
+        pass
+
+
 def _log_topic_v2_mode(*, step: str, q_idx: int) -> None:
     try:
         logger.info(
@@ -879,6 +988,7 @@ def _start_topic_practice(topic_id: str) -> None:
     _log_topic_v2_question_set(tid, qs)
     st.session_state[_KEY_MODE] = "topic"
     st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
+    st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
     st.session_state[_KEY_TOPIC] = tid
     st.session_state[_KEY_Q_INDEX] = 0
@@ -910,6 +1020,7 @@ def _start_roleplay_practice(set_id: str) -> None:
             break
     st.session_state[_KEY_MODE] = "roleplay"
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
+    st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
     st.session_state[_KEY_ROLEPLAY_SET_ID] = sid
     st.session_state[_KEY_TOPIC] = topic_id
     st.session_state[_KEY_Q_INDEX] = 0
@@ -925,6 +1036,33 @@ def _start_roleplay_practice(set_id: str) -> None:
     _sync_current_question(0)
     st.session_state[_KEY_STEP] = "question"
     _log_tpv2_state_clear("EXIT", "_start_roleplay_practice")
+
+
+def _start_advanced_practice(set_id: str) -> None:
+    _log_tpv2_state_clear("ENTER", "_start_advanced_practice")
+    sid = str(set_id or "").strip()
+    qs = get_advanced_practice_set(sid)
+    _log_topic_v2_advanced_set(sid, qs)
+    st.session_state[_KEY_MODE] = "advanced"
+    st.session_state.pop(_KEY_SINGLE_RETRY, None)
+    st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
+    st.session_state[_KEY_ADVANCED_SET_ID] = sid
+    st.session_state[_KEY_TOPIC] = sid
+    st.session_state[_KEY_Q_INDEX] = 0
+    st.session_state[_KEY_ANSWERS] = []
+    st.session_state[_KEY_FEEDBACK] = None
+    st.session_state[_KEY_FEEDBACK_BY_Q] = {}
+    st.session_state[_KEY_PRACTICE_SIG] = uuid.uuid4().hex
+    st.session_state.pop(_KEY_DRAFT_TRANSCRIPT, None)
+    if len(qs) < 2:
+        st.session_state[_KEY_QUESTIONS] = qs
+        st.session_state[_KEY_CURRENT_Q] = {}
+        st.session_state[_KEY_STEP] = "insufficient"
+        return
+    st.session_state[_KEY_QUESTIONS] = qs
+    _sync_current_question(0)
+    st.session_state[_KEY_STEP] = "question"
+    _log_tpv2_state_clear("EXIT", "_start_advanced_practice")
 
 
 def _topic_v2_blob_key(topic: str, q_idx: int) -> str:
@@ -1538,7 +1676,7 @@ def _last_answer_row_for_q(q_idx: int) -> Optional[Dict[str, Any]]:
 def _log_topic_v2_flow(*, step: str, topic: str, q_idx: int) -> None:
     try:
         latest = ""
-        if 0 <= q_idx < 3:
+        if 0 <= q_idx < _session_question_total():
             latest = str((_last_answer_row_for_q(q_idx) or {}).get("status") or "").strip()
         logger.info(
             "[TOPIC_V2_FLOW] step=%s topic=%s q_idx=%s answers_count=%s latest_answer_status=%s",
@@ -1553,17 +1691,15 @@ def _log_topic_v2_flow(*, step: str, topic: str, q_idx: int) -> None:
 
 
 def _render_topic_v2_attempt_caption(*, topic: str, q_idx: int) -> None:
-    if q_idx < 0 or q_idx >= 3:
+    total = _session_question_total()
+    if q_idx < 0 or q_idx >= total:
         return
     last_row = _last_answer_row_for_q(q_idx)
     label = _topic_v2_answer_status_label(last_row)
-    if _is_roleplay_mode():
-        title = _roleplay_set_title() or _topic_display_title(topic)
-    else:
-        title = _topic_display_title(topic)
+    title = _practice_chip_title(topic)
     st.caption("**현재 답변 시도**")
     st.caption(f"주제 · {title}")
-    st.caption(f"질문 번호 · Q{q_idx + 1}/3")
+    st.caption(f"질문 번호 · Q{q_idx + 1}/{total}")
     st.caption(f"답변 상태 · {label}")
 
 
@@ -1677,6 +1813,7 @@ def _goto_topic_select() -> None:
     st.session_state[_KEY_STEP] = "select_topic"
     st.session_state[_KEY_MODE] = "topic"
     st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
+    st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
     st.session_state[_KEY_TOPIC] = ""
     st.session_state[_KEY_Q_INDEX] = 0
@@ -1851,6 +1988,45 @@ def _render_roleplay_card_grid() -> None:
                 _render_roleplay_practice_card(ent, key_prefix="topic_v2_roleplay")
 
 
+def _render_advanced_practice_card(ent: Dict[str, Any], *, key_prefix: str) -> None:
+    set_id = str(ent.get("set_id") or "").strip()
+    if not set_id:
+        return
+    title_ko = str(ent.get("title_ko") or set_id).strip()
+    visual = _topic_visual_for_id(set_id)
+    title_en = str(visual.get("title_en") or "Comparison · News/Issue").strip()
+    _render_tp_card_html(
+        title_ko=title_ko,
+        title_en=title_en,
+        icon=str(visual.get("icon") or "circle"),
+        accent=str(visual.get("accent") or "purple"),
+    )
+    if st.button(
+        f"{title_ko} AL 연습",
+        use_container_width=True,
+        key=f"{key_prefix}_{set_id}",
+    ):
+        _start_advanced_practice(set_id)
+        st.rerun()
+
+
+def _render_advanced_card_grid() -> None:
+    sets = list_advanced_sets()
+    if not sets:
+        _render_topic_v2_empty_state()
+        return
+    st.markdown(
+        '<div class="tp-cards-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
+    for i in range(0, len(sets), 2):
+        col_left, col_right = st.columns(2)
+        pair = sets[i : i + 2]
+        for col, ent in zip((col_left, col_right), pair):
+            with col:
+                _render_advanced_practice_card(ent, key_prefix="topic_v2_advanced")
+
+
 def _render_insufficient_questions() -> None:
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     title = _topic_display_title(topic_id)
@@ -1899,6 +2075,27 @@ def _render_select_topic() -> None:
         st.markdown("#### 선택한 카테고리 주제")
         category_topics = _topics_for_category_label(str(category or "일상"))
         _render_topic_card_grid(category_topics, key_prefix="topic_v2_cat")
+
+    st.divider()
+    st.markdown("#### AL 고난도")
+    st.caption("최상위 도전 · 실전 14·15번 유형(Comparison · News/Issue) 2문항 세트")
+    if not st.session_state.get(_KEY_ADVANCED_EXPAND):
+        if st.button(
+            "AL 고난도 세트 보기",
+            use_container_width=True,
+            key="topic_v2_show_advanced",
+        ):
+            st.session_state[_KEY_ADVANCED_EXPAND] = True
+            st.rerun()
+    else:
+        if st.button(
+            "AL 고난도 세트 접기",
+            use_container_width=True,
+            key="topic_v2_hide_advanced",
+        ):
+            st.session_state[_KEY_ADVANCED_EXPAND] = False
+            st.rerun()
+        _render_advanced_card_grid()
 
     st.divider()
     st.markdown("#### 롤플레이 연습")
@@ -2123,7 +2320,7 @@ def _render_question() -> None:
         return
 
     qs = _session_question_set()
-    min_questions = 1 if _is_single_question_retry() else 3
+    min_questions = _session_min_questions()
     if len(qs) < min_questions:
         st.session_state[_KEY_STEP] = "insufficient"
         st.rerun()
@@ -2152,7 +2349,12 @@ def _render_question() -> None:
     )
 
     bank_row = _bank_question_at_index(q_idx)
-    question_id = str(bank_row.get("id") or "").strip()
+    if _is_advanced_mode():
+        question_id = str(
+            bank_row.get("audio_id") or bank_row.get("id") or ""
+        ).strip()
+    else:
+        question_id = str(bank_row.get("id") or "").strip()
     if question_id:
         mp3_path = _QUESTION_AUDIO_DIR / f"{question_id}.mp3"
         if mp3_path.is_file():
@@ -2365,15 +2567,7 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
             use_container_width=True,
             key="topic_v2_next_q",
         ):
-            if q_idx < 2:
-                nxt = q_idx + 1
-                _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=nxt)
-                st.session_state[_KEY_Q_INDEX] = nxt
-                _sync_current_question(nxt)
-                st.session_state[_KEY_STEP] = "question"
-            else:
-                _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=3)
-                st.session_state[_KEY_Q_INDEX] = 3
+            _advance_after_question(topic, q_idx)
             st.rerun()
     with c2:
         if st.button(
@@ -2540,7 +2734,7 @@ def build_topic_v2_history_payload(topic_id: str) -> Dict[str, Any]:
 
 def _maybe_persist_topic_v2_history(topic_id: str) -> None:
     """Logged-in users: append one practice_history row (idempotent per practice sig)."""
-    if _is_roleplay_mode():
+    if _is_roleplay_mode() or _is_advanced_mode():
         return
     tid = str(topic_id or "").strip()
     if not tid or not _topic_id_valid(tid):
@@ -2609,9 +2803,11 @@ def _render_saved() -> None:
         _goto_topic_select()
         st.rerun()
         return
-    if q_idx >= 3:
+    if _is_at_practice_complete(q_idx):
         if _is_roleplay_mode():
             _render_roleplay_complete()
+        elif _is_advanced_mode():
+            _render_advanced_complete()
         else:
             _render_saved_complete(topic)
     else:
@@ -2636,6 +2832,39 @@ def _render_roleplay_complete() -> None:
         _goto_topic_select()
         st.rerun()
     if st.button("주제별 연습으로 돌아가기", use_container_width=True, key="topic_v2_back_to_topic_practice"):
+        _goto_topic_select()
+        st.rerun()
+
+
+def _render_advanced_complete() -> None:
+    render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=_practice_eyebrow("완료"))
+    _render_topic_v2_accent_scope(
+        str(_topic_visual_for_id(str(st.session_state.get(_KEY_TOPIC) or "")).get("accent") or "teal")
+    )
+    st.markdown("### AL 고난도 세트를 완료했어요.")
+    st.caption("Comparison · News/Issue 2문항을 모두 마쳤어요.")
+    set_id = str(st.session_state.get(_KEY_ADVANCED_SET_ID) or "").strip()
+    if st.button(
+        "같은 세트 다시 하기",
+        type="primary",
+        use_container_width=True,
+        key="topic_v2_restart_same_advanced",
+    ):
+        if set_id:
+            _start_advanced_practice(set_id)
+        st.rerun()
+    if st.button(
+        "다른 AL 세트 선택",
+        use_container_width=True,
+        key="topic_v2_pick_other_advanced",
+    ):
+        _goto_topic_select()
+        st.rerun()
+    if st.button(
+        "주제별 연습으로 돌아가기",
+        use_container_width=True,
+        key="topic_v2_back_to_topic_practice_advanced",
+    ):
         _goto_topic_select()
         st.rerun()
 
@@ -2750,16 +2979,7 @@ def _render_feedback_ui() -> None:
             key="topic_v2_fb_next",
         ):
             st.session_state[_KEY_FEEDBACK] = None
-            if q_idx < 2:
-                nxt = q_idx + 1
-                _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=nxt)
-                st.session_state[_KEY_Q_INDEX] = nxt
-                _sync_current_question(nxt)
-                st.session_state[_KEY_STEP] = "question"
-            else:
-                _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=3)
-                st.session_state[_KEY_Q_INDEX] = 3
-                st.session_state[_KEY_STEP] = "saved"
+            _advance_after_question(topic, q_idx)
             st.rerun()
     with c3:
         if st.button(
@@ -2891,16 +3111,7 @@ def _render_pending_ui() -> None:
     with c3:
         if st.button("다음 질문", use_container_width=True, key="topic_v2_pending_next_q"):
             st.session_state[_KEY_FEEDBACK] = None
-            if q_idx < 2:
-                nxt = q_idx + 1
-                _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=nxt)
-                st.session_state[_KEY_Q_INDEX] = nxt
-                _sync_current_question(nxt)
-                st.session_state[_KEY_STEP] = "question"
-            else:
-                _log_topic_v2_next_question(topic=topic, from_q=q_idx, to_q=3)
-                st.session_state[_KEY_Q_INDEX] = 3
-                st.session_state[_KEY_STEP] = "saved"
+            _advance_after_question(topic, q_idx)
             st.rerun()
     st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 

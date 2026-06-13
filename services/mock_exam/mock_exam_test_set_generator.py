@@ -387,6 +387,88 @@ def pick_advanced_set() -> dict:
     """Pick one Q14+Q15 topic set (Comparison + News/Issue pair) for IH/AL exams."""
     return random.choice(ADVANCED_SET_POOL)
 
+
+_ADVANCED_SET_TITLE_KO = {
+    "phone": "휴대폰",
+    "internet": "인터넷",
+    "home": "집",
+    "gatherings": "모임·행사",
+    "holidays": "명절·휴일",
+    "industry": "산업·기업",
+    "transportation": "교통",
+    "technology": "기술·가전",
+    "environment": "환경",
+    "health": "건강",
+    "weather": "날씨·계절",
+    "shopping": "쇼핑",
+    "restaurants": "식당",
+    "travel": "여행",
+    "fashion": "옷·패션",
+    "education": "교육",
+    "jobs": "직업·일",
+    "neighborhood": "동네",
+    "banks": "은행",
+    "social_media": "SNS·소셜",
+}
+
+_ADVANCED_KO_HELPER = "이 질문에 대해 영어로 답변해 보세요."
+
+
+def list_advanced_sets() -> list[dict]:
+    """Return ADVANCED_SET_POOL entries as {set_id, title_ko} for topic-practice UI."""
+    out: list[dict] = []
+    for entry in ADVANCED_SET_POOL:
+        if not isinstance(entry, dict):
+            continue
+        sid = str(entry.get("set_id") or "").strip()
+        if not sid:
+            continue
+        out.append(
+            {
+                "set_id": sid,
+                "title_ko": _ADVANCED_SET_TITLE_KO.get(sid, sid),
+            }
+        )
+    return out
+
+
+def get_advanced_practice_set(set_id: str) -> list[dict]:
+    """Shape one advanced set into two topic-practice bank rows (Comparison + News/Issue)."""
+    sid = str(set_id or "").strip()
+    if not sid:
+        return []
+    for entry in ADVANCED_SET_POOL:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("set_id") or "").strip() != sid:
+            continue
+        rows: list[dict] = []
+        for kind, opic_type, question_kind in (
+            ("comparison", "Comparison", "comparison"),
+            ("news_issue", "News/Issue", "news_issue"),
+        ):
+            block = entry.get(kind)
+            if not isinstance(block, dict):
+                continue
+            text = str(block.get("question") or "").strip()
+            if not text:
+                continue
+            audio_id = f"{sid}_{kind}"
+            rows.append(
+                {
+                    "id": audio_id,
+                    "audio_id": audio_id,
+                    "opic_type": opic_type,
+                    "topic_id": sid,
+                    "topic": sid,
+                    "question_text": text,
+                    "ko_helper": _ADVANCED_KO_HELPER,
+                    "question_kind": question_kind,
+                }
+            )
+        return rows
+    return []
+
 # Ask-the-interviewer (OPIc Q5): bank 밖 독립 풀 — 레벨 3·4 출제 연결은 별도 단계
 Q5_POOL = [
     {
