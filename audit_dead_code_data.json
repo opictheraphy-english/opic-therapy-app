@@ -1,0 +1,108 @@
+{
+  "maybe_unused_private_funcs": [
+    {
+      "file": "views/topic_practice_v2.py",
+      "symbol": "_get_topic_v2_audio_by_answer_id",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/topic_practice_v2.py",
+      "symbol": "_practice_screen_title",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/topic_practice_v2.py",
+      "symbol": "_render_topic_v2_attempt_caption",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/topic_practice_v2.py",
+      "symbol": "_topic_v2_mic_key",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_is_topic_practice",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_mini_mock_sync_audio_to_mx",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_needs_mode_selection",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_render_coaching_flow",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_render_detailed_coaching_for_result",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_render_mock_question_listen_stage",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_render_real_mock_error_fallback",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_render_topic_api_delay_recovery_card",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "views/mock_exam.py",
+      "symbol": "_topic_sync_audio_to_mx",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "services/feedback/feedback_builder.py",
+      "symbol": "_expression_upgrades_from_hits",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "services/feedback/topic_mini_report_analysis.py",
+      "symbol": "_path_one_call_audio_batch",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "services/evaluation/gemini_multimodal_pipeline.py",
+      "symbol": "_list_available_models",
+      "refs": 1,
+      "confidence": "확인 필요"
+    },
+    {
+      "file": "components/navigation.py",
+      "symbol": "_href_key",
+      "refs": 1,
+      "confidence": "확인 필요"
+    }
+  ],
+  "broken_imports_guess": [],
+  "syntax_errors": []
+}

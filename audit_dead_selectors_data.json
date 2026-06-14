@@ -1,0 +1,464 @@
+{
+  "pattern_counts": {
+    "button[key=": 0,
+    "button[kind=": 25,
+    "baseButton-primary (no st)": 20,
+    "baseButton-secondary (no st)": 6,
+    "section.main": 216,
+    "stMain": 504,
+    "stBaseButton": 45,
+    "st-key-": 20,
+    "pat_ex_toggle": 2
+  },
+  "button_kind_lines": [
+    [
+      "button[kind=]",
+      483,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[kind=\"secondary\"]),"
+    ],
+    [
+      "button[kind=]",
+      487,
+      "[data-testid=\"stMain\"]:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[kind=\"secondary\"]),"
+    ],
+    [
+      "button[kind=]",
+      507,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      511,
+      "[data-testid=\"stMain\"]:has(.onb-marker) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      522,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] > button[kind=\"secondary\"],"
+    ],
+    [
+      "button[kind=]",
+      526,
+      "[data-testid=\"stMain\"]:has(.onb-marker) div[data-testid=\"stButton\"] > button[kind=\"secondary\"],"
+    ],
+    [
+      "button[kind=]",
+      839,
+      "section.main:has(.onb-marker) .onb-choice-list div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      846,
+      "section.main:has(.onb-marker) .onb-choice-list div[data-testid=\"stButton\"] > button[kind=\"secondary\"],"
+    ],
+    [
+      "button[kind=]",
+      1521,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stHorizontalBlock\"] div[data-testid=\"stButton\"] > "
+    ],
+    [
+      "button[kind=]",
+      1527,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stHorizontalBlock\"] div[data-testid=\"stButton\"] > "
+    ],
+    [
+      "button[kind=]",
+      1547,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stElementContainer\"] div[data-testid=\"stButton\"] >"
+    ],
+    [
+      "button[kind=]",
+      1553,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stElementContainer\"] div[data-testid=\"stButton\"] >"
+    ],
+    [
+      "button[kind=]",
+      1838,
+      "[data-testid=\"stMain\"]:has(.tq-screen-marker) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      3513,
+      "section.main:has(.mx-marker) .mx-listen-compact div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      3516,
+      "section.main:has(.mx-marker) .mx-listen-compact div[data-testid=\"stButton\"] > button[kind=\"secondary\"],"
+    ],
+    [
+      "button[kind=]",
+      3919,
+      "section.main:has(.mx-marker) .stButton > button[kind=\"primary\"] {"
+    ],
+    [
+      "button[kind=]",
+      3925,
+      "section.main:has(.mx-marker) .stButton > button[kind=\"primary\"]:hover:not(:disabled) {"
+    ],
+    [
+      "button[kind=]",
+      4791,
+      "div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      4800,
+      "div[data-testid=\"stButton\"] > button[kind=\"primary\"]:hover:not(:disabled),"
+    ],
+    [
+      "button[kind=]",
+      4812,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--teal) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      4824,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--blue) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      4836,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--purple) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      4848,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--pink) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      4860,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--amber) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ],
+    [
+      "button[kind=]",
+      4872,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--coral) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ]
+  ],
+  "baseButton_legacy_lines": [
+    [
+      "baseButton-* legacy",
+      484,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[data-testid=\"baseButton-secondary\"]),"
+    ],
+    [
+      "baseButton-* legacy",
+      488,
+      "[data-testid=\"stMain\"]:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[data-testid=\"baseButton-secondary\"]),"
+    ],
+    [
+      "baseButton-* legacy",
+      508,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      512,
+      "[data-testid=\"stMain\"]:has(.onb-marker) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      523,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-secondary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      527,
+      "[data-testid=\"stMain\"]:has(.onb-marker) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-secondary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      840,
+      "section.main:has(.onb-marker) .onb-choice-list div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"] {"
+    ],
+    [
+      "baseButton-* legacy",
+      847,
+      "section.main:has(.onb-marker) .onb-choice-list div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-secondary\"] {"
+    ],
+    [
+      "baseButton-* legacy",
+      1522,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stHorizontalBlock\"] div[data-testid=\"stButton\"] > "
+    ],
+    [
+      "baseButton-* legacy",
+      1528,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stHorizontalBlock\"] div[data-testid=\"stButton\"] > "
+    ],
+    [
+      "baseButton-* legacy",
+      1531,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stHorizontalBlock\"] div[data-testid=\"stButton\"] > "
+    ],
+    [
+      "baseButton-* legacy",
+      1536,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stHorizontalBlock\"] div[data-testid=\"stButton\"] > "
+    ],
+    [
+      "baseButton-* legacy",
+      1548,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stElementContainer\"] div[data-testid=\"stButton\"] >"
+    ],
+    [
+      "baseButton-* legacy",
+      1554,
+      "[data-testid=\"stMain\"]:has(.home-screen) .home-continue-actions-marker ~ div[data-testid=\"stElementContainer\"] div[data-testid=\"stButton\"] >"
+    ],
+    [
+      "baseButton-* legacy",
+      1839,
+      "[data-testid=\"stMain\"]:has(.tq-screen-marker) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"] {"
+    ],
+    [
+      "baseButton-* legacy",
+      3514,
+      "section.main:has(.mx-marker) .mx-listen-compact div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      3517,
+      "section.main:has(.mx-marker) .mx-listen-compact div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-secondary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4792,
+      "div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4801,
+      "div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"]:hover:not(:disabled),"
+    ],
+    [
+      "baseButton-* legacy",
+      4813,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--teal) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4825,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--blue) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4837,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--purple) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4849,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--pink) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4861,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--amber) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4873,
+      "[data-testid=\"stMain\"]:has(.tq-accent-scope--coral) div[data-testid=\"stButton\"] > button[data-testid=\"baseButton-primary\"],"
+    ],
+    [
+      "baseButton-* legacy",
+      4949,
+      "section.main:has(.mx-record-stage) div[data-testid=\"stButton\"] > button:not([kind=\"primary\"]):not([data-testid=\"baseButton-primary\"]):not([d"
+    ]
+  ],
+  "section_main_only_sample": [
+    [
+      96,
+      "main, section.main, .block-container {"
+    ],
+    [
+      122,
+      "section.main > div {"
+    ],
+    [
+      126,
+      "section.main:has(.mx-record-stage) > div {"
+    ],
+    [
+      133,
+      "section.main > div > div.block-container {"
+    ],
+    [
+      141,
+      "section.main > div > div.block-container { animation: none !important; }"
+    ],
+    [
+      285,
+      "section.main:has(.onb-marker) {"
+    ],
+    [
+      293,
+      "section.main:has(.onb-marker) div.block-container {"
+    ],
+    [
+      301,
+      "section.main:has(.onb-marker) .onb-wrap,"
+    ],
+    [
+      307,
+      "section.main:has(.onb-marker) .onb-card,"
+    ],
+    [
+      318,
+      "section.main:has(.onb-marker) .onb-brand,"
+    ],
+    [
+      324,
+      "section.main:has(.onb-marker) .onb-brand-icon,"
+    ],
+    [
+      337,
+      "section.main:has(.onb-marker) .onb-brand-icon svg,"
+    ],
+    [
+      343,
+      "section.main:has(.onb-marker) .onb-brand-text,"
+    ],
+    [
+      350,
+      "section.main:has(.onb-marker) .onb-copy,"
+    ],
+    [
+      354,
+      "section.main:has(.onb-marker) .onb-title-entry,"
+    ],
+    [
+      356,
+      "section.main:has(.onb-marker) .stMarkdown h1.onb-title-entry,"
+    ],
+    [
+      367,
+      "section.main:has(.onb-marker) .onb-sub-hero,"
+    ],
+    [
+      376,
+      "section.main:has(.onb-marker) .onb-steps,"
+    ],
+    [
+      384,
+      "section.main:has(.onb-marker) .onb-step-card,"
+    ],
+    [
+      394,
+      "section.main:has(.onb-marker) .onb-step-num,"
+    ],
+    [
+      410,
+      "section.main:has(.onb-marker) .onb-step-ico,"
+    ],
+    [
+      417,
+      "section.main:has(.onb-marker) .onb-step-ico svg,"
+    ],
+    [
+      423,
+      "section.main:has(.onb-marker) .onb-step-title,"
+    ],
+    [
+      432,
+      "section.main:has(.onb-marker) .onb-cta-gap {"
+    ],
+    [
+      435,
+      "section.main:has(.onb-marker) .onb-footnote,"
+    ],
+    [
+      443,
+      "section.main:has(.onb-marker) div[data-testid=\"stElementContainer\"] {"
+    ],
+    [
+      446,
+      "section.main:has(.onb-marker) div[data-testid=\"stLinkButton\"] {"
+    ],
+    [
+      449,
+      "section.main:has(.onb-marker) div[data-testid=\"stLinkButton\"] > a,"
+    ],
+    [
+      450,
+      "section.main:has(.onb-marker) a[data-testid=\"stLinkButton\"] {"
+    ],
+    [
+      470,
+      "section.main:has(.onb-marker) div[data-testid=\"stLinkButton\"] > a::before,"
+    ],
+    [
+      471,
+      "section.main:has(.onb-marker) a[data-testid=\"stLinkButton\"]::before {"
+    ],
+    [
+      479,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"],"
+    ],
+    [
+      483,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[kind=\"secondary\"]),"
+    ],
+    [
+      484,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[data-testid=\"baseButton-secondary\"]),"
+    ],
+    [
+      485,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"]:has(> button[data-testid=\"stBaseButton-secondary\"]),"
+    ],
+    [
+      486,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"]:has(button[data-testid=\"stBaseButton-secondary\"]),"
+    ],
+    [
+      493,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] > button,"
+    ],
+    [
+      494,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] button[data-testid=\"stBaseButton-secondary\"],"
+    ],
+    [
+      495,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] button[data-testid=\"stBaseButton-primary\"],"
+    ],
+    [
+      507,
+      "section.main:has(.onb-marker) div[data-testid=\"stButton\"] > button[kind=\"primary\"],"
+    ]
+  ],
+  "pat_related": [
+    [
+      2745,
+      "Only .pat-card-shell--tap columns get overlay rules; detail/buttons are outside. */"
+    ],
+    [
+      2877,
+      "[data-testid=\"stMain\"]:has(.pat-screen-marker) div[data-testid=\"stButton\"]:has(button[key*=\"pat_ex_toggle\"]),"
+    ],
+    [
+      2878,
+      "[data-testid=\"stMain\"]:has(.pat-screen-marker) div[data-testid=\"stButton\"]:has(button[key*=\"pat_detail_close\"]) {"
+    ],
+    [
+      2881,
+      "[data-testid=\"stMain\"]:has(.pat-screen-marker) div[data-testid=\"stHorizontalBlock\"]:has(button[key*=\"pat_detail_close\"]) {"
+    ],
+    [
+      2885,
+      "[data-testid=\"stMain\"]:has(.pat-screen-marker) div[data-testid=\"stButton\"]:has(button[key*=\"pat_ex_toggle\"]) > button,"
+    ],
+    [
+      2886,
+      "[data-testid=\"stMain\"]:has(.pat-screen-marker) div[data-testid=\"stButton\"]:has(button[key*=\"pat_detail_close\"]) > button {"
+    ],
+    [
+      5054,
+      "Only .pat-card-shell--tap columns get overlay rules; detail/buttons are outside. */"
+    ]
+  ]
+}
