@@ -7,6 +7,7 @@ import unittest
 from views.history import (
     _format_correction_focus_html,
     _is_topic_practice_record,
+    _labels_for_score_breakdown,
     _opic_header_label,
     _question_text_from_item,
     _resolve_short_feedback,
@@ -79,6 +80,47 @@ class HistoryTopicDetailTest(unittest.TestCase):
         html_out = _format_correction_focus_html("다음에는 이유를 한 문장 더 추가해 보세요.")
         self.assertIn("hist-card-body", html_out)
         self.assertNotIn("hist-correction-orig", html_out)
+
+    def test_score_labels_mock_six_axes(self) -> None:
+        breakdown = {
+            "response_amount": 80,
+            "relevance": 70,
+            "structure": 65,
+            "grammar": 75,
+            "vocabulary": 72,
+            "naturalness": 68,
+        }
+        labels = _labels_for_score_breakdown(
+            breakdown,
+            practice_type="mock_exam",
+            subtype="mock_v2",
+        )
+        self.assertEqual(len(labels), 6)
+        self.assertEqual(labels["relevance"], "질문 적합도")
+        self.assertEqual(labels["naturalness"], "자연스러움")
+
+    def test_score_labels_script_diagnose_five_axes(self) -> None:
+        breakdown = {
+            "response_amount": 70,
+            "vocabulary": 65,
+            "grammar": 80,
+            "context": 75,
+            "structure": 60,
+        }
+        labels = _labels_for_score_breakdown(
+            breakdown,
+            practice_type="script_coaching",
+            subtype="diagnose",
+        )
+        self.assertEqual(len(labels), 5)
+        self.assertEqual(labels["context"], "맥락")
+        self.assertNotIn("naturalness", labels)
+
+    def test_score_labels_empty_breakdown(self) -> None:
+        self.assertEqual(
+            _labels_for_score_breakdown({}, practice_type="mock_exam", subtype="mock_v2"),
+            {},
+        )
 
 
 if __name__ == "__main__":

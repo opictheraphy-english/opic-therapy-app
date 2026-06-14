@@ -14,9 +14,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
 
 from components.navigation import navigate_to
+from components.score_donut_bars import render_score_donut_bars_html
 from components.topbar import render_top_bar
 from components.brand_character import render_character_svg
 from services.history_store import get_history_record, list_history
+from services.mini_mock_v2_level_rules import SHARED_SCORE_AXES
 from utils.auth import is_authenticated
 
 _KEY_SELECTED = "history_selected_id"
@@ -27,14 +29,50 @@ _KST = timezone(timedelta(hours=9))
 
 _WEEKDAY_KO = ("월", "화", "수", "목", "금", "토", "일")
 
-_SCORE_AXES = (
-    ("fluency", "유창성"),
-    ("delivery", "전달력"),
-    ("grammar", "문법"),
-    ("vocabulary", "어휘"),
-    ("coherence", "일관성"),
-    ("response_amount", "답변량"),
+# Mock / real_mock 6-axis — key order follows SHARED_SCORE_AXES (single source).
+_MOCK_SCORE_AXIS_ORDER: Tuple[str, ...] = tuple(SHARED_SCORE_AXES.keys())
+_MOCK_SCORE_LABELS_KO: Dict[str, str] = {
+    "response_amount": "답변량",
+    "relevance": "질문 적합도",
+    "structure": "답변 구조",
+    "grammar": "문법",
+    "vocabulary": "어휘",
+    "naturalness": "자연스러움",
+}
+
+# Script coaching diagnose 5-axis (context is diagnose-only).
+_SCRIPT_DIAGNOSE_ORDER: Tuple[str, ...] = (
+    "response_amount",
+    "vocabulary",
+    "grammar",
+    "context",
+    "structure",
 )
+_SCRIPT_DIAGNOSE_LABELS_KO: Dict[str, str] = {
+    "response_amount": "분량",
+    "vocabulary": "어휘",
+    "grammar": "문법",
+    "context": "맥락",
+    "structure": "구조",
+}
+
+# Legacy history rows (pre mock-v2 axis rename).
+_LEGACY_SCORE_ORDER: Tuple[str, ...] = (
+    "fluency",
+    "delivery",
+    "grammar",
+    "vocabulary",
+    "coherence",
+    "response_amount",
+)
+_LEGACY_SCORE_LABELS_KO: Dict[str, str] = {
+    "fluency": "유창성",
+    "delivery": "전달력",
+    "grammar": "문법",
+    "vocabulary": "어휘",
+    "coherence": "일관성",
+    "response_amount": "답변량",
+}
 
 _FILTERS = (
     ("all", "전체"),
@@ -517,6 +555,52 @@ def _axis_value(breakdown: Any, key: str) -> Optional[float]:
         return None
 
 
+def _labels_for_score_breakdown(
+    breakdown: Dict[str, Any],
+    *,
+    practice_type: str,
+    subtype: str,
+) -> Dict[str, str]:
+    """Map stored score_breakdown keys to Korean display labels."""
+    if not breakdown:
+        return {}
+
+    pt = str(practice_type or "").strip()
+    st = str(subtype or "").strip()
+
+    if pt == "script_coaching" and st == "diagnose":
+        return {
+            k: _SCRIPT_DIAGNOSE_LABELS_KO[k]
+            for k in _SCRIPT_DIAGNOSE_ORDER
+            if k in breakdown
+        }
+
+    if pt == "mock_exam" or any(k in breakdown for k in _MOCK_SCORE_AXIS_ORDER):
+        return {
+            k: _MOCK_SCORE_LABELS_KO[k]
+            for k in _MOCK_SCORE_AXIS_ORDER
+            if k in breakdown
+        }
+
+    if any(k in breakdown for k in _LEGACY_SCORE_ORDER):
+        return {
+            k: _LEGACY_SCORE_LABELS_KO[k]
+            for k in _LEGACY_SCORE_ORDER
+            if k in breakdown
+        }
+
+    known = {
+        **_MOCK_SCORE_LABELS_KO,
+        **_SCRIPT_DIAGNOSE_LABELS_KO,
+        **_LEGACY_SCORE_LABELS_KO,
+    }
+    return {
+        k: known.get(k, k)
+        for k in breakdown
+        if _axis_value(breakdown, k) is not None
+    }
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -744,35 +828,43 @@ def _render_detail(record_id: str) -> None:
     if not isinstance(content, dict):
         content = {}
 
-    _render_score_breakdown(content.get("score_breakdown"))
+    _render_score_breakdown(
+        content.get("score_breakdown"),
+        overall_level=record.get("overall_level") or content.get("overall_level"),
+        practice_type=practice_type,
+        subtype=subtype,
+    )
     _render_text_sections(content, subtype, practice_type)
     _render_per_question(content, practice_type)
 
 
-def _render_score_breakdown(breakdown: Any) -> None:
-    if not isinstance(breakdown, dict):
+def _render_score_breakdown(
+    breakdown: Any,
+    *,
+    overall_level: Any = None,
+    practice_type: str = "",
+    subtype: str = "",
+) -> None:
+    if not isinstance(breakdown, dict) or not breakdown:
         return
-    rows = []
-    for key, label in _SCORE_AXES:
-        val = _axis_value(breakdown, key)
-        if val is None:
-            continue
-        pct = max(0, min(100, int(round(val))))
-        rows.append(
-            f'<div style="margin:6px 0;">'
-            f'<div style="display:flex;justify-content:space-between;font-size:13px;color:#334155;">'
-            f"<span>{html.escape(label)}</span><span style=\"font-weight:700;\">{int(round(val))}</span></div>"
-            f'<div style="height:7px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:3px;">'
-            f'<span style="display:block;height:100%;width:{pct}%;background:#0d9488;"></span></div>'
-            f"</div>"
-        )
-    if not rows:
-        return
-    st.markdown('<div class="home-section-h">항목별 점수</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="glass-card-quiet" style="padding:12px 14px;">{"".join(rows)}</div>',
-        unsafe_allow_html=True,
+
+    labels = _labels_for_score_breakdown(
+        breakdown,
+        practice_type=practice_type,
+        subtype=subtype,
     )
+    if not labels:
+        return
+    if not any(_axis_value(breakdown, key) is not None for key in labels):
+        return
+
+    level = str(overall_level or "").strip()
+    score_html = render_score_donut_bars_html(breakdown, labels, level)
+    if not score_html:
+        return
+
+    st.markdown('<div class="home-section-h">점수 요약</div>', unsafe_allow_html=True)
+    st.markdown(score_html, unsafe_allow_html=True)
 
 
 def _render_script_coaching_before_after(content: Dict[str, Any]) -> None:
