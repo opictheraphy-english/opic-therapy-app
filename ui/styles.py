@@ -3347,6 +3347,218 @@ GLOBAL_CSS = """
       }
     }
 
+    /* Learning portal — design-A cards (overlay tap; pilot: real mock only) */
+    .mx-portal-cards-marker {
+      display: none !important;
+    }
+    .mx-portal-card {
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      min-height: 72px;
+      padding: 14px 14px 14px 16px;
+      overflow: hidden;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 0.5px solid rgba(17, 24, 39, 0.08);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      color: inherit !important;
+      margin: 0;
+      pointer-events: none;
+      transition: transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out),
+        border-color 0.16s var(--ease-out);
+    }
+    .mx-portal-card-accent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #1D9E75;
+      border-radius: 0;
+      pointer-events: none;
+    }
+    .mx-portal-card-badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      margin: 0;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(13, 148, 136, 0.12);
+      color: #0F6E56 !important;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.4;
+      pointer-events: none;
+    }
+    .mx-portal-card-ico {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #E1F5EE;
+      color: #0F6E56;
+      margin: 0;
+      pointer-events: none;
+    }
+    .mx-portal-card-ico svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2;
+    }
+    .mx-portal-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: visible;
+      padding-right: 52px;
+      pointer-events: none;
+    }
+    .mx-portal-card-title {
+      font-family: var(--font-display) !important;
+      font-size: 15px;
+      font-weight: 500;
+      color: #111827;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      margin: 0;
+    }
+    .mx-portal-card-sub {
+      font-size: 12px;
+      color: #6b7280;
+      line-height: 1.4;
+      margin: 0;
+    }
+    .mx-portal-card-chevron {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      color: #0F6E56;
+      background: rgba(13, 148, 136, 0.14);
+      pointer-events: none;
+    }
+    .mx-portal-card-chevron svg {
+      width: 18px;
+      height: 18px;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card) {
+      position: relative;
+      align-self: flex-start !important;
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"] {
+      position: relative;
+      gap: 0 !important;
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stElementContainer"]:has(.mx-portal-card) {
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stMarkdown"]:has(.mx-portal-card) {
+      margin-bottom: 0 !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stMarkdownContainer"]:has(.mx-portal-card) {
+      margin-bottom: 0 !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stElementContainer"]:has(.mx-portal-card),
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stMarkdown"]:has(.mx-portal-card),
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card) .mx-portal-card,
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card) .mx-portal-card * {
+      pointer-events: none !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stElementContainer"]:has(> div[data-testid="stButton"]) {
+      position: absolute !important;
+      inset: 0 !important;
+      height: 100% !important;
+      z-index: 3 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stButton"] {
+      position: static !important;
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stButton"]
+      > button {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 16px !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      color: transparent !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card,
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card {
+      border-color: rgba(29, 158, 117, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card-chevron {
+      transform: translateY(-50%) translateX(2px);
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
+      .mx-portal-card {
+      transform: translateY(0) scale(0.985);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
     /* ==================================================================
      * Mock exam screen (UI redesign step 4) — premium speaking studio.
      *

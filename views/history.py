@@ -24,6 +24,7 @@ from utils.auth import is_authenticated
 _KEY_SELECTED = "history_selected_id"
 _KEY_FILTER = "history_filter"
 _KEY_SORT = "history_sort"
+_KEY_PERIOD = "history_period"
 
 _KST = timezone(timedelta(hours=9))
 
@@ -80,6 +81,18 @@ _FILTERS = (
     ("topic_practice", "주제별"),
     ("script_coaching", "스크립트"),
 )
+
+_PERIOD_OPTIONS: Tuple[Tuple[str, Optional[int]], ...] = (
+    ("전체", None),
+    ("최근 3일", 3),
+    ("지난 주", 7),
+    ("지난 2주", 14),
+    ("지난 한 달", 30),
+)
+_PERIOD_LABELS: Tuple[str, ...] = tuple(label for label, _ in _PERIOD_OPTIONS)
+_PERIOD_DAYS_BY_LABEL: Dict[str, Optional[int]] = {
+    label: days for label, days in _PERIOD_OPTIONS
+}
 
 _TOPIC_FB_FALLBACK_SUMMARY = "답변을 분석했어요."
 _TOPIC_FB_FALLBACK_STRENGTH = "질문에 맞춰 답변하려는 시도가 좋았어요."
@@ -349,6 +362,25 @@ def _sort_history_rows(rows: List[Dict[str, Any]], sort_dir: str) -> List[Dict[s
         key=_sort_key,
         reverse=reverse,
     )
+
+
+def _filter_history_rows_by_period(
+    rows: List[Dict[str, Any]],
+    days: Optional[int],
+) -> List[Dict[str, Any]]:
+    """Keep rows within the last ``days`` (KST); ``None`` means no period filter."""
+    base = [row for row in rows if isinstance(row, dict)]
+    if days is None:
+        return base
+    cutoff = datetime.now(_KST) - timedelta(days=int(days))
+    kept: List[Dict[str, Any]] = []
+    for row in base:
+        dt = _parse_created_at_kst(row.get("created_at"))
+        if dt is None:
+            continue
+        if dt >= cutoff:
+            kept.append(row)
+    return kept
 
 
 def _group_rows_by_date_bucket(
@@ -694,6 +726,21 @@ def _render_empty_list() -> None:
     )
 
 
+def _render_period_empty() -> None:
+    st.markdown('<div class="hist-list-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="glass-card-quiet" style="margin:8px 0 14px 0;">
+          <p style="margin:0 0 6px 0;font-weight:700;color:#0f172a;">선택한 기간에 기록이 없어요</p>
+          <p class="ds-muted" style="margin:0;">
+            다른 기간을 선택해 보세요.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_list() -> None:
     ss = st.session_state
     active = str(ss.get(_KEY_FILTER) or "all")
@@ -714,8 +761,16 @@ def _render_list() -> None:
                 ss[_KEY_FILTER] = key
                 st.rerun()
 
-    sort_cols = st.columns(2, gap="small")
-    with sort_cols[0]:
+    control_cols = st.columns([2, 1, 1], gap="small")
+    with control_cols[0]:
+        period_label = st.selectbox(
+            "기간",
+            options=list(_PERIOD_LABELS),
+            key=_KEY_PERIOD,
+            label_visibility="collapsed",
+        )
+    selected_days = _PERIOD_DAYS_BY_LABEL.get(str(period_label or ""), None)
+    with control_cols[1]:
         if st.button(
             "최신순",
             key="history_sort_desc",
@@ -724,7 +779,7 @@ def _render_list() -> None:
         ):
             ss[_KEY_SORT] = "desc"
             st.rerun()
-    with sort_cols[1]:
+    with control_cols[2]:
         if st.button(
             "오래된순",
             key="history_sort_asc",
@@ -741,7 +796,12 @@ def _render_list() -> None:
         _render_empty_list()
         return
 
-    sorted_rows = _sort_history_rows(rows, sort_dir)
+    filtered_rows = _filter_history_rows_by_period(rows, selected_days)
+    if not filtered_rows:
+        _render_period_empty()
+        return
+
+    sorted_rows = _sort_history_rows(filtered_rows, sort_dir)
     groups = _group_rows_by_date_bucket(sorted_rows)
 
     st.markdown('<div class="hist-list-marker" aria-hidden="true"></div>', unsafe_allow_html=True)

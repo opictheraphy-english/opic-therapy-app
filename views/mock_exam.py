@@ -2509,6 +2509,40 @@ def _begin_new_practice_from_completed(mx: dict) -> bool:
     return True
 
 
+_PORTAL_CLIPBOARD_CHECK_SVG = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />'
+    '<path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />'
+    '<path d="M9 14l2 2l4 -4" />'
+    "</svg>"
+)
+
+
+def _render_portal_real_mock_card_html() -> None:
+    """Learning portal — real mock card (design A, overlay tap target follows in st.button)."""
+    st.markdown(
+        f"""
+        <div class="mx-portal-card mx-portal-card--real-mock" role="region" aria-label="실전 모의고사">
+          <span class="mx-portal-card-accent" aria-hidden="true"></span>
+          <span class="mx-portal-card-badge">추천</span>
+          <span class="mx-portal-card-ico">{_PORTAL_CLIPBOARD_CHECK_SVG}</span>
+          <div class="mx-portal-card-body">
+            <span class="mx-portal-card-title">실전 모의고사</span>
+            <span class="mx-portal-card-sub">15문항 실전 흐름 + AI 최종 리포트</span>
+          </div>
+          <span class="mx-portal-card-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+          </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_learning_portal(mx: dict) -> None:
     """Learning portal — real mock, mini mock, topic practice (coaching hidden for launch)."""
     _maybe_reset_practice_from_url()
@@ -2541,22 +2575,16 @@ def render_learning_portal(mx: dict) -> None:
         '<div class="mx-portal-practice-marker" aria-hidden="true"></div>',
         unsafe_allow_html=True,
     )
+    st.markdown(
+        '<div class="mx-portal-cards-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
 
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown(
-            """
-            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
-                     aria-label="실전 모의고사">
-              <div class="cc-title">실전 모의고사</div>
-              <div class="cc-meta">OPIc 실전 흐름에 맞춰 15문항을 연습하고 AI 최종 리포트를 확인해요.</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
+        _render_portal_real_mock_card_html()
         if st.button(
             "실전 모의고사 시작",
-            type="primary",
             use_container_width=True,
             key="portal_start_real_mock",
         ):
