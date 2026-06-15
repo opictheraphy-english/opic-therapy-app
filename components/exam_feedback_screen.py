@@ -218,3 +218,171 @@ def render_feedback_summary(
         ),
         unsafe_allow_html=True,
     )
+
+
+def build_keyword_constraint_feedback_label_html() -> str:
+    return (
+        '<div class="tq-feedback-label-row">'
+        f'<span class="tq-feedback-label-ico tq-feedback-label-ico--teal">'
+        f"{_SPARK_SVG}"
+        f"</span>"
+        f'<span class="tq-feedback-label-text">키워드 표현 피드백</span>'
+        f"</div>"
+    )
+
+
+def build_keyword_constraint_checklist_html(fb: dict) -> str:
+    """Checklist for target/banned/pattern results (separate from keyword_drill chips)."""
+    targets = fb.get("targets") if isinstance(fb.get("targets"), list) else []
+    banned = fb.get("banned") if isinstance(fb.get("banned"), list) else []
+    target_used = int(fb.get("target_used_count") or 0)
+    target_total = int(fb.get("target_total") or len(targets))
+    banned_hit_count = int(fb.get("banned_hit_count") or 0)
+    patterns_used = bool(fb.get("patterns_used"))
+    pattern_quote = html.escape(str(fb.get("pattern_quote") or "").strip())
+
+    target_rows: list[str] = []
+    for row in targets:
+        if not isinstance(row, dict):
+            continue
+        expr = html.escape(str(row.get("expr") or "").strip())
+        ko = html.escape(str(row.get("ko") or "").strip())
+        ko_html = (
+            f'<span class="tq-kc-result-ko">{ko}</span>' if ko else ""
+        )
+        used = bool(row.get("used"))
+        if used:
+            mark = "✓"
+            cls = "tq-kc-result-row--ok"
+            meta = f"{int(row.get('count') or 1)}회"
+        else:
+            mark = "—"
+            cls = "tq-kc-result-row--miss"
+            meta = "미사용"
+        target_rows.append(
+            f'<li class="tq-kc-result-row {cls}">'
+            f'<span class="tq-kc-result-mark">{mark}</span>'
+            f'<span class="tq-kc-result-expr">{expr}{ko_html}</span>'
+            f'<span class="tq-kc-result-meta">{meta}</span>'
+            f"</li>"
+        )
+    target_list = (
+        f'<ul class="tq-kc-result-list">{"".join(target_rows)}</ul>'
+        if target_rows
+        else '<p class="tq-kc-result-empty">—</p>'
+    )
+
+    banned_rows: list[str] = []
+    for row in banned:
+        if not isinstance(row, dict) or not row.get("hit"):
+            continue
+        expr = html.escape(str(row.get("expr") or "").strip())
+        count = int(row.get("count") or 0)
+        banned_rows.append(
+            f'<li class="tq-kc-result-row tq-kc-result-row--warn">'
+            f'<span class="tq-kc-result-mark">⚠</span>'
+            f'<span class="tq-kc-result-expr">{expr}</span>'
+            f'<span class="tq-kc-result-meta">{count}회</span>'
+            f"</li>"
+        )
+    if banned_rows:
+        banned_section = f'<ul class="tq-kc-result-list">{"".join(banned_rows)}</ul>'
+    else:
+        banned_section = '<p class="tq-kc-result-clear">금지 표현 안 씀 ✓</p>'
+
+    if patterns_used:
+        pattern_mark = "✓"
+        pattern_cls = "tq-kc-result-row--pattern-ok"
+        pattern_meta = "사용"
+    else:
+        pattern_mark = "—"
+        pattern_cls = "tq-kc-result-row--miss"
+        pattern_meta = "안 씀"
+    pattern_quote_block = ""
+    if patterns_used and pattern_quote:
+        pattern_quote_block = (
+            f'<p class="tq-kc-result-quote">“{pattern_quote}”</p>'
+        )
+
+    naturalness = html.escape(str(fb.get("naturalness_note") or "").strip())
+    naturalness_block = ""
+    if naturalness:
+        naturalness_block = (
+            f'<p class="tq-kc-result-note">{naturalness}</p>'
+        )
+
+    return (
+        '<div class="tq-kc-result-panel" role="region" aria-label="키워드 표현 체크리스트">'
+        '<div class="tq-kc-result-block tq-kc-result-block--target">'
+        '<div class="tq-kc-result-head">'
+        '<span class="tq-kc-result-title">목표 표현</span>'
+        f'<span class="tq-kc-result-score">{target_used}/{target_total} 사용</span>'
+        "</div>"
+        f"{target_list}"
+        "</div>"
+        '<div class="tq-kc-result-block tq-kc-result-block--banned">'
+        '<div class="tq-kc-result-head">'
+        '<span class="tq-kc-result-title">금지 표현</span>'
+        f'<span class="tq-kc-result-score">{banned_hit_count}건 위반</span>'
+        "</div>"
+        f"{banned_section}"
+        "</div>"
+        '<div class="tq-kc-result-block tq-kc-result-block--pattern">'
+        '<div class="tq-kc-result-head">'
+        '<span class="tq-kc-result-title">확장 패턴</span>'
+        f'<span class="tq-kc-result-score">{pattern_meta}</span>'
+        "</div>"
+        f'<div class="tq-kc-result-row {pattern_cls}">'
+        f'<span class="tq-kc-result-mark">{pattern_mark}</span>'
+        f'<span class="tq-kc-result-expr">AI 판정</span>'
+        "</div>"
+        f"{pattern_quote_block}"
+        f"{naturalness_block}"
+        "</div>"
+        "</div>"
+        "<style>"
+        ".tq-kc-result-panel{display:flex;flex-direction:column;gap:10px;margin:0 0 14px 0;}"
+        ".tq-kc-result-block{border-radius:12px;padding:12px 14px;border:0.5px solid transparent;}"
+        ".tq-kc-result-block--target{background:#ecfdf5;border-color:#99f6e4;}"
+        ".tq-kc-result-block--banned{background:#fff7ed;border-color:#fdba74;}"
+        ".tq-kc-result-block--pattern{background:#f5f3ff;border-color:#c4b5fd;}"
+        ".tq-kc-result-head{display:flex;justify-content:space-between;align-items:center;"
+        "gap:8px;margin:0 0 8px 0;}"
+        ".tq-kc-result-title{font-size:12px;font-weight:700;color:#334155;}"
+        ".tq-kc-result-block--target .tq-kc-result-title{color:#0f766e;}"
+        ".tq-kc-result-block--banned .tq-kc-result-title{color:#c2410c;}"
+        ".tq-kc-result-block--pattern .tq-kc-result-title{color:#5b21b6;}"
+        ".tq-kc-result-score{font-size:12px;font-weight:600;color:#64748b;}"
+        ".tq-kc-result-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}"
+        ".tq-kc-result-row{display:flex;align-items:center;gap:8px;font-size:13px;}"
+        ".tq-kc-result-mark{width:18px;font-weight:700;flex-shrink:0;}"
+        ".tq-kc-result-expr{flex:1;font-weight:600;color:#0f172a;}"
+        ".tq-kc-result-ko{margin-left:6px;font-size:12px;font-weight:500;color:#94a3b8;}"
+        ".tq-kc-result-meta{font-size:12px;color:#64748b;}"
+        ".tq-kc-result-row--ok .tq-kc-result-mark{color:#0f766e;}"
+        ".tq-kc-result-row--miss .tq-kc-result-mark{color:#94a3b8;}"
+        ".tq-kc-result-row--warn .tq-kc-result-mark{color:#c2410c;}"
+        ".tq-kc-result-row--pattern-ok .tq-kc-result-mark{color:#5b21b6;}"
+        ".tq-kc-result-clear{margin:0;font-size:13px;font-weight:600;color:#0f766e;}"
+        ".tq-kc-result-empty,.tq-kc-result-note,.tq-kc-result-quote{margin:6px 0 0 0;"
+        "font-size:13px;color:#475569;}"
+        ".tq-kc-result-quote{font-style:italic;color:#5b21b6;}"
+        "</style>"
+    )
+
+
+def render_keyword_constraint_feedback(fb: dict, *, accent: str = "teal") -> None:
+    """Keyword-constraint result screen (checklist + summary/coaching cards)."""
+    summary = str(fb.get("summary") or "").strip() or "키워드 표현 결과를 확인해 보세요."
+    coaching = str(fb.get("coaching") or "").strip() or "목표 표현을 자연스럽게 녹여 다시 말해 보세요."
+
+    st.markdown(build_keyword_constraint_feedback_label_html(), unsafe_allow_html=True)
+    render_feedback_summary(summary, accent=accent)
+    st.markdown(build_keyword_constraint_checklist_html(fb), unsafe_allow_html=True)
+    render_feedback_section_card(
+        "코칭 한 줄",
+        coaching,
+        accent="amber",
+        icon="flag",
+        filled=True,
+    )

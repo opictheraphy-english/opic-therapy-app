@@ -31,6 +31,7 @@ from components.exam_feedback_screen import (
     render_feedback_label,
     render_feedback_section_card,
     render_feedback_summary,
+    render_keyword_constraint_feedback,
 )
 from components.exam_saved_screen import (
     render_saved_recording_header,
@@ -46,6 +47,11 @@ from components.recovery_card import (
     render_recovery_retry_caption_html,
 )
 from components.topbar import render_top_bar
+from data.keyword_constraint_sets import (
+    get_keyword_constraint_practice_set,
+    list_keyword_constraint_sets,
+    list_keyword_constraint_sets_by_category,
+)
 from data.opic_question_bank_v2 import (
     ROLEPLAY_PRACTICE_SETS,
     TOPIC_PRACTICE_TOPICS,
@@ -70,6 +76,8 @@ _KEY_AUDIO_BLOBS = "topic_v2_audio_blobs"
 _MIN_SAVED_WORDS = 5
 
 MOCK_MODE_TOPIC_V2 = "topic_practice_v2"
+ENTRY_SOURCE_PORTAL_KEYWORD = "portal_keyword"
+ENTRY_SOURCE_TOPIC_HUB = "topic_hub"
 
 _KEY_STEP = "topic_v2_step"
 _KEY_PAGE = "topic_v2_page"
@@ -80,6 +88,8 @@ _KEY_QUESTIONS = "topic_v2_questions"
 _KEY_MODE = "topic_v2_mode"
 _KEY_ROLEPLAY_SET_ID = "topic_v2_roleplay_set_id"
 _KEY_ADVANCED_SET_ID = "topic_v2_advanced_set_id"
+_KEY_KEYWORD_CONSTRAINT_SET_ID = "topic_v2_keyword_constraint_set_id"
+_KEY_ENTRY_SOURCE = "topic_v2_entry_source"
 _KEY_ANSWERS = "topic_v2_answers"
 _KEY_FEEDBACK = "topic_v2_feedback"
 _KEY_DRAFT_TRANSCRIPT = "topic_v2_practice_transcript"
@@ -114,13 +124,22 @@ _FB_FALLBACK_PRACTICE_MISSION = (
 _EMPTY_FIELD_PLACEHOLDER = "—"
 
 _VALID_STEPS = frozenset(
-    {"select_topic", "question", "saved", "feedback", "pending", "insufficient"}
+    {
+        "select_topic",
+        "select_keyword_set",
+        "question",
+        "saved",
+        "feedback",
+        "pending",
+        "insufficient",
+    }
 )
 
 _KEY_TOPIC_SEARCH = "topic_v2_topic_search"
 _KEY_TOPIC_CATEGORY = "topic_v2_topic_category"
 _KEY_ROLEPLAY_EXPAND = "topic_v2_roleplay_expand"
 _KEY_ADVANCED_EXPAND = "topic_v2_advanced_expand"
+_KEY_KEYWORD_CONSTRAINT_EXPAND = "topic_v2_keyword_constraint_expand"
 
 _RECOMMENDED_TOPIC_IDS: Tuple[str, ...] = (
     "home",
@@ -295,6 +314,7 @@ _OPIC_TYPE_LABELS: Dict[str, str] = {
     "Q8": "Q8 유형 · 관련 경험",
     "COMPARISON": "Comparison · 비교·변화",
     "NEWS/ISSUE": "News/Issue · 사회 이슈",
+    "KEYWORD": "Keyword · 표현 제약",
 }
 
 _OPIC_TYPE_BADGE_LABELS: Dict[str, str] = {
@@ -307,6 +327,7 @@ _OPIC_TYPE_BADGE_LABELS: Dict[str, str] = {
     "Q8": "Q8 · 관련 경험",
     "COMPARISON": "Comparison · 비교·변화",
     "NEWS/ISSUE": "News/Issue · 사회 이슈",
+    "KEYWORD": "Keyword · 표현 제약",
 }
 
 _TOPIC_ACCENT_NAMES: Tuple[str, ...] = (
@@ -568,6 +589,8 @@ def clear_topic_v2_session() -> None:
         _KEY_MODE,
         _KEY_ROLEPLAY_SET_ID,
         _KEY_ADVANCED_SET_ID,
+        _KEY_KEYWORD_CONSTRAINT_SET_ID,
+        _KEY_ENTRY_SOURCE,
         _KEY_ANSWERS,
         _KEY_FEEDBACK,
         _KEY_FEEDBACK_BY_Q,
@@ -603,7 +626,10 @@ def _opic_type_label(opic_type: str) -> str:
 
 
 def _opic_type_badge_label(opic_type: str) -> str:
-    key = str(opic_type or "").strip().upper()
+    raw = str(opic_type or "").strip()
+    if raw.startswith("Keyword"):
+        return raw
+    key = raw.upper()
     return _OPIC_TYPE_BADGE_LABELS.get(key, _opic_type_label(opic_type))
 
 
@@ -632,7 +658,11 @@ def _topic_visual_for_id(topic_id: str) -> Dict[str, str]:
 
 def _topic_v2_mode() -> str:
     raw = str(st.session_state.get(_KEY_MODE) or "topic").strip()
-    return raw if raw in ("topic", "roleplay", "advanced") else "topic"
+    return (
+        raw
+        if raw in ("topic", "roleplay", "advanced", "keyword_constraint")
+        else "topic"
+    )
 
 
 def _is_roleplay_mode() -> bool:
@@ -643,10 +673,72 @@ def _is_advanced_mode() -> bool:
     return _topic_v2_mode() == "advanced"
 
 
+def _is_keyword_constraint_mode() -> bool:
+    return _topic_v2_mode() == "keyword_constraint"
+
+
+def _topic_v2_entry_source() -> str:
+    return str(st.session_state.get(_KEY_ENTRY_SOURCE) or "").strip()
+
+
+def _is_portal_keyword_entry() -> bool:
+    return _topic_v2_entry_source() == ENTRY_SOURCE_PORTAL_KEYWORD
+
+
+def _return_to_learning_portal() -> None:
+    from views.mock_exam import reset_to_learning_portal
+
+    reset_to_learning_portal()
+    try:
+        st.query_params.clear()
+        st.query_params["nav"] = "MOCK"
+    except Exception:
+        pass
+
+
+def _goto_keyword_set_select() -> None:
+    """Return to keyword topic picker (portal or topic hub)."""
+    _log_tpv2_state_clear("ENTER", "_goto_keyword_set_select")
+    st.session_state[_KEY_PAGE] = "practice"
+    st.session_state[_KEY_STEP] = "select_keyword_set"
+    st.session_state[_KEY_MODE] = "topic"
+    st.session_state.pop(_KEY_KEYWORD_CONSTRAINT_SET_ID, None)
+    st.session_state.pop(_KEY_SINGLE_RETRY, None)
+    st.session_state[_KEY_TOPIC] = ""
+    st.session_state[_KEY_Q_INDEX] = 0
+    st.session_state[_KEY_CURRENT_Q] = {}
+    st.session_state[_KEY_QUESTIONS] = []
+    st.session_state[_KEY_FEEDBACK] = None
+    st.session_state.pop(_KEY_DRAFT_TRANSCRIPT, None)
+    _log_tpv2_state_clear("EXIT", "_goto_keyword_set_select")
+
+
+def _goto_keyword_back() -> None:
+    """Keyword practice back: portal entry → set picker; topic hub → select screen."""
+    if _is_portal_keyword_entry():
+        _goto_keyword_set_select()
+    else:
+        _goto_topic_select()
+
+
+def _question_back_handler() -> None:
+    if _is_keyword_constraint_mode() and _is_portal_keyword_entry():
+        _goto_keyword_set_select()
+    elif _is_keyword_constraint_mode():
+        _goto_topic_select()
+    else:
+        _goto_topic_select()
+
+
 def _session_question_total() -> int:
     qs = _session_question_set()
     if qs:
         return len(qs)
+    if _is_keyword_constraint_mode():
+        sid = str(st.session_state.get(_KEY_KEYWORD_CONSTRAINT_SET_ID) or "").strip()
+        if sid:
+            return len(get_keyword_constraint_practice_set(sid))
+        return 1
     if _is_advanced_mode():
         return 2
     return 3
@@ -663,9 +755,22 @@ def _is_at_practice_complete(q_idx: int) -> bool:
 def _session_min_questions() -> int:
     if _is_single_question_retry():
         return 1
+    if _is_keyword_constraint_mode():
+        return _session_question_total()
     if _is_advanced_mode():
         return 2
     return 3
+
+
+def _topic_v2_progress_total() -> int:
+    if _is_keyword_constraint_mode() or _is_advanced_mode() or _is_roleplay_mode():
+        return _session_question_total()
+    return 3
+
+
+def _keyword_combo_label(q_idx: int) -> str:
+    bank = _bank_question_at_index(q_idx)
+    return str(bank.get("combo_ko") or "").strip()
 
 
 def _advance_after_question(topic: str, q_idx: int) -> None:
@@ -767,6 +872,20 @@ def _bank_question_at_index(q_index: int) -> Dict[str, Any]:
     return {}
 
 
+def _keyword_constraint_set_meta(q_idx: int) -> Dict[str, Any]:
+    bank = _bank_question_at_index(q_idx)
+    return {
+        "set_id": str(st.session_state.get(_KEY_KEYWORD_CONSTRAINT_SET_ID) or "").strip(),
+        "combo": str(bank.get("combo") or "").strip(),
+        "combo_ko": str(bank.get("combo_ko") or "").strip(),
+        "question_text": str(bank.get("question_text") or bank.get("en") or "").strip(),
+        "ko_helper": str(bank.get("ko_helper") or bank.get("ko") or "").strip(),
+        "target_expressions": list(bank.get("target_expressions") or []),
+        "banned_expressions": list(bank.get("banned_expressions") or []),
+        "patterns": list(bank.get("patterns") or []),
+    }
+
+
 
 
 
@@ -826,18 +945,34 @@ def _advanced_set_title() -> str:
     return sid
 
 
+def _keyword_constraint_set_title() -> str:
+    sid = str(st.session_state.get(_KEY_KEYWORD_CONSTRAINT_SET_ID) or "").strip()
+    if not sid:
+        return ""
+    for ent in list_keyword_constraint_sets():
+        if str(ent.get("set_id") or "").strip() == sid:
+            return str(ent.get("title_ko") or "").strip()
+    return sid
+
+
 def _practice_chip_title(topic_id: str) -> str:
     """Header chip label — roleplay/advanced show set name, topic shows catalog title."""
     if _is_roleplay_mode():
         return _roleplay_set_title() or _topic_display_title(topic_id)
     if _is_advanced_mode():
         return _advanced_set_title() or _topic_display_title(topic_id)
+    if _is_keyword_constraint_mode():
+        return _keyword_constraint_set_title() or _topic_display_title(topic_id)
     return _topic_display_title(topic_id)
 
 
 def _practice_eyebrow(suffix: str) -> str:
     tid = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     name = _practice_chip_title(tid)
+    if _is_keyword_constraint_mode():
+        combo = _keyword_combo_label(int(st.session_state.get(_KEY_Q_INDEX) or 0))
+        if name and combo:
+            return f"{name} · {combo} · {suffix}"
     return f"{name} · {suffix}" if name else suffix
 
 
@@ -846,6 +981,10 @@ def _back_to_select_label() -> str:
         return "롤플레이·주제 선택"
     if _is_advanced_mode():
         return "AL 고난도·주제 선택"
+    if _is_keyword_constraint_mode():
+        if _is_portal_keyword_entry():
+            return "다른 주제 선택"
+        return "키워드 표현·주제 선택"
     return "주제 선택으로 돌아가기"
 
 
@@ -854,6 +993,8 @@ def _other_practice_label() -> str:
         return "다른 롤플레이 선택"
     if _is_advanced_mode():
         return "다른 AL 세트 선택"
+    if _is_keyword_constraint_mode():
+        return "다른 키워드 세트 선택"
     return "다른 주제 선택"
 
 
@@ -864,6 +1005,9 @@ def _practice_screen_title() -> str:
     if _is_advanced_mode():
         adv_title = _advanced_set_title()
         return f"AL 고난도 · {adv_title}" if adv_title else "AL 고난도"
+    if _is_keyword_constraint_mode():
+        kc_title = _keyword_constraint_set_title()
+        return f"키워드 제약 · {kc_title}" if kc_title else "키워드 제약 연습"
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     return f"주제별 연습 · {_topic_display_title(topic_id)}"
 
@@ -879,6 +1023,8 @@ def _session_valid_for_practice() -> bool:
         return bool(str(st.session_state.get(_KEY_ROLEPLAY_SET_ID) or "").strip())
     if _is_advanced_mode():
         return bool(str(st.session_state.get(_KEY_ADVANCED_SET_ID) or "").strip())
+    if _is_keyword_constraint_mode():
+        return bool(str(st.session_state.get(_KEY_KEYWORD_CONSTRAINT_SET_ID) or "").strip())
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     return _topic_id_valid(topic_id)
 
@@ -904,6 +1050,7 @@ def _question_for_index(topic_id: str, q_index: int) -> Optional[Dict[str, str]]
         not qs
         and not _is_roleplay_mode()
         and not _is_advanced_mode()
+        and not _is_keyword_constraint_mode()
         and _topic_id_valid(topic_id)
     ):
         qs = get_topic_practice_set(topic_id)
@@ -969,6 +1116,21 @@ def _log_topic_v2_advanced_set(set_id: str, questions: List[Dict[str, Any]]) -> 
         pass
 
 
+def _log_topic_v2_keyword_constraint_set(set_id: str, questions: List[Dict[str, Any]]) -> None:
+    try:
+        types = ",".join(
+            str((q or {}).get("opic_type") or "-") for q in questions if isinstance(q, dict)
+        )
+        logger.info(
+            "[TOPIC_V2_KEYWORD_CONSTRAINT_SET] set_id=%s question_count=%s types=%s",
+            set_id,
+            len(questions),
+            types or "-",
+        )
+    except Exception:
+        pass
+
+
 def _log_topic_v2_mode(*, step: str, q_idx: int) -> None:
     try:
         logger.info(
@@ -989,6 +1151,7 @@ def _start_topic_practice(topic_id: str) -> None:
     st.session_state[_KEY_MODE] = "topic"
     st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
     st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
+    st.session_state.pop(_KEY_KEYWORD_CONSTRAINT_SET_ID, None)
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
     st.session_state[_KEY_TOPIC] = tid
     st.session_state[_KEY_Q_INDEX] = 0
@@ -1021,6 +1184,7 @@ def _start_roleplay_practice(set_id: str) -> None:
     st.session_state[_KEY_MODE] = "roleplay"
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
     st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
+    st.session_state.pop(_KEY_KEYWORD_CONSTRAINT_SET_ID, None)
     st.session_state[_KEY_ROLEPLAY_SET_ID] = sid
     st.session_state[_KEY_TOPIC] = topic_id
     st.session_state[_KEY_Q_INDEX] = 0
@@ -1046,6 +1210,7 @@ def _start_advanced_practice(set_id: str) -> None:
     st.session_state[_KEY_MODE] = "advanced"
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
     st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
+    st.session_state.pop(_KEY_KEYWORD_CONSTRAINT_SET_ID, None)
     st.session_state[_KEY_ADVANCED_SET_ID] = sid
     st.session_state[_KEY_TOPIC] = sid
     st.session_state[_KEY_Q_INDEX] = 0
@@ -1063,6 +1228,36 @@ def _start_advanced_practice(set_id: str) -> None:
     _sync_current_question(0)
     st.session_state[_KEY_STEP] = "question"
     _log_tpv2_state_clear("EXIT", "_start_advanced_practice")
+
+
+def _start_keyword_constraint_practice(set_id: str) -> None:
+    _log_tpv2_state_clear("ENTER", "_start_keyword_constraint_practice")
+    sid = str(set_id or "").strip()
+    qs = get_keyword_constraint_practice_set(sid)
+    _log_topic_v2_keyword_constraint_set(sid, qs)
+    if _topic_v2_entry_source() != ENTRY_SOURCE_PORTAL_KEYWORD:
+        st.session_state[_KEY_ENTRY_SOURCE] = ENTRY_SOURCE_TOPIC_HUB
+    st.session_state[_KEY_MODE] = "keyword_constraint"
+    st.session_state.pop(_KEY_SINGLE_RETRY, None)
+    st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
+    st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
+    st.session_state[_KEY_KEYWORD_CONSTRAINT_SET_ID] = sid
+    st.session_state[_KEY_TOPIC] = sid
+    st.session_state[_KEY_Q_INDEX] = 0
+    st.session_state[_KEY_ANSWERS] = []
+    st.session_state[_KEY_FEEDBACK] = None
+    st.session_state[_KEY_FEEDBACK_BY_Q] = {}
+    st.session_state[_KEY_PRACTICE_SIG] = uuid.uuid4().hex
+    st.session_state.pop(_KEY_DRAFT_TRANSCRIPT, None)
+    if len(qs) < 1:
+        st.session_state[_KEY_QUESTIONS] = qs
+        st.session_state[_KEY_CURRENT_Q] = {}
+        st.session_state[_KEY_STEP] = "insufficient"
+        return
+    st.session_state[_KEY_QUESTIONS] = qs
+    _sync_current_question(0)
+    st.session_state[_KEY_STEP] = "question"
+    _log_tpv2_state_clear("EXIT", "_start_keyword_constraint_practice")
 
 
 def _topic_v2_blob_key(topic: str, q_idx: int) -> str:
@@ -1797,6 +1992,7 @@ def _normalize_step(raw: Any) -> str:
 def _topic_v2_router_will_render(step: str) -> str:
     labels = {
         "select_topic": "selection",
+        "select_keyword_set": "keyword_selection",
         "question": "question",
         "saved": "saved",
         "feedback": "feedback",
@@ -1814,6 +2010,8 @@ def _goto_topic_select() -> None:
     st.session_state[_KEY_MODE] = "topic"
     st.session_state.pop(_KEY_ROLEPLAY_SET_ID, None)
     st.session_state.pop(_KEY_ADVANCED_SET_ID, None)
+    st.session_state.pop(_KEY_KEYWORD_CONSTRAINT_SET_ID, None)
+    st.session_state.pop(_KEY_ENTRY_SOURCE, None)
     st.session_state.pop(_KEY_SINGLE_RETRY, None)
     st.session_state[_KEY_TOPIC] = ""
     st.session_state[_KEY_Q_INDEX] = 0
@@ -2027,6 +2225,71 @@ def _render_advanced_card_grid() -> None:
                 _render_advanced_practice_card(ent, key_prefix="topic_v2_advanced")
 
 
+def _render_keyword_constraint_practice_card(ent: Dict[str, Any], *, key_prefix: str) -> None:
+    set_id = str(ent.get("set_id") or "").strip()
+    if not set_id:
+        return
+    title_ko = str(ent.get("title_ko") or set_id).strip()
+    visual = _topic_visual_for_id(set_id)
+    _render_tp_card_html(
+        title_ko=title_ko,
+        title_en="",
+        icon=str(visual.get("icon") or "circle"),
+        accent=str(visual.get("accent") or "amber"),
+    )
+    if st.button(
+        f"{title_ko} 5콤보 시작",
+        use_container_width=True,
+        key=f"{key_prefix}_{set_id}",
+    ):
+        _start_keyword_constraint_practice(set_id)
+        st.rerun()
+
+
+def _render_select_keyword_set() -> None:
+    if _is_portal_keyword_entry():
+        render_top_bar(
+            "키워드 표현 연습",
+            on_back=_return_to_learning_portal,
+            back_key="topic_v2_keyword_set_portal",
+            eyebrow="주제 선택",
+        )
+    else:
+        render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow="키워드 표현 연습")
+    st.markdown("### 키워드 표현 연습")
+    st.caption(
+        "주제 하나를 고르면 묘사 → 루틴 → 경험 → 세부경험 → 롤플 5콤보를 순서대로 풀어요."
+    )
+    _render_keyword_constraint_card_grid()
+
+
+def _render_keyword_constraint_card_grid() -> None:
+    groups = list_keyword_constraint_sets_by_category()
+    if not groups:
+        st.caption("준비된 키워드 제약 세트가 없습니다.")
+        return
+    st.markdown(
+        '<div class="tp-cards-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
+    for group in groups:
+        category = str(group.get("category") or "").strip()
+        sets = group.get("sets") if isinstance(group.get("sets"), list) else []
+        if not category or not sets:
+            continue
+        st.markdown(f"#### {html.escape(category)}")
+        for i in range(0, len(sets), 2):
+            col_left, col_right = st.columns(2)
+            pair = sets[i : i + 2]
+            for col, ent in zip((col_left, col_right), pair):
+                with col:
+                    if isinstance(ent, dict):
+                        _render_keyword_constraint_practice_card(
+                            ent,
+                            key_prefix="topic_v2_keyword_constraint",
+                        )
+
+
 def _render_insufficient_questions() -> None:
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     title = _topic_display_title(topic_id)
@@ -2075,6 +2338,27 @@ def _render_select_topic() -> None:
         st.markdown("#### 선택한 카테고리 주제")
         category_topics = _topics_for_category_label(str(category or "일상"))
         _render_topic_card_grid(category_topics, key_prefix="topic_v2_cat")
+
+    st.divider()
+    st.markdown("#### 키워드 표현 연습")
+    st.caption("목표·금지·패턴 — 주제당 5콤보(묘사→루틴→경험→세부→롤플)")
+    if not st.session_state.get(_KEY_KEYWORD_CONSTRAINT_EXPAND):
+        if st.button(
+            "키워드 제약 세트 보기",
+            use_container_width=True,
+            key="topic_v2_show_keyword_constraint",
+        ):
+            st.session_state[_KEY_KEYWORD_CONSTRAINT_EXPAND] = True
+            st.rerun()
+    else:
+        if st.button(
+            "키워드 제약 세트 접기",
+            use_container_width=True,
+            key="topic_v2_hide_keyword_constraint",
+        ):
+            st.session_state[_KEY_KEYWORD_CONSTRAINT_EXPAND] = False
+            st.rerun()
+        _render_keyword_constraint_card_grid()
 
     st.divider()
     st.markdown("#### AL 고난도")
@@ -2158,6 +2442,109 @@ def build_topic_practice_header_html(
         + "</div>"
         + "</div>"
         + progress_html
+    )
+
+
+def _keyword_constraint_constraints_html(bank_row: Dict[str, Any]) -> str:
+    """Target / banned / pattern cards shown under the question (keyword_constraint mode)."""
+    raw_targets = bank_row.get("target_expressions") or []
+    targets: List[Dict[str, str]] = []
+    for item in raw_targets:
+        if isinstance(item, dict):
+            expr = str(item.get("expr") or "").strip()
+            if expr:
+                targets.append(
+                    {
+                        "expr": expr,
+                        "ko": str(item.get("ko") or "").strip(),
+                    }
+                )
+        else:
+            expr = str(item or "").strip()
+            if expr:
+                targets.append({"expr": expr, "ko": ""})
+    banned = [
+        str(x).strip()
+        for x in (bank_row.get("banned_expressions") or [])
+        if str(x).strip()
+    ]
+    patterns = [
+        str(x).strip()
+        for x in (bank_row.get("patterns") or [])
+        if str(x).strip()
+    ]
+    if not targets and not banned and not patterns:
+        return ""
+
+    combo_ko = str(bank_row.get("combo_ko") or "").strip()
+    combo_head = (
+        f'<div class="tq-kc-combo-label">{html.escape(combo_ko)} · 표현 제약</div>'
+        if combo_ko
+        else ""
+    )
+
+    def _chip_list(items: List[str], *, strike: bool = False) -> str:
+        if not items:
+            return '<p class="tq-kc-empty">—</p>'
+        style = ' style="text-decoration:line-through;"' if strike else ""
+        chips = "".join(
+            f'<span class="tq-kc-chip"{style}>{html.escape(item)}</span>'
+            for item in items
+        )
+        return f'<div class="tq-kc-chips">{chips}</div>'
+
+    def _target_chip_list(items: List[Dict[str, str]]) -> str:
+        if not items:
+            return '<p class="tq-kc-empty">—</p>'
+        chips: List[str] = []
+        for item in items:
+            expr = html.escape(item.get("expr") or "")
+            ko = html.escape(item.get("ko") or "")
+            ko_part = (
+                f'<span class="tq-kc-chip-ko">{ko}</span>' if ko else ""
+            )
+            chips.append(
+                f'<span class="tq-kc-chip tq-kc-chip--target">'
+                f"{expr}{ko_part}</span>"
+            )
+        return f'<div class="tq-kc-chips">{"".join(chips)}</div>'
+
+    return (
+        '<div class="tq-kc-panel" role="region" aria-label="표현 제약">'
+        f"{combo_head}"
+        '<div class="tq-kc-block tq-kc-block--target">'
+        '<div class="tq-kc-label">목표 표현</div>'
+        f"{_target_chip_list(targets)}"
+        "</div>"
+        '<div class="tq-kc-block tq-kc-block--banned">'
+        '<div class="tq-kc-label">금지 표현</div>'
+        f"{_chip_list(banned, strike=True)}"
+        "</div>"
+        '<div class="tq-kc-block tq-kc-block--pattern">'
+        '<div class="tq-kc-label">확장 패턴</div>'
+        f"{_chip_list(patterns)}"
+        "</div>"
+        "</div>"
+        "<style>"
+        ".tq-kc-panel{display:flex;flex-direction:column;gap:10px;margin:0 0 14px 0;}"
+        ".tq-kc-combo-label{font-size:13px;font-weight:700;color:#0f766e;margin:0 0 2px 0;}"
+        ".tq-kc-block{border-radius:12px;padding:12px 14px;border:0.5px solid transparent;}"
+        ".tq-kc-block--target{background:#ecfdf5;border-color:#99f6e4;}"
+        ".tq-kc-block--banned{background:#fff7ed;border-color:#fdba74;}"
+        ".tq-kc-block--pattern{background:#f5f3ff;border-color:#c4b5fd;}"
+        ".tq-kc-label{font-size:12px;font-weight:700;margin:0 0 8px 0;color:#334155;}"
+        ".tq-kc-block--target .tq-kc-label{color:#0f766e;}"
+        ".tq-kc-block--banned .tq-kc-label{color:#c2410c;}"
+        ".tq-kc-block--pattern .tq-kc-label{color:#5b21b6;}"
+        ".tq-kc-chips{display:flex;flex-wrap:wrap;gap:6px;}"
+        ".tq-kc-chip{display:inline-block;padding:4px 10px;border-radius:999px;"
+        "font-size:13px;font-weight:600;background:rgba(255,255,255,0.72);color:#0f172a;}"
+        ".tq-kc-block--target .tq-kc-chip{color:#0f766e;}"
+        ".tq-kc-chip-ko{margin-left:5px;font-size:11px;font-weight:500;color:#94a3b8;}"
+        ".tq-kc-block--banned .tq-kc-chip{color:#c2410c;}"
+        ".tq-kc-block--pattern .tq-kc-chip{color:#5b21b6;}"
+        ".tq-kc-empty{margin:0;font-size:13px;color:#64748b;}"
+        "</style>"
     )
 
 
@@ -2334,7 +2721,7 @@ def _render_question() -> None:
 
     render_top_bar(
         "주제별 연습",
-        on_back=_goto_topic_select,
+        on_back=_question_back_handler,
         back_key="topic_v2_question",
         eyebrow=_practice_eyebrow("질문"),
     )
@@ -2349,7 +2736,12 @@ def _render_question() -> None:
     )
 
     bank_row = _bank_question_at_index(q_idx)
-    if _is_advanced_mode():
+    if _is_keyword_constraint_mode():
+        kc_html = _keyword_constraint_constraints_html(bank_row)
+        if kc_html:
+            st.markdown(kc_html, unsafe_allow_html=True)
+
+    if _is_advanced_mode() or _is_keyword_constraint_mode():
         question_id = str(
             bank_row.get("audio_id") or bank_row.get("id") or ""
         ).strip()
@@ -2461,7 +2853,7 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
         build_topic_practice_header_html(
             topic,
             q_idx,
-            total_questions=3,
+            total_questions=_topic_v2_progress_total(),
             include_screen_marker=False,
             chip_title=_practice_chip_title(topic),
         ),
@@ -2545,7 +2937,10 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
                 use_container_width=True,
                 key="topic_v2_back_select",
             ):
-                _goto_topic_select()
+                if _is_keyword_constraint_mode():
+                    _goto_keyword_back()
+                else:
+                    _goto_topic_select()
                 st.rerun()
         return
 
@@ -2587,15 +2982,16 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
             use_container_width=True,
             key="topic_v2_back_select",
         ):
-            _goto_topic_select()
+            if _is_keyword_constraint_mode():
+                _goto_keyword_back()
+            else:
+                _goto_topic_select()
             st.rerun()
 
 
 def _run_topic_v2_feedback_request(
     topic: str, q_idx: int, last_row: Optional[Dict[str, Any]]
 ) -> None:
-    from services.topic_practice_v2_analysis import analyze_topic_practice_v2_answer
-
     row_in = last_row if isinstance(last_row, dict) else {}
     aid = _feedback_answer_id(row_in, topic=topic, q_idx=q_idx)
     allowed, block_msg = _can_request_topic_v2_feedback(aid)
@@ -2614,27 +3010,61 @@ def _run_topic_v2_feedback_request(
     st.session_state[_KEY_FB_IN_FLIGHT] = True
     st.session_state.pop(_KEY_FB_NOTICE, None)
     result: Dict[str, Any]
+    spinner_msg = (
+        "키워드 표현 피드백을 만들고 있어요…"
+        if _is_keyword_constraint_mode()
+        else "AI 짧은 피드백을 만들고 있어요…"
+    )
     try:
-        with st.spinner("AI 짧은 피드백을 만들고 있어요…"):
-            result = analyze_topic_practice_v2_answer(dict(row_in))
+        with st.spinner(spinner_msg):
+            if _is_keyword_constraint_mode():
+                from services.keyword_constraint_analysis import (
+                    analyze_keyword_constraint_answer,
+                )
+
+                set_meta = _keyword_constraint_set_meta(q_idx)
+                result = analyze_keyword_constraint_answer(dict(row_in), set_meta)
+            else:
+                from services.topic_practice_v2_analysis import (
+                    analyze_topic_practice_v2_answer,
+                )
+
+                result = analyze_topic_practice_v2_answer(dict(row_in))
     except Exception as exc:
         try:
             logger.exception("[TOPIC_V2_FEEDBACK] analyze_failed: %s", exc)
         except Exception:
             pass
-        result = {
-            "ok": False,
-            "answer_level": "",
-            "summary": "",
-            "strength": "",
-            "correction_focus": "",
-            "better_expression": "",
-            "upgrade_sample": "",
-            "keyword_drill": [],
-            "practice_mission": "",
-            "error_category": "exception",
-            "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
-        }
+        if _is_keyword_constraint_mode():
+            result = {
+                "ok": False,
+                "summary": "",
+                "coaching": "",
+                "naturalness_note": "",
+                "patterns_used": False,
+                "pattern_quote": "",
+                "targets": [],
+                "banned": [],
+                "target_used_count": 0,
+                "target_total": 0,
+                "banned_hit_count": 0,
+                "error_category": "exception",
+                "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
+            }
+        else:
+            result = {
+                "ok": False,
+                "answer_level": "",
+                "summary": "",
+                "strength": "",
+                "correction_focus": "",
+                "better_expression": "",
+                "upgrade_sample": "",
+                "keyword_drill": [],
+                "practice_mission": "",
+                "error_category": "exception",
+                "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
+            }
     finally:
         st.session_state[_KEY_FB_IN_FLIGHT] = False
 
@@ -2658,17 +3088,36 @@ def _stash_topic_v2_feedback_for_q(q_idx: int, result: Dict[str, Any]) -> None:
     log = st.session_state.get(_KEY_FEEDBACK_BY_Q)
     if not isinstance(log, dict):
         log = {}
-    log[int(q_idx)] = {
-        "ok": True,
-        "answer_level": result.get("answer_level"),
-        "summary": result.get("summary"),
-        "strength": result.get("strength"),
-        "correction_focus": result.get("correction_focus"),
-        "better_expression": result.get("better_expression"),
-        "upgrade_sample": result.get("upgrade_sample"),
-        "keyword_drill": result.get("keyword_drill"),
-        "practice_mission": result.get("practice_mission"),
-    }
+    entry: Dict[str, Any] = {"ok": True}
+    if _is_keyword_constraint_mode():
+        entry.update(
+            {
+                "summary": result.get("summary"),
+                "coaching": result.get("coaching"),
+                "naturalness_note": result.get("naturalness_note"),
+                "patterns_used": result.get("patterns_used"),
+                "pattern_quote": result.get("pattern_quote"),
+                "targets": result.get("targets"),
+                "banned": result.get("banned"),
+                "target_used_count": result.get("target_used_count"),
+                "target_total": result.get("target_total"),
+                "banned_hit_count": result.get("banned_hit_count"),
+            }
+        )
+    else:
+        entry.update(
+            {
+                "answer_level": result.get("answer_level"),
+                "summary": result.get("summary"),
+                "strength": result.get("strength"),
+                "correction_focus": result.get("correction_focus"),
+                "better_expression": result.get("better_expression"),
+                "upgrade_sample": result.get("upgrade_sample"),
+                "keyword_drill": result.get("keyword_drill"),
+                "practice_mission": result.get("practice_mission"),
+            }
+        )
+    log[int(q_idx)] = entry
     st.session_state[_KEY_FEEDBACK_BY_Q] = log
 
 
@@ -2734,7 +3183,7 @@ def build_topic_v2_history_payload(topic_id: str) -> Dict[str, Any]:
 
 def _maybe_persist_topic_v2_history(topic_id: str) -> None:
     """Logged-in users: append one practice_history row (idempotent per practice sig)."""
-    if _is_roleplay_mode() or _is_advanced_mode():
+    if _is_roleplay_mode() or _is_advanced_mode() or _is_keyword_constraint_mode():
         return
     tid = str(topic_id or "").strip()
     if not tid or not _topic_id_valid(tid):
@@ -2808,6 +3257,8 @@ def _render_saved() -> None:
             _render_roleplay_complete()
         elif _is_advanced_mode():
             _render_advanced_complete()
+        elif _is_keyword_constraint_mode():
+            _render_keyword_constraint_complete()
         else:
             _render_saved_complete(topic)
     else:
@@ -2869,6 +3320,149 @@ def _render_advanced_complete() -> None:
         st.rerun()
 
 
+def _render_keyword_constraint_complete() -> None:
+    if _is_portal_keyword_entry():
+        render_top_bar(
+            "키워드 표현 연습",
+            on_back=_return_to_learning_portal,
+            back_key="topic_v2_keyword_portal_complete",
+            eyebrow=_practice_eyebrow("완료"),
+        )
+    else:
+        render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=_practice_eyebrow("완료"))
+    _render_topic_v2_accent_scope("teal")
+    st.markdown("### 키워드 표현 연습을 완료했어요.")
+    total = _session_question_total()
+    st.caption(f"묘사→루틴→경험→세부경험→롤플 {total}콤보를 모두 마쳤어요.")
+    set_id = str(st.session_state.get(_KEY_KEYWORD_CONSTRAINT_SET_ID) or "").strip()
+    if st.button(
+        "같은 세트 다시 하기",
+        type="primary",
+        use_container_width=True,
+        key="topic_v2_restart_same_keyword_constraint",
+    ):
+        if set_id:
+            _start_keyword_constraint_practice(set_id)
+        st.rerun()
+    if _is_portal_keyword_entry():
+        if st.button(
+            "다른 주제 선택",
+            use_container_width=True,
+            key="topic_v2_pick_other_keyword_constraint",
+        ):
+            _goto_keyword_set_select()
+            st.rerun()
+        if st.button(
+            "학습 포털로",
+            use_container_width=True,
+            key="topic_v2_back_to_portal_keyword_constraint",
+        ):
+            _return_to_learning_portal()
+            st.rerun()
+    else:
+        if st.button(
+            "다른 키워드 세트 선택",
+            use_container_width=True,
+            key="topic_v2_pick_other_keyword_constraint",
+        ):
+            _goto_topic_select()
+            st.rerun()
+        if st.button(
+            "주제별 연습으로 돌아가기",
+            use_container_width=True,
+            key="topic_v2_back_to_topic_practice_keyword_constraint",
+        ):
+            _goto_topic_select()
+            st.rerun()
+
+
+def _render_keyword_constraint_feedback_ui(
+    fb: Dict[str, Any], *, topic: str, q_idx: int
+) -> None:
+    total = _session_question_total()
+    if _is_portal_keyword_entry():
+        render_top_bar(
+            "키워드 표현 연습",
+            on_back=_return_to_learning_portal,
+            back_key="topic_v2_keyword_fb_portal",
+            eyebrow=_practice_eyebrow("피드백"),
+        )
+    else:
+        render_top_bar(
+            "주제별 연습",
+            back_href="?nav=MOCK",
+            eyebrow=_practice_eyebrow("피드백"),
+        )
+    _render_topic_v2_accent_scope("teal")
+    st.markdown(
+        build_topic_practice_header_html(
+            topic,
+            q_idx,
+            total_questions=total,
+            include_screen_marker=True,
+            chip_title=_practice_chip_title(topic),
+        ),
+        unsafe_allow_html=True,
+    )
+    render_keyword_constraint_feedback(fb, accent="teal")
+
+    st.divider()
+    last_idx = _last_question_index()
+    if q_idx < last_idx:
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button(
+                "같은 질문 다시 말하기",
+                use_container_width=True,
+                key="topic_v2_kc_fb_retry_same",
+            ):
+                _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
+                st.session_state[_KEY_FEEDBACK] = None
+                st.session_state[_KEY_STEP] = "question"
+                st.rerun()
+        with c2:
+            if st.button(
+                "다음 콤보",
+                use_container_width=True,
+                type="primary",
+                key="topic_v2_kc_fb_next",
+            ):
+                st.session_state[_KEY_FEEDBACK] = None
+                _advance_after_question(topic, q_idx)
+                st.rerun()
+        with c3:
+            if st.button(
+                _back_to_select_label(),
+                use_container_width=True,
+                key="topic_v2_kc_fb_back",
+            ):
+                st.session_state[_KEY_FEEDBACK] = None
+                _goto_keyword_back()
+                st.rerun()
+    else:
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button(
+                "같은 질문 다시 말하기",
+                use_container_width=True,
+                type="primary",
+                key="topic_v2_kc_fb_retry_same",
+            ):
+                _log_topic_v2_retry_same_question(topic=topic, q_idx=q_idx)
+                st.session_state[_KEY_FEEDBACK] = None
+                st.session_state[_KEY_STEP] = "question"
+                st.rerun()
+        with c2:
+            if st.button(
+                _back_to_select_label(),
+                use_container_width=True,
+                key="topic_v2_kc_fb_back",
+            ):
+                st.session_state[_KEY_FEEDBACK] = None
+                _goto_keyword_back()
+                st.rerun()
+
+
 def _render_feedback_ui() -> None:
     topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
@@ -2880,6 +3474,10 @@ def _render_feedback_ui() -> None:
     if not isinstance(fb, dict) or not fb.get("ok"):
         st.session_state[_KEY_STEP] = "saved"
         st.rerun()
+        return
+
+    if _is_keyword_constraint_mode():
+        _render_keyword_constraint_feedback_ui(fb, topic=topic, q_idx=q_idx)
         return
 
     render_top_bar(
@@ -3168,6 +3766,8 @@ def render_topic_practice_v2() -> None:
 
     if step == "select_topic":
         _render_select_topic()
+    elif step == "select_keyword_set":
+        _render_select_keyword_set()
     elif step == "question":
         _render_question()
     elif step == "saved":

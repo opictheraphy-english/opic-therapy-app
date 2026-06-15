@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import streamlit as st
 
@@ -24,6 +25,8 @@ _KEY_SCRIPT_TEXT = "script_coaching_script_text"
 _KEY_DIAGNOSE_RESULT = "script_coaching_diagnose_result"
 _KEY_UPGRADE_RESULT = "script_coaching_upgrade_result"
 _KEY_CLEAR_INPUTS = "script_coaching_clear_inputs"
+_KEY_MIC_OUTPUT = "script_coaching_mic_output"
+_KEY_STT_NOTICE = "script_coaching_stt_notice"
 
 _SCORE_LABELS: Dict[str, str] = {
     "response_amount": "분량",
@@ -43,14 +46,22 @@ def clear_script_coaching_session() -> None:
         _KEY_DIAGNOSE_RESULT,
         _KEY_UPGRADE_RESULT,
         _KEY_CLEAR_INPUTS,
+        _KEY_MIC_OUTPUT,
+        _KEY_STT_NOTICE,
     ):
         st.session_state.pop(k, None)
+
+
+def _clear_script_coaching_mic_cache() -> None:
+    st.session_state.pop(_KEY_MIC_OUTPUT, None)
+    st.session_state.pop(_KEY_STT_NOTICE, None)
 
 
 def _ensure_defaults() -> None:
     if st.session_state.pop(_KEY_CLEAR_INPUTS, False):
         st.session_state[_KEY_QUESTION_EN] = ""
         st.session_state[_KEY_SCRIPT_TEXT] = ""
+        _clear_script_coaching_mic_cache()
     if _KEY_STEP not in st.session_state:
         st.session_state[_KEY_STEP] = "input"
     if _KEY_QUESTION_EN not in st.session_state:
@@ -59,9 +70,177 @@ def _ensure_defaults() -> None:
         st.session_state[_KEY_SCRIPT_TEXT] = ""
 
 
+def _render_stt_notice() -> None:
+    msg = str(st.session_state.pop(_KEY_STT_NOTICE, "") or "").strip()
+    if msg:
+        st.warning(msg)
+
+
+def _set_stt_notice(msg: str) -> None:
+    text = str(msg or "").strip()
+    if text:
+        st.session_state[_KEY_STT_NOTICE] = text
+
+
+def _sc_mime_from_mic_dict(mic_dict: Dict[str, Any], audio_bytes: bytes) -> str:
+    for key in ("mime_type", "mimeType", "type"):
+        val = str(mic_dict.get(key) or "").strip()
+        if val:
+            if "/" in val:
+                return val
+            from utils.audio_utils import mime_from_audio_format
+
+            return mime_from_audio_format(val)
+    fmt = str(mic_dict.get("format") or "").strip()
+    if fmt:
+        from utils.audio_utils import mime_from_audio_format
+
+        return mime_from_audio_format(fmt)
+    from services.evaluation.audio_mime import resolve_audio_mime
+
+    return resolve_audio_mime(audio_bytes, "")
+
+
+def _coerce_sc_mic_payload_to_bytes(raw: Any) -> Tuple[bytes, str]:
+    if raw is None:
+        return b"", "missing"
+    if isinstance(raw, (bytes, bytearray)):
+        return bytes(raw), ""
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            return b"", "empty_string"
+        try:
+            return base64.b64decode(text, validate=False), ""
+        except Exception:
+            logger.debug("[SCRIPT_COACHING_AUDIO] base64_decode_failed", exc_info=True)
+            return b"", "base64_decode_failed"
+    if isinstance(raw, list):
+        try:
+            return bytes(int(x) for x in raw), ""
+        except (TypeError, ValueError):
+            return b"", "list_int_convert_failed"
+    try:
+        return bytes(raw), ""
+    except (TypeError, ValueError):
+        return b"", "unsupported_type"
+
+
+def _extract_script_coaching_audio_bytes(
+    mic_result: Any,
+) -> Tuple[bytes, str]:
+    """Normalize streamlit_mic_recorder output; fall back to session cache when just_once clears return."""
+    sources: List[Any] = []
+    if mic_result is not None:
+        sources.append(mic_result)
+    cached = st.session_state.get(_KEY_MIC_OUTPUT)
+    if cached is not None and cached is not mic_result:
+        sources.append(cached)
+
+    last_fail = "no_payload"
+    for payload in sources:
+        if isinstance(payload, (bytes, bytearray)):
+            blob = bytes(payload)
+            if blob:
+                return blob, "audio/webm"
+            last_fail = "empty_bytes"
+            continue
+        if not isinstance(payload, dict):
+            last_fail = "unsupported_type"
+            continue
+        for key in ("bytes", "audio", "blob", "data", "audio_bytes"):
+            if key not in payload:
+                continue
+            blob, fail = _coerce_sc_mic_payload_to_bytes(payload.get(key))
+            if fail:
+                last_fail = fail
+                continue
+            if blob:
+                return blob, _sc_mime_from_mic_dict(payload, blob)
+        last_fail = "dict_no_audio_field"
+
+    try:
+        logger.warning("[SCRIPT_COACHING_AUDIO_EXTRACT] failed category=%s", last_fail)
+    except Exception:
+        pass
+    return b"", ""
+
+
+def _stt_user_message(stt: Dict[str, Any]) -> str:
+    cat = str(stt.get("error_category") or "").strip()
+    if cat == "empty_audio":
+        return "소리가 녹음되지 않았어요. 다시 시도해 주세요."
+    if cat == "timeout":
+        return "변환이 지연됐어요. 다시 시도해 주세요."
+    return "음성 변환에 실패했어요. 다시 시도해 주세요."
+
+
+def _append_transcript_to_script(transcript: str) -> None:
+    new_text = str(transcript or "").strip()
+    if not new_text:
+        return
+    existing = str(st.session_state.get(_KEY_SCRIPT_TEXT) or "").strip()
+    if existing:
+        st.session_state[_KEY_SCRIPT_TEXT] = f"{existing} {new_text}".strip()
+    else:
+        st.session_state[_KEY_SCRIPT_TEXT] = new_text
+
+
+def _stash_script_coaching_mic_result(mic_result: Any) -> None:
+    """Cache mic capture; STT runs on the next rerun before text_area renders."""
+    if mic_result is None:
+        return
+    st.session_state[_KEY_MIC_OUTPUT] = mic_result
+    st.rerun()
+
+
+def _process_pending_script_coaching_stt() -> None:
+    """Run STT on cached mic audio and append transcript — call only before text_area widgets."""
+    mic_result = st.session_state.get(_KEY_MIC_OUTPUT)
+    if mic_result is None:
+        return
+
+    question_en = str(st.session_state.get(_KEY_QUESTION_EN) or "").strip()
+    audio_bytes, mime_type = _extract_script_coaching_audio_bytes(mic_result)
+    if len(audio_bytes) <= 0:
+        _set_stt_notice("소리가 녹음되지 않았어요. 다시 시도해 주세요.")
+        st.session_state.pop(_KEY_MIC_OUTPUT, None)
+        st.rerun()
+
+    from services.stt_service import transcribe_answer_audio
+
+    resolved_mime = (mime_type or "audio/webm").strip() or "audio/webm"
+    with st.spinner("음성을 텍스트로 변환하고 있어요…"):
+        stt = transcribe_answer_audio(
+            audio_bytes,
+            mime_type=resolved_mime,
+            language_hint="en",
+            question_text=question_en,
+            mode="script_coaching",
+            question_id="script_coaching_draft",
+        )
+
+    transcript = str(stt.get("transcript") or stt.get("text") or "").strip()
+    st.session_state.pop(_KEY_MIC_OUTPUT, None)
+    if stt.get("ok") and transcript:
+        _append_transcript_to_script(transcript)
+        st.rerun()
+
+    if stt.get("ok") and not transcript:
+        _set_stt_notice("말씀 내용을 인식하지 못했어요. 다시 시도해 주세요.")
+    else:
+        _set_stt_notice(_stt_user_message(stt if isinstance(stt, dict) else {}))
+    st.rerun()
+
+
 def _render_input_form() -> None:
     render_top_bar("스크립트 첨삭", back_href="?nav=MOCK", eyebrow="스크립트 첨삭")
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_stt_notice()
+
+    # STT + script text update must run before text_area(key=_KEY_SCRIPT_TEXT) is instantiated.
+    if st.session_state.get(_KEY_MIC_OUTPUT) is not None:
+        _process_pending_script_coaching_stt()
 
     st.markdown(
         """
@@ -85,6 +264,25 @@ def _render_input_form() -> None:
         height=200,
         placeholder="여기에 답변 스크립트를 영어로 입력해 주세요.",
     )
+
+    from streamlit_mic_recorder import mic_recorder
+
+    mic_result = mic_recorder(
+        start_prompt="🎤 말로 입력",
+        stop_prompt="■ 변환하기",
+        key=None,
+        use_container_width=True,
+        just_once=True,
+    )
+    st.markdown(
+        '<p class="ds-muted" style="font-size:12px;margin:4px 0 12px 0;">'
+        "말한 내용이 위 칸에 이어서 채워져요. 변환 후 자유롭게 수정하세요."
+        "</p>",
+        unsafe_allow_html=True,
+    )
+
+    if mic_result is not None:
+        _stash_script_coaching_mic_result(mic_result)
 
     if st.button(
         "진단받기",

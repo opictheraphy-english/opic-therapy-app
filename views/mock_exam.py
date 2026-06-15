@@ -739,6 +739,20 @@ def _mock_mode_label(mode: str | None) -> str:
     if mode == "topic_practice":
         return "주제별 답변 연습"
     if mode == "topic_practice_v2":
+        try:
+            from views.topic_practice_v2 import (
+                ENTRY_SOURCE_PORTAL_KEYWORD,
+                _is_keyword_constraint_mode,
+                _topic_v2_entry_source,
+            )
+
+            if (
+                _is_keyword_constraint_mode()
+                and _topic_v2_entry_source() == ENTRY_SOURCE_PORTAL_KEYWORD
+            ):
+                return "키워드 표현 연습"
+        except Exception:
+            pass
         return "주제별 답변 연습"
     if mode == "mini_mock":
         return "5분 진단 미니 모의고사"
@@ -2654,6 +2668,49 @@ def render_learning_portal(mx: dict) -> None:
             _clear_reset_practice_query_param()
             try:
                 logger.info("[SCRIPT_COACHING] portal_start mode=script_coaching")
+            except Exception:
+                pass
+            st.rerun()
+
+    c5, _ = st.columns([1, 1])
+    with c5:
+        st.markdown(
+            """
+            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
+                     aria-label="키워드 표현 연습">
+              <div class="cc-title">키워드 표현 연습</div>
+              <div class="cc-meta">목표 표현을 쓰고, 금지 표현은 피하고, 패턴으로 길게 말해 보세요.</div>
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            "키워드 표현 연습 시작",
+            type="primary",
+            use_container_width=True,
+            key="portal_start_keyword_constraint",
+        ):
+            from views.topic_practice_v2 import (
+                ENTRY_SOURCE_PORTAL_KEYWORD,
+                MOCK_MODE_TOPIC_V2,
+                clear_topic_v2_session,
+            )
+
+            clear_topic_v2_session()
+            st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
+            st.session_state["practice_portal_selected"] = True
+            st.session_state["mock_page"] = "TOPIC_V2"
+            _sync_portal_mode_to_mx(mx, MOCK_MODE_TOPIC_V2)
+            _set_mock_page(mx, "TOPIC_V2")
+            st.session_state["topic_v2_entry_source"] = ENTRY_SOURCE_PORTAL_KEYWORD
+            st.session_state["topic_v2_page"] = "practice"
+            st.session_state["topic_v2_step"] = "select_keyword_set"
+            _clear_reset_practice_query_param()
+            try:
+                logger.info(
+                    "[KEYWORD_CONSTRAINT] portal_start mode=%s page=TOPIC_V2 step=select_keyword_set",
+                    MOCK_MODE_TOPIC_V2,
+                )
             except Exception:
                 pass
             st.rerun()
