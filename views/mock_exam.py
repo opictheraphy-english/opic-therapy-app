@@ -2509,38 +2509,50 @@ def _begin_new_practice_from_completed(mx: dict) -> bool:
     return True
 
 
-_PORTAL_CLIPBOARD_CHECK_SVG = (
+_PORTAL_CHEVRON_SVG = (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    '<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />'
-    '<path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />'
-    '<path d="M9 14l2 2l4 -4" />'
-    "</svg>"
+    'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    '<polyline points="9 6 15 12 9 18"></polyline></svg>'
 )
 
 
-def _render_portal_real_mock_card_html() -> None:
-    """Learning portal — real mock card (design A, overlay tap target follows in st.button)."""
-    st.markdown(
-        f"""
-        <div class="mx-portal-card mx-portal-card--real-mock" role="region" aria-label="실전 모의고사">
-          <span class="mx-portal-card-accent" aria-hidden="true"></span>
-          <span class="mx-portal-card-badge">추천</span>
-          <span class="mx-portal-card-ico">{_PORTAL_CLIPBOARD_CHECK_SVG}</span>
-          <div class="mx-portal-card-body">
-            <span class="mx-portal-card-title">실전 모의고사</span>
-            <span class="mx-portal-card-sub">15문항 실전 흐름 + AI 최종 리포트</span>
-          </div>
-          <span class="mx-portal-card-chevron" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 6 15 12 9 18"></polyline>
-            </svg>
-          </span>
-        </div>
-        """,
-        unsafe_allow_html=True,
+def _render_portal_card_html(
+    *,
+    variant: str,
+    aria_label: str,
+    title: str,
+    sub: str,
+    icon: str,
+    badge: str = "",
+    badge_tone: str = "teal",
+) -> None:
+    """Learning portal design-A card (overlay tap target follows in st.button)."""
+    from views.topic_icons import TOPIC_ICONS
+
+    icon_svg = TOPIC_ICONS.get(icon, TOPIC_ICONS["circle"])
+    badge_html = ""
+    if badge:
+        badge_html = (
+            f'<span class="mx-portal-card-badge mx-portal-card-badge--{html.escape(badge_tone)}">'
+            f"{html.escape(badge)}</span>"
+        )
+    html_block = (
+        f'<div class="mx-portal-card mx-portal-card--{html.escape(variant)}" role="region" '
+        f'aria-label="{html.escape(aria_label)}">'
+        f'<span class="mx-portal-card-accent" aria-hidden="true"></span>'
+        f'<span class="mx-portal-card-ico">{icon_svg}</span>'
+        f'<div class="mx-portal-card-body">'
+        f'<div class="mx-portal-card-title-row">'
+        f'<span class="mx-portal-card-title">{html.escape(title)}</span>'
+        f"{badge_html}"
+        f"</div>"
+        f'<span class="mx-portal-card-sub">{html.escape(sub)}</span>'
+        f"</div>"
+        f'<span class="mx-portal-card-chevron" aria-hidden="true">{_PORTAL_CHEVRON_SVG}</span>'
+        f"</div>"
     )
+    html_block = "\n".join(line.strip() for line in html_block.splitlines() if line.strip())
+    st.markdown(html_block, unsafe_allow_html=True)
 
 
 def render_learning_portal(mx: dict) -> None:
@@ -2582,7 +2594,15 @@ def render_learning_portal(mx: dict) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        _render_portal_real_mock_card_html()
+        _render_portal_card_html(
+            variant="real-mock",
+            aria_label="실전 모의고사",
+            title="실전 모의고사",
+            sub="15문항 실전 흐름 + AI 최종 리포트",
+            icon="clipboard-check",
+            badge="추천",
+            badge_tone="teal",
+        )
         if st.button(
             "실전 모의고사 시작",
             use_container_width=True,
@@ -2603,20 +2623,17 @@ def render_learning_portal(mx: dict) -> None:
                 pass
             st.rerun()
     with c2:
-        st.markdown(
-            """
-            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
-                     aria-label="5분 진단 미니 모의고사">
-              <span class="mx-mode-badge">추천 · 약 5분</span>
-              <div class="cc-title">5분 진단 미니 모의고사</div>
-              <div class="cc-meta">묘사, 경험, 롤플레이 3문항으로 빠르게 현재 답변 습관을 진단해요.</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
+        _render_portal_card_html(
+            variant="mini-mock",
+            aria_label="5분 진단 미니 모의고사",
+            title="5분 진단 미니 모의고사",
+            sub="묘사·경험·롤플 3문항 빠른 진단",
+            icon="stopwatch",
+            badge="추천 · 약 5분",
+            badge_tone="blue",
         )
         if st.button(
             "5분 진단 시작",
-            type="primary",
             use_container_width=True,
             key="portal_start_mini_mock",
         ):
@@ -2640,19 +2657,15 @@ def render_learning_portal(mx: dict) -> None:
 
     c3, c4 = st.columns(2)
     with c3:
-        st.markdown(
-            """
-            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
-                     aria-label="주제별 답변 연습">
-              <div class="cc-title">주제별 답변 연습</div>
-              <div class="cc-meta">원하는 주제를 골라 3문항씩 연습하고 주제별 리포트를 받아요.</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
+        _render_portal_card_html(
+            variant="topic",
+            aria_label="주제별 답변 연습",
+            title="주제별 답변 연습",
+            sub="원하는 주제 3문항씩 + 주제별 리포트",
+            icon="list-search",
         )
         if st.button(
             "주제별 연습 시작",
-            type="primary",
             use_container_width=True,
             key="portal_start_topic_practice",
         ):
@@ -2671,19 +2684,15 @@ def render_learning_portal(mx: dict) -> None:
                 pass
             st.rerun()
     with c4:
-        st.markdown(
-            """
-            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
-                     aria-label="스크립트 첨삭">
-              <div class="cc-title">스크립트 첨삭</div>
-              <div class="cc-meta">내가 쓴 답변을 등급별로 진단받아요.</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
+        _render_portal_card_html(
+            variant="script",
+            aria_label="스크립트 첨삭",
+            title="스크립트 첨삭",
+            sub="내가 쓴 답변을 등급별로 진단",
+            icon="pencil-check",
         )
         if st.button(
             "스크립트 첨삭 시작",
-            type="primary",
             use_container_width=True,
             key="portal_start_script_coaching",
         ):
@@ -2702,19 +2711,15 @@ def render_learning_portal(mx: dict) -> None:
 
     c5, _ = st.columns([1, 1])
     with c5:
-        st.markdown(
-            """
-            <section class="continue-card continue-card--start mx-mode-card mx-portal-mode-card" role="region"
-                     aria-label="키워드 표현 연습">
-              <div class="cc-title">키워드 표현 연습</div>
-              <div class="cc-meta">목표 표현을 쓰고, 금지 표현은 피하고, 패턴으로 길게 말해 보세요.</div>
-            </section>
-            """,
-            unsafe_allow_html=True,
+        _render_portal_card_html(
+            variant="keyword",
+            aria_label="키워드 표현 연습",
+            title="키워드 표현 연습",
+            sub="목표 표현 쓰고 금지 표현 피하기",
+            icon="vocabulary",
         )
         if st.button(
             "키워드 표현 연습 시작",
-            type="primary",
             use_container_width=True,
             key="portal_start_keyword_constraint",
         ):

@@ -63,5 +63,10 @@ TOPIC_ICONS: Dict[str, str] = {
     "swimming": f'<svg {_SVG_ATTRS}><path d="M16 9m -1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M6 11l4 -2l3.5 3l -1.5 2" /> <path d="M3 16.75a2.4 2.4 0 0 0 1 .25a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 1 -.25" /></svg>',
     "tent": f'<svg {_SVG_ATTRS}><path d="M11 14l4 6h6l -9 -16l -9 16h6l4 -6" /></svg>',
     "yoga": f'<svg {_SVG_ATTRS}><path d="M12 4m -1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M4 20h4l1.5 -3" /> <path d="M17 20l -1 -5h -5l1 -7" /> <path d="M4 10l4 -1l4 -1l4 1.5l4 1.5" /></svg>',
+    "clipboard-check": f'<svg {_SVG_ATTRS}><path d="M9 5h -2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v -12a2 2 0 0 0 -2 -2h -2" /> <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h -2a2 2 0 0 1 -2 -2z" /> <path d="M9 14l2 2l4 -4" /></svg>',
+    "stopwatch": f'<svg {_SVG_ATTRS}><path d="M5 13a7 7 0 1 0 14 0a7 7 0 0 0 -14 0z" /> <path d="M14.5 10.5l -2.5 2.5" /> <path d="M17 8l1 -1" /> <path d="M14 3h -4" /></svg>',
+    "list-search": f'<svg {_SVG_ATTRS}><path d="M15 15m -4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M18.5 18.5l2.5 2.5" /> <path d="M4 6h16" /> <path d="M4 12h4" /> <path d="M4 18h4" /></svg>',
+    "pencil-check": f'<svg {_SVG_ATTRS}><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l -10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /> <path d="M15 19l2 2l4 -4" /></svg>',
+    "vocabulary": f'<svg {_SVG_ATTRS}><path d="M10 19h -6a1 1 0 0 1 -1 -1v -14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h -6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2z" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /></svg>',
     "circle": f'<svg {_SVG_ATTRS}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></svg>',
 }

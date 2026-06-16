@@ -3254,87 +3254,12 @@ GLOBAL_CSS = """
       gap: 12px;
       justify-content: flex-start;
     }
-    section.main:has(.mx-landing-marker) .mx-portal-mode-card {
-      position: relative;
-      /* Fixed, identical height for every card so the start buttons (which sit
-         directly below each card) line up across columns. ``flex: 0 0 auto``
-         stops Streamlit's column from stretching cards to uneven heights. */
-      min-height: 144px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      gap: 8px;
-      flex: 0 0 auto;
-      margin-bottom: 0;
-    }
-    /* "추천 · 약 5분" badge pinned top-right so it adds no card height —
-       keeps the 5-min card the same height as 실전 모의고사 → buttons align. */
-    section.main:has(.mx-landing-marker) .mx-portal-mode-card .mx-mode-badge {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      margin: 0 !important;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(37, 99, 235, 0.12);
-      color: #2563eb !important;
-      font-size: 11px;
-      font-weight: 500;
-      line-height: 1.4;
-    }
-    /* Title shouldn't run under the pinned badge (only the badge card). */
-    section.main:has(.mx-landing-marker) .mx-portal-mode-card:has(.mx-mode-badge) .cc-title {
-      padding-right: 76px;
+    section.main:has(.mx-landing-marker) .mx-portal-practice-marker ~ div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:has(.mx-portal-card) {
+      gap: 0;
     }
     section.main:has(.mx-landing-marker) .mx-portal-mode-spacer {
       min-height: 1px;
       visibility: hidden;
-    }
-    section.main:has(.mx-landing-marker) .mx-portal-practice-marker ~ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] > button {
-      width: 100%;
-    }
-
-    /* ------------------------------------------------------------------
-     * Portal card alignment — version-independent (Streamlit 1.50 renders
-     * the main container as ``stMain``, so the older ``section.main`` scope
-     * above no longer matches). ``.mx-portal-mode-card`` is unique to this
-     * portal, so we size it directly (no main-section dependency). All four
-     * cards share one fixed height → the start buttons that follow each card
-     * line up across columns. ----------------------------------------- */
-    .mx-portal-mode-card {
-      position: relative !important;
-      min-height: 112px !important;
-      height: 112px !important;
-      padding: 15px 18px !important;
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: flex-start !important;
-      gap: 5px !important;
-      flex: 0 0 auto !important;
-      margin: 0 0 10px 0 !important;
-    }
-    .mx-portal-mode-card .mx-mode-badge {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      margin: 0 !important;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(37, 99, 235, 0.12);
-      color: #2563eb !important;
-      font-size: 11px;
-      font-weight: 500;
-      line-height: 1.4;
-    }
-    .mx-portal-mode-card:has(.mx-mode-badge) .cc-title {
-      padding-right: 80px;
-    }
-
-    @media (max-width: 640px) {
-      .mx-portal-mode-card {
-        min-height: 118px !important;
-        height: 118px !important;
-      }
     }
 
     @media (max-width: 640px) {
@@ -3342,12 +3267,9 @@ GLOBAL_CSS = """
         margin-bottom: 22px;
         padding-bottom: 16px;
       }
-      section.main:has(.mx-landing-marker) .mx-portal-mode-card {
-        min-height: 132px;
-      }
     }
 
-    /* Learning portal — design-A cards (overlay tap; pilot: real mock only) */
+    /* Learning portal — design-A cards (overlay tap; all 5 practice modes) */
     .mx-portal-cards-marker {
       display: none !important;
     }
@@ -3376,23 +3298,28 @@ GLOBAL_CSS = """
       top: 0;
       bottom: 0;
       width: 3px;
-      background: #1D9E75;
       border-radius: 0;
       pointer-events: none;
     }
     .mx-portal-card-badge {
-      position: absolute;
-      top: 10px;
-      right: 12px;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
       margin: 0;
-      padding: 3px 10px;
+      padding: 2px 8px;
       border-radius: 999px;
-      background: rgba(13, 148, 136, 0.12);
-      color: #0F6E56 !important;
       font-size: 11px;
       font-weight: 500;
-      line-height: 1.4;
+      line-height: 1.35;
       pointer-events: none;
+    }
+    .mx-portal-card-badge--teal {
+      background: rgba(13, 148, 136, 0.12);
+      color: #0F6E56 !important;
+    }
+    .mx-portal-card-badge--blue {
+      background: rgba(37, 99, 235, 0.12);
+      color: #2563eb !important;
     }
     .mx-portal-card-ico {
       flex-shrink: 0;
@@ -3402,8 +3329,6 @@ GLOBAL_CSS = """
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: #E1F5EE;
-      color: #0F6E56;
       margin: 0;
       pointer-events: none;
     }
@@ -3419,8 +3344,16 @@ GLOBAL_CSS = """
       min-width: 0;
       flex: 1 1 auto;
       overflow: visible;
-      padding-right: 52px;
+      padding-right: 40px;
       pointer-events: none;
+    }
+    .mx-portal-card-title-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
     }
     .mx-portal-card-title {
       font-family: var(--font-display) !important;
@@ -3449,14 +3382,27 @@ GLOBAL_CSS = """
       width: 28px;
       height: 28px;
       border-radius: 999px;
-      color: #0F6E56;
-      background: rgba(13, 148, 136, 0.14);
       pointer-events: none;
     }
     .mx-portal-card-chevron svg {
       width: 18px;
       height: 18px;
     }
+    .mx-portal-card--real-mock .mx-portal-card-accent { background: #1D9E75; }
+    .mx-portal-card--real-mock .mx-portal-card-ico { background: #E1F5EE; color: #0F6E56; }
+    .mx-portal-card--real-mock .mx-portal-card-chevron { color: #0F6E56; background: rgba(13, 148, 136, 0.14); }
+    .mx-portal-card--mini-mock .mx-portal-card-accent { background: #378ADD; }
+    .mx-portal-card--mini-mock .mx-portal-card-ico { background: #E6F1FB; color: #185FA5; }
+    .mx-portal-card--mini-mock .mx-portal-card-chevron { color: #185FA5; background: rgba(55, 138, 221, 0.14); }
+    .mx-portal-card--topic .mx-portal-card-accent { background: #7F77DD; }
+    .mx-portal-card--topic .mx-portal-card-ico { background: #EEEDFE; color: #534AB7; }
+    .mx-portal-card--topic .mx-portal-card-chevron { color: #534AB7; background: rgba(127, 119, 221, 0.14); }
+    .mx-portal-card--script .mx-portal-card-accent { background: #D85A30; }
+    .mx-portal-card--script .mx-portal-card-ico { background: #FAECE7; color: #993C1D; }
+    .mx-portal-card--script .mx-portal-card-chevron { color: #993C1D; background: rgba(216, 90, 48, 0.14); }
+    .mx-portal-card--keyword .mx-portal-card-accent { background: #EF9F27; }
+    .mx-portal-card--keyword .mx-portal-card-ico { background: #FAEEDA; color: #854F0B; }
+    .mx-portal-card--keyword .mx-portal-card-chevron { color: #854F0B; background: rgba(239, 159, 39, 0.16); }
     [data-testid="stMain"]:has(.mx-portal-cards-marker)
       div[data-testid="stColumn"]:has(.mx-portal-card) {
       position: relative;
@@ -3538,12 +3484,52 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.mx-portal-cards-marker)
       div[data-testid="stColumn"]:has(.mx-portal-card)
       > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
-      .mx-portal-card,
+      .mx-portal-card--real-mock,
     [data-testid="stMain"]:has(.mx-portal-cards-marker)
       div[data-testid="stColumn"]:has(.mx-portal-card)
       > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
-      .mx-portal-card {
+      .mx-portal-card--real-mock {
       border-color: rgba(29, 158, 117, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--mini-mock,
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--mini-mock {
+      border-color: rgba(55, 138, 221, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--topic,
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--topic {
+      border-color: rgba(127, 119, 221, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--script,
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--script {
+      border-color: rgba(216, 90, 48, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--keyword,
+    [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--keyword {
+      border-color: rgba(239, 159, 39, 0.35) !important;
     }
     [data-testid="stMain"]:has(.mx-portal-cards-marker)
       div[data-testid="stColumn"]:has(.mx-portal-card)
