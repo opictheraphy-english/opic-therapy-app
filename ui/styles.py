@@ -23,8 +23,11 @@ GLOBAL_CSS = """
       --text-soft: #9ca3af;
       --color-background-primary: #ffffff;
       --color-background-secondary: #f4f4f5;
+      --color-text-primary: #111827;
       --color-text-secondary: #4b5563;
       --color-text-tertiary: #9ca3af;
+      --color-border-tertiary: rgba(17, 24, 39, 0.08);
+      --border-radius-lg: 16px;
       --danger-soft: #fecaca;
       --danger-text: #b91c1c;
       --radius-lg: 16px;
@@ -1074,7 +1077,96 @@ GLOBAL_CSS = """
       color: var(--text-muted);
     }
 
-    /* --- 1) Greeting ---------------------------------------------------- */
+    /* --- 1) Greeting — design B card ----------------------------------- */
+    .greeting-card {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 14px;
+      margin: 6px 0 18px 0;
+      padding: 14px 16px;
+      border-radius: var(--border-radius-lg);
+      background: var(--color-background-primary);
+      border: 0.5px solid var(--color-border-tertiary);
+      box-shadow: var(--shadow-card);
+    }
+    .greeting-avatar {
+      flex-shrink: 0;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #E1F5EE;
+      color: #0F6E56;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.01em;
+    }
+    .greeting-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .greeting-date {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .greeting-date-icon {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      color: var(--color-text-tertiary);
+    }
+    .greeting-date-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+    .greeting-date-text {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-text-tertiary);
+      line-height: 1.35;
+    }
+    .greeting-hello {
+      font-family: var(--font-display) !important;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+      margin: 0;
+    }
+    .greeting-brand {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+      margin: 0;
+    }
+    .greeting-chip {
+      flex-shrink: 0;
+      align-self: center;
+      white-space: nowrap;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #E1F5EE;
+      color: #0F6E56;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+    /* Legacy greeting (other views) ------------------------------------- */
     .greeting {
       margin: 6px 0 18px 0;
       padding: 4px 4px 0 4px;
@@ -1414,28 +1506,8 @@ GLOBAL_CSS = """
     }
 
     /* --- Home screen polish (scoped — .home-screen marker in views/home.py) --- */
-    [data-testid="stMain"]:has(.home-screen) .greeting {
+    [data-testid="stMain"]:has(.home-screen) .greeting-card {
       margin: 4px 0 16px 0;
-      padding: 0 4px;
-    }
-    [data-testid="stMain"]:has(.home-screen) .greeting .gr-hello {
-      font-size: 22px;
-      font-weight: 500;
-      color: #111827;
-      letter-spacing: -0.02em;
-      line-height: 1.3;
-      margin: 0;
-      display: block;
-    }
-    [data-testid="stMain"]:has(.home-screen) .greeting .gr-sub {
-      margin: 6px 0 0 0;
-      font-size: 14px;
-      font-weight: 400;
-      color: #6b7280;
-      line-height: 1.5;
-    }
-    [data-testid="stMain"]:has(.home-screen) .greeting .gr-meta {
-      display: none;
     }
     [data-testid="stMain"]:has(.home-screen) .home-section-h--quick,
     [data-testid="stMain"]:has(.home-screen) .home-section-h--stats {
@@ -1591,102 +1663,6 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.home-screen) .qa-card .qa-sub {
       font-size: 12px;
       color: #888780;
-    }
-    /* Home quick-action + history entry buttons — st-key classes (Streamlit 1.50+). */
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-home_open_history {
-      margin-top: 5px;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
-      div[data-testid="stButton"] > button,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
-      div[data-testid="stButton"] > button,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
-      div[data-testid="stButton"] > button,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
-      div[data-testid="stButton"] > button,
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-home_open_history
-      div[data-testid="stButton"] > button {
-      border-radius: 10px !important;
-      font-size: 14px !important;
-      font-weight: 500 !important;
-      padding: 11px 12px !important;
-      min-height: 0 !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
-      div[data-testid="stButton"] > button {
-      background: rgba(15, 110, 86, 0.10) !important;
-      color: #0F6E56 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
-      div[data-testid="stButton"] > button:hover:not(:disabled) {
-      background: rgba(15, 110, 86, 0.16) !important;
-      color: #0F6E56 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
-      div[data-testid="stButton"] > button {
-      background: rgba(24, 95, 165, 0.10) !important;
-      color: #185FA5 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
-      div[data-testid="stButton"] > button:hover:not(:disabled) {
-      background: rgba(24, 95, 165, 0.16) !important;
-      color: #185FA5 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
-      div[data-testid="stButton"] > button {
-      background: rgba(83, 74, 183, 0.10) !important;
-      color: #534AB7 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
-      div[data-testid="stButton"] > button:hover:not(:disabled) {
-      background: rgba(83, 74, 183, 0.16) !important;
-      color: #534AB7 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
-      div[data-testid="stButton"] > button {
-      background: rgba(133, 79, 11, 0.12) !important;
-      color: #854F0B !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
-      div[data-testid="stButton"] > button:hover:not(:disabled) {
-      background: rgba(133, 79, 11, 0.18) !important;
-      color: #854F0B !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-home_open_history
-      div[data-testid="stButton"] > button {
-      background: rgba(15, 110, 86, 0.10) !important;
-      color: #0F6E56 !important;
-    }
-    [data-testid="stMain"]:has(.home-screen)
-      div[data-testid="stElementContainer"].st-key-home_open_history
-      div[data-testid="stButton"] > button:hover:not(:disabled) {
-      background: rgba(15, 110, 86, 0.16) !important;
-      color: #0F6E56 !important;
     }
     [data-testid="stMain"]:has(.home-screen) .stats-row {
       gap: 8px;
@@ -3403,6 +3379,60 @@ GLOBAL_CSS = """
     .mx-portal-card--keyword .mx-portal-card-accent { background: #EF9F27; }
     .mx-portal-card--keyword .mx-portal-card-ico { background: #FAEEDA; color: #854F0B; }
     .mx-portal-card--keyword .mx-portal-card-chevron { color: #854F0B; background: rgba(239, 159, 39, 0.16); }
+    .mx-portal-card--home-start .mx-portal-card-accent { background: #1D9E75; }
+    .mx-portal-card--home-start .mx-portal-card-ico { background: #E1F5EE; color: #0F6E56; }
+    .mx-portal-card--home-start .mx-portal-card-chevron { color: #0F6E56; background: rgba(13, 148, 136, 0.14); }
+    .mx-portal-card--home-history .mx-portal-card-accent { background: #888780; }
+    .mx-portal-card--home-history .mx-portal-card-ico { background: #F1EFE8; color: #5F5E5A; }
+    .mx-portal-card--home-history .mx-portal-card-chevron { color: #5F5E5A; background: rgba(136, 135, 128, 0.14); }
+    .mx-portal-card--home-quick-pattern .mx-portal-card-accent { background: #378ADD; }
+    .mx-portal-card--home-quick-pattern .mx-portal-card-ico { background: #E6F1FB; color: #185FA5; }
+    .mx-portal-card--home-quick-pattern .mx-portal-card-chevron { color: #185FA5; background: rgba(55, 138, 221, 0.14); }
+    .mx-portal-card--home-quick-scripts .mx-portal-card-accent { background: #EF9F27; }
+    .mx-portal-card--home-quick-scripts .mx-portal-card-ico { background: #FAEEDA; color: #854F0B; }
+    .mx-portal-card--home-quick-scripts .mx-portal-card-chevron { color: #854F0B; background: rgba(239, 159, 39, 0.16); }
+    .mx-portal-card--home-quick-lectures .mx-portal-card-accent { background: #7F77DD; }
+    .mx-portal-card--home-quick-lectures .mx-portal-card-ico { background: #EEEDFE; color: #534AB7; }
+    .mx-portal-card--home-quick-lectures .mx-portal-card-chevron { color: #534AB7; background: rgba(127, 119, 221, 0.14); }
+    .mx-portal-card--home-quick-coaching .mx-portal-card-accent { background: #D85A30; }
+    .mx-portal-card--home-quick-coaching .mx-portal-card-ico { background: #FAECE7; color: #993C1D; }
+    .mx-portal-card--home-quick-coaching .mx-portal-card-chevron { color: #993C1D; background: rgba(216, 90, 48, 0.14); }
+    .mx-portal-card--compact {
+      min-height: 58px;
+      padding: 10px 10px 10px 12px;
+      gap: 8px;
+    }
+    .mx-portal-card--compact .mx-portal-card-ico {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+    }
+    .mx-portal-card--compact .mx-portal-card-ico svg {
+      width: 18px;
+      height: 18px;
+    }
+    .mx-portal-card--compact .mx-portal-card-body {
+      padding-right: 32px;
+    }
+    .mx-portal-card--compact .mx-portal-card-title {
+      font-size: 13px;
+    }
+    .mx-portal-card--compact .mx-portal-card-sub {
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .mx-portal-card--compact .mx-portal-card-chevron {
+      right: 8px;
+      width: 24px;
+      height: 24px;
+    }
+    .mx-portal-card--compact .mx-portal-card-chevron svg {
+      width: 16px;
+      height: 16px;
+    }
+    [data-testid="stMain"]:has(.home-screen) .mx-portal-card--home-history {
+      margin-top: 10px;
+    }
     [data-testid="stMain"]:has(.mx-portal-cards-marker)
       div[data-testid="stColumn"]:has(.mx-portal-card) {
       position: relative;
@@ -3538,6 +3568,235 @@ GLOBAL_CSS = """
       transform: translateY(-50%) translateX(2px);
     }
     [data-testid="stMain"]:has(.mx-portal-cards-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
+      .mx-portal-card {
+      transform: translateY(0) scale(0.985);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    /* Home — design-A cards (overlay tap; start + history + quick actions) */
+    .home-card-grid-marker {
+      display: none !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_start_primary),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_open_history),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_PATTERN),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_SCRIPTS),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_LECTURES),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_script_coaching) {
+      position: relative;
+      align-self: flex-start !important;
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_start_primary)
+      > [data-testid="stVerticalBlock"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_open_history)
+      > [data-testid="stVerticalBlock"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_PATTERN)
+      > [data-testid="stVerticalBlock"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_SCRIPTS)
+      > [data-testid="stVerticalBlock"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_LECTURES)
+      > [data-testid="stVerticalBlock"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_script_coaching)
+      > [data-testid="stVerticalBlock"] {
+      position: relative;
+      gap: 0 !important;
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stElementContainer"]:has(.mx-portal-card) {
+      height: auto !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stMarkdown"]:has(.mx-portal-card) {
+      margin-bottom: 0 !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stMarkdownContainer"]:has(.mx-portal-card) {
+      margin-bottom: 0 !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stElementContainer"]:has(.mx-portal-card),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      div[data-testid="stMarkdown"]:has(.mx-portal-card),
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card) .mx-portal-card,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card) .mx-portal-card * {
+      pointer-events: none !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-home_start_primary,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-home_open_history,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching {
+      position: absolute !important;
+      inset: 0 !important;
+      height: 100% !important;
+      z-index: 3 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-home_start_primary
+      div[data-testid="stButton"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-home_open_history
+      div[data-testid="stButton"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
+      div[data-testid="stButton"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
+      div[data-testid="stButton"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
+      div[data-testid="stButton"],
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
+      div[data-testid="stButton"] {
+      position: static !important;
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-home_start_primary
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-home_open_history
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_PATTERN
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_SCRIPTS
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_LECTURES
+      div[data-testid="stButton"] > button,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stElementContainer"].st-key-qa_nav_script_coaching
+      div[data-testid="stButton"] > button {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 16px !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      opacity: 0 !important;
+      color: transparent !important;
+      -webkit-text-fill-color: transparent !important;
+      font-size: 0 !important;
+      line-height: 0 !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card--compact)
+      div[data-testid="stElementContainer"][class*="st-key-"]
+      div[data-testid="stButton"] > button {
+      border-radius: 12px !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_start_primary)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--home-start,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_start_primary)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--home-start {
+      border-color: rgba(29, 158, 117, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_open_history)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--home-history,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-home_open_history)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--home-history {
+      border-color: rgba(136, 135, 128, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_PATTERN)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--home-quick-pattern,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_PATTERN)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--home-quick-pattern {
+      border-color: rgba(55, 138, 221, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_SCRIPTS)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--home-quick-scripts,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_SCRIPTS)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--home-quick-scripts {
+      border-color: rgba(239, 159, 39, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_LECTURES)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--home-quick-lectures,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_LECTURES)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--home-quick-lectures {
+      border-color: rgba(127, 119, 221, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_script_coaching)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card--home-quick-coaching,
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.st-key-qa_nav_script_coaching)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:focus-visible)
+      .mx-portal-card--home-quick-coaching {
+      border-color: rgba(216, 90, 48, 0.35) !important;
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
+      div[data-testid="stColumn"]:has(.mx-portal-card)
+      > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:hover)
+      .mx-portal-card-chevron {
+      transform: translateY(-50%) translateX(2px);
+    }
+    [data-testid="stMain"]:has(.home-card-grid-marker)
       div[data-testid="stColumn"]:has(.mx-portal-card)
       > [data-testid="stVerticalBlock"]:has(div[data-testid="stButton"] > button:active)
       .mx-portal-card {

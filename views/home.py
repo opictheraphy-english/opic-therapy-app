@@ -17,6 +17,8 @@ Routing uses ``navigate_to`` + ``st.button`` (same tab); query params stay in sy
 from __future__ import annotations
 
 import html
+import random
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 import streamlit as st
@@ -49,18 +51,21 @@ def render_home() -> None:
     st.markdown('<div class="home-screen" aria-hidden="true"></div>', unsafe_allow_html=True)
 
     # 1) Greeting
-    _render_greeting(gid, um)
+    _render_greeting(gid, um, sett)
 
     # 2) Continue Study — the visual focus of the screen.
     from utils.v2_flow_persistence import get_v2_resume_offer
 
     v2_offer = get_v2_resume_offer(st.session_state, prog_disk)
     snap = None if v2_offer else _detect_in_progress_snapshot(prog_disk, mx)
+    show_start_hero = v2_offer is None and snap is None
     if v2_offer is not None:
         _render_v2_resume_card(v2_offer)
     elif snap is not None:
         _render_resume_card(snap)
-    else:
+
+    _emit_home_card_grid_marker()
+    if show_start_hero:
         _render_start_card(prog_disk, sett)
 
     # 2.5) 내 학습 기록 진입점
@@ -74,31 +79,102 @@ def render_home() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 1) Greeting
+# 1) Greeting — design B
 # ---------------------------------------------------------------------------
 
-def _render_greeting(_gid: str, _um: str) -> None:
-    """Warm hello — logged-in name or guest fallback."""
-    ss = st.session_state
+_GREETING_LINES = (
+    "오늘의 처방, 한 문장이면 충분해요",
+    "어색한 표현, 오늘 깔끔하게 교정해요",
+    "막히던 문장도 오늘은 트일 거예요",
+)
+
+_KST_WEEKDAYS = ("월", "화", "수", "목", "금", "토", "일")
+
+_GREETING_CALENDAR_SVG = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'aria-hidden="true"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" />'
+    '<path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /></svg>'
+)
+
+
+def _kst_now() -> datetime:
+    try:
+        from zoneinfo import ZoneInfo
+
+        return datetime.now(ZoneInfo("Asia/Seoul"))
+    except Exception:
+        return datetime.now(timezone(timedelta(hours=9)))
+
+
+def _format_kst_date_label() -> str:
+    now = _kst_now()
+    return f"{now.month}월 {now.day}일 {_KST_WEEKDAYS[now.weekday()]}"
+
+
+def _resolve_greeting_name(ss: Any) -> tuple[str, str]:
+    """Return (hello line HTML-safe text, raw name for initials)."""
     if ss.get("user_authenticated") and not ss.get("is_guest"):
         raw_name = str(ss.get("user_name") or "").strip()
         if not raw_name:
             email = str(ss.get("user_email") or "").strip()
             raw_name = email.split("@")[0] if email else "회원"
-        hello = f"{html.escape(raw_name)}님, 안녕하세요"
-        sub = "오늘도 말하면서 고쳐볼까요?"
+        return raw_name, raw_name
+    return "안녕하세요", ""
+
+
+def _initials_from_name(name: str) -> str:
+    name = (name or "").strip()
+    if not name:
+        return "O"
+    for ch in name:
+        if "\uac00" <= ch <= "\ud7a3":
+            return ch
+    parts = name.split()
+    if len(parts) >= 2:
+        a = parts[0][:1]
+        b = parts[1][:1]
+        if a and b:
+            return f"{a}{b}".upper()
+    if len(name) >= 2:
+        return name[:2].upper()
+    return name[:1].upper()
+
+
+def _greeting_brand_line(ss: Any) -> str:
+    if "greeting_line" not in ss:
+        ss["greeting_line"] = random.choice(_GREETING_LINES)
+    return str(ss["greeting_line"])
+
+
+def _render_greeting(_gid: str, _um: str, sett: Dict[str, Any]) -> None:
+    """Design B — avatar + date + hello + brand line + target level chip."""
+    ss = st.session_state
+    hello_text, raw_name = _resolve_greeting_name(ss)
+    if raw_name:
+        hello_html = f"{html.escape(raw_name)}님, 안녕하세요"
     else:
-        hello = "안녕하세요"
-        sub = "로그인하면 학습 기록이 저장돼요"
-    st.markdown(
-        f"""
-        <section class="greeting" aria-label="환영 인사">
-          <h1 class="gr-hello">{hello}</h1>
-          <p class="gr-sub">{html.escape(sub)}</p>
-        </section>
-        """,
-        unsafe_allow_html=True,
+        hello_html = html.escape(hello_text)
+    initials = html.escape(_initials_from_name(raw_name))
+    date_label = html.escape(_format_kst_date_label())
+    brand_line = html.escape(_greeting_brand_line(ss))
+    target_level = int(sett.get("difficulty", 5) or 5)
+    html_block = (
+        f'<section class="greeting-card" role="region" aria-label="환영 인사">'
+        f'<span class="greeting-avatar" aria-hidden="true">{initials}</span>'
+        f'<div class="greeting-body">'
+        f'<div class="greeting-date">'
+        f'<span class="greeting-date-icon">{_GREETING_CALENDAR_SVG}</span>'
+        f'<span class="greeting-date-text">{date_label}</span>'
+        f"</div>"
+        f'<div class="greeting-hello">{hello_html}</div>'
+        f'<div class="greeting-brand">{brand_line}</div>'
+        f"</div>"
+        f'<span class="greeting-chip">목표 Lv.{target_level}</span>'
+        f"</section>"
     )
+    html_block = "".join(line.strip() for line in html_block.splitlines())
+    st.markdown(html_block, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -230,76 +306,168 @@ def _render_resume_card(snap: Dict[str, Any]) -> None:
             st.rerun()
 
 
+_HOME_CHEVRON_SVG = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+    '<polyline points="9 6 15 12 9 18"></polyline></svg>'
+)
+
+_HOME_CARD_ICONS: Dict[str, str] = {
+    "player-play": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M7 4v16l13 -8z" /></svg>'
+    ),
+    "history": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M12 8l0 4l2 2" />'
+        '<path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></svg>'
+    ),
+    "wave-sine": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M3 12c2 -4 4 -4 6 0s4 4 6 0s4 -4 6 0s4 4 6 0" /></svg>'
+    ),
+    "shopping-bag": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M6.331 8h11.339a2 2 0 0 1 1.977 2.304l-1.255 8.152a3 3 0 0 1 -2.966 2.544h-6.852a3 3 0 0 1 -2.965 -2.544l-1.255 -8.152a2 2 0 0 1 1.977 -2.304" />'
+        '<path d="M9 11v-5a3 3 0 0 1 6 0v5" /></svg>'
+    ),
+    "pencil-check": (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />'
+        '<path d="M13.5 6.5l4 4" /><path d="M15 19l2 2l4 -4" /></svg>'
+    ),
+}
+
+
+def _normalize_home_card_html(html_block: str) -> str:
+    return "".join(line.strip() for line in html_block.splitlines())
+
+
+def _emit_home_card_grid_marker() -> None:
+    st.markdown(
+        '<div class="home-card-grid-marker" aria-hidden="true"></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_home_design_a_card(
+    *,
+    variant: str,
+    aria_label: str,
+    title: str,
+    sub: str,
+    icon: str,
+    compact: bool = False,
+) -> None:
+    """Home design-A card (transparent overlay tap target follows in st.button)."""
+    icon_svg = _HOME_CARD_ICONS.get(icon, "")
+    compact_cls = " mx-portal-card--compact" if compact else ""
+    html_block = (
+        f'<div class="mx-portal-card mx-portal-card--{html.escape(variant)}{compact_cls}" role="region" '
+        f'aria-label="{html.escape(aria_label)}">'
+        f'<span class="mx-portal-card-accent" aria-hidden="true"></span>'
+        f'<span class="mx-portal-card-ico">{icon_svg}</span>'
+        f'<div class="mx-portal-card-body">'
+        f'<div class="mx-portal-card-title-row">'
+        f'<span class="mx-portal-card-title">{html.escape(title)}</span>'
+        f"</div>"
+        f'<span class="mx-portal-card-sub">{html.escape(sub)}</span>'
+        f"</div>"
+        f'<span class="mx-portal-card-chevron" aria-hidden="true">{_HOME_CHEVRON_SVG}</span>'
+        f"</div>"
+    )
+    st.markdown(_normalize_home_card_html(html_block), unsafe_allow_html=True)
+
+
+def _render_home_overlay_card_in_col(
+    col,
+    *,
+    variant: str,
+    aria_label: str,
+    title: str,
+    sub: str,
+    icon: str,
+    button_label: str,
+    button_key: str,
+    on_click,
+    compact: bool = False,
+    rerun_after: bool = True,
+) -> None:
+    """Design-A card + transparent overlay button in one column (portal pattern)."""
+    with col:
+        _render_home_design_a_card(
+            variant=variant,
+            aria_label=aria_label,
+            title=title,
+            sub=sub,
+            icon=icon,
+            compact=compact,
+        )
+        if st.button(button_label, use_container_width=True, key=button_key):
+            on_click()
+            if rerun_after:
+                st.rerun()
+
+
+def _render_home_overlay_card(
+    *,
+    variant: str,
+    aria_label: str,
+    title: str,
+    sub: str,
+    icon: str,
+    button_label: str,
+    button_key: str,
+    on_click,
+    compact: bool = False,
+    rerun_after: bool = True,
+) -> None:
+    """Full-width design-A card + overlay (single column)."""
+    col, = st.columns(1)
+    _render_home_overlay_card_in_col(
+        col,
+        variant=variant,
+        aria_label=aria_label,
+        title=title,
+        sub=sub,
+        icon=icon,
+        button_label=button_label,
+        button_key=button_key,
+        on_click=on_click,
+        compact=compact,
+        rerun_after=rerun_after,
+    )
+
+
 def _render_start_card(
     prog_disk: Dict[str, Any],
     sett: Dict[str, Any],
 ) -> None:
-    """Card shown when nothing is mid-exam.
-
-    Returning users: one CTA to start mock practice (no past-report shortcut).
-    New users: diagnostic start + pattern browse.
-    """
+    """Card shown when nothing is mid-exam."""
     card = prog_disk.get("last_activity_card") if isinstance(prog_disk, dict) else None
     has_history = isinstance(card, dict) and bool(card.get("estimated_level"))
     diff = int(sett.get("difficulty", 5))
 
     if has_history:
         desc = f"목표 난이도 Lv.{diff} · 모의고사나 주제별 연습으로 이어가요"
-        primary_label = "연습 시작"
-        primary_nav = ("MOCK", None, False)
-        secondary_label = None
-        secondary_nav = None
     else:
         desc = f"5분 진단으로 난이도를 맞춘 뒤 연습을 시작해요 · 목표 Lv.{diff}"
-        primary_label = "진단 시작"
-        primary_nav = ("MOCK", None, False)
-        secondary_label = "패턴 둘러보기"
-        secondary_nav = ("PATTERN", None, False)
 
-    st.markdown(
-        f"""
-        <section class="continue-card continue-card--start" role="region"
-                 aria-label="학습 시작">
-          <div class="cc-row-top">
-            <div class="cc-eyebrow">시작하기</div>
-          </div>
-          <div class="cc-title">오늘의 연습 시작하기</div>
-          <div class="cc-desc">{html.escape(desc)}</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
+    _render_home_overlay_card(
+        variant="home-start",
+        aria_label="학습 시작",
+        title="오늘의 연습 시작하기",
+        sub=desc,
+        icon="player-play",
+        button_label="오늘의 연습 시작하기",
+        button_key="home_start_primary",
+        on_click=lambda: navigate_to("MOCK"),
     )
-    st.markdown('<div class="home-continue-actions-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-    if secondary_nav:
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button(
-                primary_label,
-                type="primary",
-                use_container_width=True,
-                key="home_start_primary",
-            ):
-                page, mock, reset = primary_nav
-                navigate_to(page, mock=mock, reset=reset)
-                st.rerun()
-        with c2:
-            if st.button(
-                secondary_label or "",
-                use_container_width=True,
-                key="home_start_secondary",
-            ):
-                page, mock, reset = secondary_nav
-                navigate_to(page, mock=mock, reset=reset)
-                st.rerun()
-    elif st.button(
-        primary_label,
-        type="primary",
-        use_container_width=True,
-        key="home_start_primary",
-    ):
-        page, mock, reset = primary_nav
-        navigate_to(page, mock=mock, reset=reset)
-        st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -308,62 +476,21 @@ def _render_start_card(
 
 def _render_history_entry() -> None:
     """Slim full-width entry into the saved-history view (login handled there)."""
-    st.markdown(
-        """
-        <section class="continue-card continue-card--start" role="region"
-                 aria-label="내 학습 기록" style="margin-top:10px;">
-          <div class="cc-row-top">
-            <div class="cc-eyebrow">내 기록</div>
-          </div>
-          <div class="cc-title">지난 학습 기록 보기</div>
-          <div class="cc-meta">모의고사 · 주제별 연습 · 스크립트 첨삭 결과를 다시 확인해요</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
+    _render_home_overlay_card(
+        variant="home-history",
+        aria_label="내 학습 기록",
+        title="지난 학습 기록 보기",
+        sub="모의고사 · 주제별 · 첨삭 결과 다시 보기",
+        icon="history",
+        button_label="지난 학습 기록 보기",
+        button_key="home_open_history",
+        on_click=lambda: navigate_to("HISTORY"),
     )
-    if st.button("학습 기록 열기", use_container_width=True, key="home_open_history"):
-        navigate_to("HISTORY")
-        st.rerun()
 
 
 # ---------------------------------------------------------------------------
 # 3) Quick Action Cards
 # ---------------------------------------------------------------------------
-
-# Tiny inline SVGs — same stroke style as the bottom-nav icons so the home
-# screen feels consistent with the dock.
-_QA_ICONS: Dict[str, str] = {
-    "wave": (
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-        'aria-hidden="true"><path d="M2 12h2"/><path d="M6 8v8"/>'
-        '<path d="M10 4v16"/><path d="M14 8v8"/><path d="M18 5v14"/>'
-        '<path d="M22 12h2"/></svg>'
-    ),
-    "file": (
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-        'aria-hidden="true">'
-        '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>'
-        '<polyline points="14 2 14 8 20 8"/>'
-        '<line x1="16" y1="13" x2="8" y2="13"/>'
-        '<line x1="16" y1="17" x2="8" y2="17"/></svg>'
-    ),
-    "play": (
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-        'aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="3"/>'
-        '<path d="m10 8 6 4-6 4V8z"/></svg>'
-    ),
-    "chart": (
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-        'aria-hidden="true"><path d="M3 3v18h18"/>'
-        '<rect x="7" y="13" width="3" height="5" rx="1"/>'
-        '<rect x="12" y="9" width="3" height="9" rx="1"/>'
-        '<rect x="17" y="5" width="3" height="13" rx="1"/></svg>'
-    ),
-}
 
 
 def _start_script_coaching_from_home() -> None:
@@ -382,40 +509,31 @@ def _start_script_coaching_from_home() -> None:
 
 
 def _render_quick_actions() -> None:
-    # 4th tuple field = per-card modifier class for icon colour (styles.py).
     items = (
-        ("PATTERN", "wave", "오늘의 패턴", "한 줄 듣고 따라하기", "qa-card--pattern"),
-        ("SCRIPTS", "file", "스크립트", "스마트스토어에서 구매", "qa-card--scripts"),
-        ("LECTURES", "play", "강의 보기", "출제 유형 강의", "qa-card--lectures"),
-        ("SCRIPT_COACHING", "chart", "스크립트 첨삭", "내 답변 등급 진단받기", "qa-card--coaching"),
+        ("home-quick-pattern", "wave-sine", "오늘의 패턴", "한 줄 듣고 따라하기", "qa_nav_PATTERN", lambda: navigate_to("PATTERN"), True),
+        ("home-quick-scripts", "shopping-bag", "스크립트", "스마트스토어에서 구매", "qa_nav_SCRIPTS", lambda: navigate_to("SCRIPTS"), True),
+        ("home-quick-lectures", "player-play", "강의 보기", "출제 유형 강의", "qa_nav_LECTURES", lambda: navigate_to("LECTURES"), True),
+        ("home-quick-coaching", "pencil-check", "스크립트 첨삭", "내 답변 등급 진단받기", "qa_nav_script_coaching", _start_script_coaching_from_home, False),
     )
     st.markdown('<div class="home-section-h home-section-h--quick">빠른 실행</div>', unsafe_allow_html=True)
     row_a = st.columns(2, gap="small")
     row_b = st.columns(2, gap="small")
-    for col, (action, ico, title, sub, variant) in zip(row_a + row_b, items):
-        with col:
-            st.markdown(
-                f'<div class="qa-card {variant}" aria-label="{html.escape(title)}">'
-                f'<span class="qa-ico">{_QA_ICONS.get(ico, "")}</span>'
-                f'<span class="qa-title">{html.escape(title)}</span>'
-                f'<span class="qa-sub">{html.escape(sub)}</span>'
-                "</div>",
-                unsafe_allow_html=True,
-            )
-            if action == "SCRIPT_COACHING":
-                if st.button(
-                    f"{title} 열기",
-                    key="qa_nav_script_coaching",
-                    use_container_width=True,
-                ):
-                    _start_script_coaching_from_home()
-            elif st.button(
-                f"{title} 열기",
-                key=f"qa_nav_{action}",
-                use_container_width=True,
-            ):
-                navigate_to(action)
-                st.rerun()
+    for col, (variant, icon, title, sub, button_key, on_click, rerun_after) in zip(
+        row_a + row_b, items
+    ):
+        _render_home_overlay_card_in_col(
+            col,
+            variant=variant,
+            aria_label=title,
+            title=title,
+            sub=sub,
+            icon=icon,
+            button_label=title,
+            button_key=button_key,
+            on_click=on_click,
+            compact=True,
+            rerun_after=rerun_after,
+        )
 
 
 # ---------------------------------------------------------------------------
