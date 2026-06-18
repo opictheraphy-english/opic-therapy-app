@@ -109,6 +109,118 @@ def trim_mock_v2_audio_blobs(ss: MutableMapping[str, Any]) -> int:
     return _trim_dict_store(store, allowed_aids, flow="mock_v2")
 
 
+def _mock_v2_question_id_for_index(
+    questions: List[Dict[str, Any]],
+    answers: List[Dict[str, Any]],
+    idx: int,
+) -> str:
+    if isinstance(questions, list) and 0 <= idx < len(questions):
+        q = questions[idx]
+        if isinstance(q, dict):
+            qid = str(q.get("id") or "").strip()
+            if qid:
+                return qid
+    for row in answers:
+        if not isinstance(row, dict):
+            continue
+        try:
+            qi = int(row.get("question_index", -1))
+        except (TypeError, ValueError):
+            continue
+        if qi == idx:
+            qid = str(row.get("question_id") or "").strip()
+            if qid:
+                return qid
+    return f"mock_v2_q{idx + 1}"
+
+
+def trim_mock_v2_widget_state(
+    ss: MutableMapping[str, Any],
+    *,
+    questions: Optional[List[Dict[str, Any]]] = None,
+    current_index: Optional[int] = None,
+) -> int:
+    """Drop stale mic/audio/timer session keys; keep recent answered + current index."""
+    answers = ss.get("mock_v2_answers")
+    if not isinstance(answers, list):
+        answers = []
+    q_list = questions if isinstance(questions, list) else ss.get("mock_v2_questions")
+    if not isinstance(q_list, list):
+        q_list = []
+
+    keep_indices = _recent_question_indices(answers, "question_index")
+    if current_index is not None:
+        try:
+            keep_indices.add(int(current_index))
+        except (TypeError, ValueError):
+            pass
+
+    keep_question_ids: Set[str] = set()
+    keep_timer_keys: Set[str] = set()
+    for idx in keep_indices:
+        if idx < 0:
+            continue
+        qid = _mock_v2_question_id_for_index(q_list, answers, idx)
+        keep_question_ids.add(qid)
+        try:
+            from components.answer_countdown_timer import build_answer_timer_id
+
+            timer_id = build_answer_timer_id("mock_v2", qid, str(idx))
+            keep_timer_keys.add(f"_answer_timer_up_done_{timer_id}")
+        except Exception:
+            pass
+
+    # Pending mic stash (just_once rerun) — never trim until commit clears _output.
+    for key in list(ss.keys()):
+        if not isinstance(key, str):
+            continue
+        if not key.startswith("mock_v2_mic_") or not key.endswith("_output"):
+            continue
+        if ss.get(key) is None:
+            continue
+        qid_suffix = key[len("mock_v2_mic_") :][: -len("_output")]
+        if qid_suffix:
+            keep_question_ids.add(qid_suffix)
+
+    removed = 0
+    for key in list(ss.keys()):
+        if not isinstance(key, str):
+            continue
+        drop = False
+        if key.startswith("mock_v2_mic_"):
+            rest = key[len("mock_v2_mic_") :]
+            if rest.endswith("_output"):
+                qid_suffix = rest[: -len("_output")]
+            else:
+                qid_suffix = rest
+            drop = qid_suffix not in keep_question_ids
+        elif key.startswith("mock_v2_audio_"):
+            qid_suffix = key[len("mock_v2_audio_") :]
+            drop = qid_suffix not in keep_question_ids
+        elif key.startswith("_answer_timer_up_done_mock_v2__"):
+            drop = key not in keep_timer_keys
+        if drop:
+            ss.pop(key, None)
+            removed += 1
+
+    if removed:
+        try:
+            logger.info(
+                "[MOCK_V2_WIDGET_TRIM] removed=%s kept_question_ids=%s mic_keys_remaining=%s",
+                removed,
+                sorted(keep_question_ids),
+                sum(
+                    1
+                    for k in ss.keys()
+                    if isinstance(k, str)
+                    and (k.startswith("mock_v2_mic_") or k.startswith("mock_v2_audio_"))
+                ),
+            )
+        except Exception:
+            pass
+    return removed
+
+
 def trim_mini_v2_audio_blobs(ss: MutableMapping[str, Any]) -> int:
     answers = ss.get("mini_v2_answers")
     if not isinstance(answers, list):

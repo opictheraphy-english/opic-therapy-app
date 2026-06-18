@@ -12,6 +12,7 @@ from utils.recording_blob_memory import (
     trim_legacy_mock_recordings,
     trim_mini_v2_audio_blobs,
     trim_mock_v2_audio_blobs,
+    trim_mock_v2_widget_state,
     trim_topic_v2_audio_blobs,
 )
 from utils.v2_flow_persistence import (
@@ -69,6 +70,67 @@ class RecordingBlobMemoryTests(unittest.TestCase):
             trim_mock_v2_audio_blobs(ss)
         self.assertEqual(len(ss["mock_v2_answers"]), 5)
         self.assertEqual(ss["mock_v2_answers"][0]["transcript"], "t0")
+
+    def test_mock_v2_widget_state_fifteen_questions_keeps_two_mic_keys(self) -> None:
+        from components.answer_countdown_timer import build_answer_timer_id
+
+        questions = [
+            {"id": f"q{i}", "question_index": i, "question_number": i + 1}
+            for i in range(15)
+        ]
+        ss: Dict[str, Any] = {
+            "mock_v2_questions": questions,
+            "mock_v2_answers": [],
+        }
+        for i in range(15):
+            qid = f"q{i}"
+            ss["mock_v2_answers"].append(
+                {
+                    "question_index": i,
+                    "question_id": qid,
+                    "answer_id": f"aid-{i}",
+                    "transcript": f"t{i}",
+                }
+            )
+            ss[f"mock_v2_mic_{qid}"] = {"bytes": b"mic"}
+            ss[f"mock_v2_mic_{qid}_output"] = {"bytes": b"mic"}
+            ss[f"mock_v2_audio_{qid}"] = {"bytes": b"alt"}
+            tid = build_answer_timer_id("mock_v2", qid, str(i))
+            ss[f"_answer_timer_up_done_{tid}"] = True
+            trim_mock_v2_widget_state(ss, questions=questions, current_index=i)
+            ss.pop(f"mock_v2_mic_{qid}_output", None)
+
+        mic_keys = [
+            k
+            for k in ss
+            if isinstance(k, str)
+            and (k.startswith("mock_v2_mic_") or k.startswith("mock_v2_audio_"))
+        ]
+        self.assertLessEqual(len(mic_keys), MAX_RETAINED_RECORDING_BLOBS * 3)
+        self.assertIn("mock_v2_mic_q13", ss)
+        self.assertIn("mock_v2_mic_q14", ss)
+        self.assertNotIn("mock_v2_mic_q0", ss)
+        self.assertNotIn("mock_v2_audio_q0", ss)
+
+    def test_mock_v2_widget_trim_keeps_pending_stash_output(self) -> None:
+        questions = [{"id": "q14", "question_index": 14, "question_number": 15}]
+        ss: Dict[str, Any] = {
+            "mock_v2_questions": questions,
+            "mock_v2_answers": [
+                {
+                    "question_index": i,
+                    "question_id": f"q{i}",
+                    "answer_id": f"aid-{i}",
+                    "transcript": f"t{i}",
+                }
+                for i in range(14)
+            ],
+            "mock_v2_mic_q0": {"bytes": b"old"},
+            "mock_v2_mic_q14_output": {"bytes": b"pending"},
+        }
+        trim_mock_v2_widget_state(ss, questions=questions, current_index=14)
+        self.assertIn("mock_v2_mic_q14_output", ss)
+        self.assertNotIn("mock_v2_mic_q0", ss)
 
     def test_mini_v2_fifteen_questions_keeps_two_blobs(self) -> None:
         ss: Dict[str, Any] = {"mini_v2_answers": [], "mini_v2_audio_blobs": {}}

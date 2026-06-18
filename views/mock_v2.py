@@ -249,9 +249,17 @@ def _upsert_mock_v2_answer(row: Dict[str, Any]) -> None:
     answers.append(row)
     answers.sort(key=lambda a: int(a.get("question_index", 0)))
     st.session_state[_KEY_ANSWERS] = answers
-    from utils.recording_blob_memory import trim_mock_v2_audio_blobs
+    from utils.recording_blob_memory import (
+        trim_mock_v2_audio_blobs,
+        trim_mock_v2_widget_state,
+    )
 
     trim_mock_v2_audio_blobs(st.session_state)
+    trim_mock_v2_widget_state(
+        st.session_state,
+        questions=_questions_list(),
+        current_index=idx,
+    )
     from utils.v2_flow_persistence import persist_v2_flows_now
 
     persist_v2_flows_now(st.session_state)
@@ -271,6 +279,62 @@ def _mock_v2_mic_key(question_id: str) -> str:
 
 def _mock_v2_mic_output_key(mic_key: str) -> str:
     return f"{mic_key}_output"
+
+
+def _clear_mock_v2_mic_cache(mic_key: str) -> None:
+    if mic_key:
+        st.session_state.pop(_mock_v2_mic_output_key(mic_key), None)
+
+
+def _stash_mock_v2_mic_result(mic_result: Any, mic_key: str) -> None:
+    """Cache mic capture; commit runs on the next rerun before mic_recorder renders."""
+    if mic_result is None or not mic_key:
+        return
+    st.session_state[_mock_v2_mic_output_key(mic_key)] = mic_result
+    st.rerun()
+
+
+def _process_pending_mock_v2_recording(
+    q: Dict[str, Any],
+    *,
+    mic_key: str,
+    timer_id: str,
+) -> bool:
+    """Commit cached mic audio from a prior rerun — call only before mic_recorder."""
+    if not mic_key:
+        return False
+    cached = st.session_state.get(_mock_v2_mic_output_key(mic_key))
+    if cached is None:
+        return False
+
+    dismiss_answer_timer_signal(timer_id)
+    qnum = int(q.get("question_number") or 1)
+    audio_bytes, mime_type = _extract_mock_v2_audio_bytes(cached, mic_key=mic_key)
+    try:
+        logger.info(
+            "[MOCK_V2_MIC_RESULT] q=%s audio_len=%s mime_type=%s source=stash",
+            qnum,
+            len(audio_bytes),
+            mime_type or _DEFAULT_MIME,
+        )
+    except Exception:
+        pass
+
+    _clear_mock_v2_mic_cache(mic_key)
+    if len(audio_bytes) <= 0:
+        st.warning("음성이 저장되지 않았어요. 다시 녹음해 주세요.")
+        st.rerun()
+        return True
+
+    with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
+        _commit_mock_v2_recording(
+            q,
+            audio_bytes,
+            mime_type or _DEFAULT_MIME,
+            mic_result=cached,
+        )
+    st.rerun()
+    return True
 
 
 def _mock_v2_mime_from_mic_dict(mic_dict: Dict[str, Any], audio_bytes: bytes) -> str:
@@ -943,6 +1007,20 @@ def _render_mock_v2_question() -> None:
 
     qnum = int(q.get("question_number") or 1)
     question_id = str(q.get("id") or f"mock_v2_q{qnum}")
+    mic_key = _mock_v2_mic_key(question_id)
+    timer_id = build_answer_timer_id("mock_v2", question_id, str(idx))
+
+    # Stash commit before trim — do not drop uncommitted _output keys.
+    if _process_pending_mock_v2_recording(q, mic_key=mic_key, timer_id=timer_id):
+        return
+
+    from utils.recording_blob_memory import trim_mock_v2_widget_state
+
+    trim_mock_v2_widget_state(
+        st.session_state,
+        questions=_questions_list(),
+        current_index=idx,
+    )
 
     render_top_bar(
         f"Q{qnum}",
@@ -964,7 +1042,6 @@ def _render_mock_v2_question() -> None:
     )
     _render_mock_v2_question_listen(q, qnum)
     render_exam_answer_card_top(accent="teal")
-    timer_id = build_answer_timer_id("mock_v2", question_id, str(idx))
     render_answer_countdown_timer(
         timer_id=timer_id,
         accent="teal",
@@ -974,7 +1051,6 @@ def _render_mock_v2_question() -> None:
 
     from streamlit_mic_recorder import mic_recorder
 
-    mic_key = _mock_v2_mic_key(question_id)
     mic_result = mic_recorder(
         start_prompt="🎤 답변 시작",
         stop_prompt="■ 녹음 완료",
@@ -985,25 +1061,12 @@ def _render_mock_v2_question() -> None:
 
     if mic_result is not None:
         dismiss_answer_timer_signal(timer_id)
-        audio_bytes, mime_type = _extract_mock_v2_audio_bytes(mic_result, mic_key=mic_key)
-        extraction_source = "mic_result" if audio_bytes else "empty"
-        _log_mock_v2_mic_result(
-            qnum,
-            mic_result,
-            audio_bytes=audio_bytes,
-            mime_type=mime_type or _DEFAULT_MIME,
-            source=extraction_source,
-        )
-        if len(audio_bytes) > 0:
-            with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
-                if _commit_mock_v2_recording(q, audio_bytes, mime_type, mic_result=mic_result):
-                    st.rerun()
-        else:
-            st.warning("음성이 저장되지 않았어요. 다시 녹음해 주세요.")
+        _stash_mock_v2_mic_result(mic_result, mic_key)
 
     def _commit_from_timer(audio_bytes: bytes, mime_type: str, mic_payload: Any) -> None:
         with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
             _commit_mock_v2_recording(q, audio_bytes, mime_type, mic_result=mic_payload)
+        _clear_mock_v2_mic_cache(mic_key)
 
     if handle_answer_timer_expiry(
         timer_id,
@@ -1080,10 +1143,19 @@ def _render_mock_v2_saved() -> None:
             use_container_width=True,
             key="mock_v2_next_question",
         ):
-            from utils.recording_blob_memory import trim_mock_v2_audio_blobs
+            from utils.recording_blob_memory import (
+                trim_mock_v2_audio_blobs,
+                trim_mock_v2_widget_state,
+            )
 
             trim_mock_v2_audio_blobs(st.session_state)
-            st.session_state[_KEY_INDEX] = idx + 1
+            next_idx = idx + 1
+            trim_mock_v2_widget_state(
+                st.session_state,
+                questions=_questions_list(),
+                current_index=next_idx,
+            )
+            st.session_state[_KEY_INDEX] = next_idx
             st.session_state[_KEY_STEP] = "question"
             st.rerun()
     else:
