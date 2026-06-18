@@ -5129,6 +5129,36 @@ GLOBAL_CSS = """
       -webkit-text-fill-color: #111827 !important;
     }
 
+    /* Multiselect chips — wrap to new lines instead of horizontal clip (BaseWeb Select) */
+    div[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+      align-items: flex-start !important;
+    }
+    div[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:first-child {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      flex: 1 1 auto !important;
+      align-items: center !important;
+      gap: 4px 6px !important;
+      overflow: visible !important;
+      overflow-y: visible !important;
+      max-height: none !important;
+      height: auto !important;
+    }
+    div[data-testid="stMultiSelect"] span[data-baseweb="tag"],
+    div[data-testid="stMultiSelect"] [data-baseweb="tag"] {
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      max-width: 100% !important;
+      overflow: visible !important;
+    }
+    div[data-testid="stMultiSelect"] [data-baseweb="tag"] > span {
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+
     input::placeholder,
     textarea::placeholder {
       color: #9ca3af !important;
