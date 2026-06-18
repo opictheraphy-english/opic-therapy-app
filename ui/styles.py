@@ -5129,34 +5129,56 @@ GLOBAL_CSS = """
       -webkit-text-fill-color: #111827 !important;
     }
 
-    /* Multiselect chips — wrap to new lines instead of horizontal clip (BaseWeb Select) */
+    /* Multiselect chips — wrap + no horizontal clip (BaseWeb Control/Value + Tag) */
+    div[data-testid="stMultiSelect"] .stMultiSelect [data-baseweb="select"],
+    div[data-testid="stMultiSelect"] [data-baseweb="select"] {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
     div[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+      display: flex !important;
       height: auto !important;
+      min-height: 2.75rem !important;
       max-height: none !important;
       overflow: visible !important;
+      overflow-x: visible !important;
       align-items: flex-start !important;
     }
     div[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:first-child {
       display: flex !important;
-      flex-wrap: wrap !important;
       flex: 1 1 auto !important;
+      flex-wrap: wrap !important;
       align-items: center !important;
+      align-content: flex-start !important;
       gap: 4px 6px !important;
-      overflow: visible !important;
-      overflow-y: visible !important;
-      max-height: none !important;
+      width: 100% !important;
+      min-width: 0 !important;
       height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+      overflow-x: visible !important;
+      overflow-y: visible !important;
     }
     div[data-testid="stMultiSelect"] span[data-baseweb="tag"],
     div[data-testid="stMultiSelect"] [data-baseweb="tag"] {
-      white-space: nowrap !important;
+      display: inline-flex !important;
+      width: auto !important;
+      max-width: none !important;
+      flex: 0 0 auto !important;
       flex-shrink: 0 !important;
-      max-width: 100% !important;
+      white-space: nowrap !important;
       overflow: visible !important;
     }
     div[data-testid="stMultiSelect"] [data-baseweb="tag"] > span {
       overflow: visible !important;
       text-overflow: clip !important;
+      white-space: nowrap !important;
+      max-width: none !important;
+    }
+    div[data-testid="stMultiSelect"] [data-baseweb="select"] input {
+      flex: 1 1 2.5rem !important;
+      min-width: 2.5rem !important;
+      width: auto !important;
     }
 
     input::placeholder,
@@ -6576,6 +6598,34 @@ GLOBAL_CSS = """
       color: #ffffff !important;
     }
 """
+
+
+def inject_multiselect_chip_scroll_fix() -> None:
+    """Reset BaseWeb multiselect value-container scrollLeft (clips first chip char)."""
+    import streamlit.components.v1 as components
+
+    components.html(
+        """
+<script>
+(function () {
+  const doc = window.parent.document;
+  function reset() {
+    doc.querySelectorAll(
+      '[data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:first-child'
+    ).forEach(function (el) {
+      if (el && el.scrollLeft) el.scrollLeft = 0;
+    });
+  }
+  reset();
+  var obs = new MutationObserver(reset);
+  obs.observe(doc.body, { childList: true, subtree: true, attributes: true });
+  window.addEventListener("load", reset);
+})();
+</script>
+        """,
+        height=0,
+        width=0,
+    )
 
 
 def inject_global_styles() -> None:

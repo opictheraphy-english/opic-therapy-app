@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v7_answer_level"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v8_honest_deflection"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -28,7 +28,7 @@ def build_topic_practice_v2_feedback_rubric() -> str:
 
 위 JSON이 레벨 앵커, 6개 score_axes, speech_rate_90s 밴드, question_type_guidance,
 decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
-advanced_function_gate의 단일 기준이다. 밴드 숫자나 평가 축 의미, 게이트를 여기서
+honest_deflection_guidance, advanced_function_gate의 단일 기준이다. 밴드 숫자나 평가 축 의미, 게이트를 여기서
 다시 적거나 임의로 바꾸지 말 것. 레벨은 단어 수가 아니라 기능(function)·텍스트 타입으로
 먼저 판정하고(anchor_usage), 단어 수는 보조 근거로만 쓴다. IH와 AL의 구분은
 advanced_function_gate(과거·현재 시간틀 통제 + 문단 담화의 지속)를 따른다.
@@ -60,6 +60,14 @@ relevance(관련성) 판단 — 느슨하게 적용할 것:
   relevance를 높게 유지한다. 애매하면 깎지 말고 살려준다.
 - correction_focus·summary에서 relevance를 지적할 때도, 완전 오프토픽이 아니면
   "주제를 벗어났다"는 식의 지적을 하지 말 것.
+
+경험 없음·자연스러운 회피 (honest_deflection_guidance — 반드시 적용):
+- "직접 경험이 없다"고 말하고 이유·가족/배우자 역할을 설명하는 답은 **정상적인 OPIc 답변**이다.
+  예: 재활용 경험 질문에 "I don't really recycle — my wife does it since she's home"처럼
+  솔직히 말하고 누가 하는지 설명하는 것은 **질문에 답한 것**이며, off-topic·회피·응답 부족이 아니다.
+- relevance를 낮추거나 IL로만 묶지 말 것. because/since/so 등으로 문장이 이어지면 IM1–IM2까지는
+  충분히 가능하다. IH 이상은 과거 서사·문단 담화가 필요하므로 회피만으로 IH를 주지는 않되,
+  유창한 회피를 IL로 깎지 말 것.
 
 질문 유형 판정:
 - question_en/question_ko를 보고 위 JSON의 question_type_guidance 중 하나를 고른다:

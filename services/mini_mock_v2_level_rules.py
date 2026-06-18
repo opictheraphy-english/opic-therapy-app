@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Tuple
 
-LEVEL_RULE_VERSION = "shared_level_rules_2026_05_beta_07_actfl"
+LEVEL_RULE_VERSION = "shared_level_rules_2026_05_beta_08_honest_deflection"
 
 # ---------------------------------------------------------------------------
 # DURATION / WPM CONTEXT
@@ -219,8 +219,13 @@ SHARED_QUESTION_TYPE_GUIDANCE: Dict[str, str] = {
         "example. Present-tense habitual framing."
     ),
     "experience": (
-        "A specific past event: what happened, sequence of events, and the "
-        "feeling or why it was memorable. Do NOT apply roleplay rules here."
+        "Prefer a specific past event (what happened, sequence, feeling) when the "
+        "student has one — but an HONEST lack-of-experience answer is also valid: "
+        "saying they have no direct experience, briefly why, or who handles it at "
+        "home (spouse/family) while staying on the question topic. Score such "
+        "deflection by fluency and connected sentences, NOT as off-topic or "
+        "insufficient. Do NOT cap at IL only because no past narrative was given "
+        "(see honest_deflection_guidance). Do NOT apply roleplay rules here."
     ),
     "roleplay": (
         "Speak DIRECTLY to the imagined person (second person 'you'). Complete "
@@ -312,7 +317,27 @@ RELEVANCE_GATE: str = (
     "on quantity alone (cap at IL at most). IMPORTANT consistency with the loose "
     "relevance philosophy: genuine on-topic answers that branch into extra "
     "detail (TMI) or reuse a few question keywords are NOT penalized — this gate "
-    "fires ONLY on true non-answers (question echo or total off-topic)."
+    "fires ONLY on true non-answers (question echo or total off-topic). "
+    "NOT non-answers: honestly stating no personal experience while staying on "
+    "topic (e.g. 'I don't recycle — my wife does it at home') or naturally "
+    "redirecting to someone nearby who handles the topic — see honest_deflection_guidance."
+)
+
+HONEST_DEFLECTION_GUIDANCE: str = (
+    "HONEST NO-EXPERIENCE / NATURAL DEFLECTION (valid OPIc answers): Real OPIc "
+    "speakers often say they lack direct experience and explain why, or redirect "
+    "to a household member who handles the topic. Example: 'I don't really have "
+    "any experience related to recycling because I don't recycle — my wife does "
+    "it since she's mostly at home, so you should ask her or my mom.' This IS "
+    "answering the question (acknowledges the ask, gives reason/context). Do NOT "
+    "treat as off-topic, evasion, or insufficient_response. Score relevance HIGH. "
+    "Count all words toward response_amount. Level by FUNCTION: multi-sentence "
+    "connected deflection with reasons (because/since/so) can reach IM1–IM2; "
+    "paragraph-like flow with connectors can reach IM3. Do NOT assign IL solely "
+    "because no past-event narrative was provided. IH+ still requires sustained "
+    "past+present paragraph discourse per advanced_function_gate — honest "
+    "deflection alone does not earn IH, but it should not be downgraded to IL "
+    "when the speaker produces fluent IM1–IM2-level connected speech."
 )
 
 ADVANCED_FUNCTION_GATE: str = (
@@ -422,6 +447,7 @@ SHARED_LEVEL_DECISION_GUIDANCE = MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE
 SHARED_ROLEPLAY_GATE = MINI_MOCK_V2_ROLEPLAY_GATE
 SHARED_STRUCTURE_GATE = STRUCTURE_GATE
 SHARED_RELEVANCE_GATE = RELEVANCE_GATE
+SHARED_HONEST_DEFLECTION_GUIDANCE = HONEST_DEFLECTION_GUIDANCE
 SHARED_ADVANCED_FUNCTION_GATE = ADVANCED_FUNCTION_GATE
 SHARED_ANCHOR_USAGE_NOTE = ANCHOR_USAGE_NOTE
 SHARED_VOCABULARY_RULES = MINI_MOCK_V2_VOCABULARY_RULES
@@ -462,6 +488,7 @@ def format_level_rules_for_prompt() -> str:
         "roleplay_gate": MINI_MOCK_V2_ROLEPLAY_GATE,
         "structure_gate": STRUCTURE_GATE,
         "relevance_gate": RELEVANCE_GATE,
+        "honest_deflection_guidance": HONEST_DEFLECTION_GUIDANCE,
         "advanced_function_gate": ADVANCED_FUNCTION_GATE,
         "mock_v2_usable_answer_gate": MOCK_V2_USABLE_ANSWER_GATE,
         "vocabulary_rules": MINI_MOCK_V2_VOCABULARY_RULES,

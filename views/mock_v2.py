@@ -879,6 +879,9 @@ def _retry_mock_v2_stt(q_idx: int) -> bool:
 
 
 def _render_mock_v2_survey() -> None:
+    from ui.styles import inject_multiselect_chip_scroll_fix
+
+    inject_multiselect_chip_scroll_fix()
     render_top_bar("실전 모의고사", back_href="?nav=MOCK", eyebrow="실전 모의고사")
     st.title("실전 모의고사 · Background Survey")
     st.write("OPIc 실전 흐름에 맞춰 15문항 시험지가 생성됩니다.")
