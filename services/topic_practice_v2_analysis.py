@@ -6,12 +6,8 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from services.api_retry_policy import (
-    STT_RETRY_DELAYS_SEC,
-    is_retryable_error,
-    sleep_before_retry,
-)
 from services.evaluation.eval_config import build_topic_feedback_model_candidates
+from services.gemini_json_client import run_gemini_json_model_chain
 from services.stt_service import count_english_words
 from services.topic_practice_v2_rubric import (
     RUBRIC_VERSION,
@@ -27,8 +23,6 @@ _STUDENT_FEEDBACK_UNAVAILABLE = (
     "방금 답변은 안전하게 보관 중이에요. "
     "재녹음 없이 분석만 다시 받을 수 있어요."
 )
-
-_FEEDBACK_MODEL_ATTEMPTS = 2  # one automatic retry per model on transient errors
 
 _ALLOWED_ANSWER_LEVELS = frozenset(
     {"NL", "NM", "NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"}
@@ -117,102 +111,6 @@ def _answer_transcript(answer: Dict[str, Any]) -> str:
     return ""
 
 
-def _is_model_not_found_error(exc: BaseException) -> bool:
-    msg = f"{type(exc).__name__}: {exc}"
-    low = msg.lower()
-    if "404" in msg:
-        return True
-    if "not_found" in low or "not found" in low:
-        return True
-    if "model_not_found" in low:
-        return True
-    if "no longer available" in low or "not available" in low:
-        return True
-    status = getattr(exc, "status_code", None)
-    if status == 404:
-        return True
-    return False
-
-
-def _parse_json_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
-    from services.evaluation.gemini_multimodal_pipeline import strip_json_fence
-    from services.transcript_analysis_service import _extract_json_object
-
-    parsed = _extract_json_object(raw_text)
-    if parsed:
-        return parsed, ""
-    fence = strip_json_fence(raw_text)
-    if fence != raw_text:
-        parsed = _extract_json_object(fence)
-        if parsed:
-            return parsed, ""
-    return None, "json_parse_failed"
-
-
-def _err_to_category(err: str) -> str:
-    if err == "model_not_found":
-        return "model_not_found"
-    if err in ("json_parse_failed", "empty_response"):
-        return err
-    if is_retryable_error(err) or err == "api_error":
-        return "api_error"
-    return "api_error"
-
-
-def _invoke_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[Dict[str, Any]], str]:
-    """Returns (parsed_json, error_token). error_token is '' on success."""
-    from google import genai
-    from google.genai import types as genai_types
-
-    client = genai.Client(
-        api_key=api_key,
-        http_options=genai_types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
-    )
-    parts = [genai_types.Part.from_text(text=prompt)]
-    contents = [genai_types.Content(role="user", parts=parts)]
-    config = genai_types.GenerateContentConfig(temperature=0.2, max_output_tokens=1024)
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
-        )
-    except Exception as exc:
-        if _is_model_not_found_error(exc):
-            try:
-                logger.warning(
-                    "[TOPIC_V2_FEEDBACK] model=%s error_category=model_not_found",
-                    model_name,
-                )
-            except Exception:
-                pass
-            return None, "model_not_found"
-        try:
-            logger.warning(
-                "[TOPIC_V2_FEEDBACK] model=%s error_category=api_error exc_type=%s",
-                model_name,
-                type(exc).__name__,
-            )
-        except Exception:
-            pass
-        return None, "api_error"
-
-    raw_text = (getattr(response, "text", "") or "").strip()
-    if not raw_text:
-        for cand in getattr(response, "candidates", None) or []:
-            content = getattr(cand, "content", None)
-            for part in getattr(content, "parts", None) or []:
-                t = getattr(part, "text", None)
-                if t:
-                    raw_text = (raw_text + "\n" + t).strip()
-    if not raw_text:
-        return None, "empty_response"
-    parsed, err = _parse_json_response(raw_text)
-    if parsed:
-        return parsed, ""
-    return None, err or "json_parse_failed"
-
-
 def _speech_metrics_for_transcript(transcript: str, duration_seconds: float) -> Dict[str, Any]:
     from services.speech_rate_scoring import build_per_answer_speech_metrics, count_content_words
 
@@ -296,64 +194,53 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
 
     prompt = _build_prompt(answer, transcript)
     models = build_topic_feedback_model_candidates()
-    saw_model_not_found = False
-    saw_other_failure = False
-    for model_name in models:
-        for attempt_idx in range(1, _FEEDBACK_MODEL_ATTEMPTS + 1):
-            if attempt_idx > 1:
-                sleep_before_retry(attempt_idx, STT_RETRY_DELAYS_SEC)
-            try:
-                logger.info(
-                    "[TOPIC_V2_FEEDBACK] model=%s attempt=%s transcript_words=%s",
-                    model_name,
-                    attempt_idx,
-                    wc,
-                )
-            except Exception:
-                pass
-            parsed, err = _invoke_model(api_key, prompt, model_name)
-            if parsed:
-                norm = _normalize_success(parsed)
-                if not norm["summary"]:
-                    norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
-                if not norm["strength"]:
-                    norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
-                if not norm["correction_focus"]:
-                    norm["correction_focus"] = "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
-                if not norm["better_expression"]:
-                    norm["better_expression"] = "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
-                if not norm.get("upgrade_sample"):
-                    norm["upgrade_sample"] = ""
-                if not norm["practice_mission"]:
-                    norm["practice_mission"] = "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
-                try:
-                    logger.info(
-                        "[TOPIC_V2_FEEDBACK] success model=%s attempt=%s",
-                        model_name,
-                        attempt_idx,
-                    )
-                except Exception:
-                    pass
-                return _stringify_result(norm)
-            cat = _err_to_category(err or "")
-            if err == "model_not_found":
-                saw_model_not_found = True
-                break
-            saw_other_failure = True
-            try:
-                logger.warning(
-                    "[TOPIC_V2_FEEDBACK] model_failed model=%s attempt=%s err=%s",
-                    model_name,
-                    attempt_idx,
-                    err,
-                )
-            except Exception:
-                pass
-            if attempt_idx < _FEEDBACK_MODEL_ATTEMPTS and is_retryable_error(cat):
-                continue
-            break
 
-    final_cat = "model_not_found" if saw_model_not_found and not saw_other_failure else "api_error"
+    def _log_attempt(model_name: str, attempt_no: int) -> None:
+        try:
+            logger.info(
+                "[TOPIC_V2_FEEDBACK] model=%s attempt=%s transcript_words=%s",
+                model_name,
+                attempt_no,
+                wc,
+            )
+        except Exception:
+            pass
+
+    parsed, err = run_gemini_json_model_chain(
+        api_key=api_key,
+        prompt=prompt,
+        models=models,
+        temperature=0.2,
+        max_output_tokens=1024,
+        timeout_ms=GEMINI_REQUEST_TIMEOUT_MS,
+        log_tag="TOPIC_V2_FEEDBACK",
+        on_attempt=_log_attempt,
+    )
+    if parsed:
+        norm = _normalize_success(parsed)
+        if not norm["summary"]:
+            norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
+        if not norm["strength"]:
+            norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
+        if not norm["correction_focus"]:
+            norm["correction_focus"] = "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
+        if not norm["better_expression"]:
+            norm["better_expression"] = "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
+        if not norm.get("upgrade_sample"):
+            norm["upgrade_sample"] = ""
+        if not norm["practice_mission"]:
+            norm["practice_mission"] = "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
+        try:
+            logger.info("[TOPIC_V2_FEEDBACK] success")
+        except Exception:
+            pass
+        return _stringify_result(norm)
+
+    try:
+        logger.warning("[TOPIC_V2_FEEDBACK] model_chain_failed err=%s", err)
+    except Exception:
+        pass
+    final_cat = "model_not_found" if err == "model_not_found" else "api_error"
     return _stringify_result(
         _failure(
             category=final_cat,

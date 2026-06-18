@@ -4,6 +4,7 @@ streamlit-mic-recorder
 
 # AI / speech APIs
 google-genai
+openai>=1.30.0
 google-cloud-texttospeech
 gTTS
 

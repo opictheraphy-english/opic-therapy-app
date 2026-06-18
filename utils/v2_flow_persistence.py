@@ -45,6 +45,23 @@ _MOCK_V2_SESSION_KEYS: tuple[str, ...] = (
     "mock_v2_report",
 )
 
+_TOPIC_V2_SESSION_KEYS: tuple[str, ...] = (
+    "topic_v2_step",
+    "topic_v2_question_index",
+    "topic_v2_mode",
+    "topic_v2_topic",
+    "topic_v2_roleplay_set_id",
+    "topic_v2_advanced_set_id",
+    "topic_v2_keyword_constraint_set_id",
+    "topic_v2_entry_source",
+    "topic_v2_practice_sig",
+    "topic_v2_questions",
+    "topic_v2_current_question",
+    "topic_v2_answers",
+    "topic_v2_feedback",
+    "topic_v2_feedback_by_q",
+)
+
 _IN_PROGRESS_MINI_STEPS = frozenset({"question", "recording", "saved", "ready_report", "analyzing", "pending"})
 _IN_PROGRESS_MOCK_STEPS = frozenset({"survey", "question", "saved", "complete", "report_pending"})
 
@@ -127,6 +144,19 @@ def _snapshot_meaningful_mock(snap: Dict[str, Any]) -> bool:
     return step in _IN_PROGRESS_MOCK_STEPS and step not in ("survey",)
 
 
+def _snapshot_meaningful_topic_v2(snap: Dict[str, Any]) -> bool:
+    """True when at least one answer exists — select-only / pre-answer flows are excluded."""
+    if not isinstance(snap, dict) or not snap:
+        return False
+    answers = snap.get("topic_v2_answers")
+    return isinstance(answers, list) and len(answers) > 0
+
+
+def _topic_v2_in_memory(ss: MutableMapping[str, Any]) -> bool:
+    answers = ss.get("topic_v2_answers")
+    return isinstance(answers, list) and len(answers) > 0
+
+
 def _build_mini_v2_snapshot(ss: MutableMapping[str, Any]) -> Dict[str, Any]:
     if not _mini_v2_in_memory(ss):
         return {}
@@ -167,6 +197,26 @@ def _build_mock_v2_snapshot(ss: MutableMapping[str, Any]) -> Dict[str, Any]:
     return snap
 
 
+def _build_topic_v2_snapshot(ss: MutableMapping[str, Any]) -> Dict[str, Any]:
+    if not _topic_v2_in_memory(ss):
+        return {}
+    snap: Dict[str, Any] = {}
+    for key in _TOPIC_V2_SESSION_KEYS:
+        if key not in ss:
+            continue
+        try:
+            snap[key] = _encode_value(ss[key])
+        except Exception:
+            logger.debug("skip topic_v2 snapshot key %s", key)
+    snap["_resume_hint"] = {
+        "flow": "topic_v2",
+        "mock_mode": "topic_practice_v2",
+        "practice_portal_selected": True,
+        "mock_page": "TOPIC_V2",
+    }
+    return snap
+
+
 def _apply_routing(ss: MutableMapping[str, Any], routing: Dict[str, Any]) -> None:
     """Apply resume navigation — only call when the user explicitly taps 이어하기."""
     if not isinstance(routing, dict):
@@ -190,7 +240,9 @@ def _apply_routing(ss: MutableMapping[str, Any], routing: Dict[str, Any]) -> Non
             ss["mock_page"] = mock_page
 
 
-_SKIP_RESTORE_AUDIO_KEYS = frozenset({"mini_v2_audio_blobs", "mock_v2_audio_blobs"})
+_SKIP_RESTORE_AUDIO_KEYS = frozenset(
+    {"mini_v2_audio_blobs", "mock_v2_audio_blobs", "topic_v2_audio_blobs"}
+)
 
 
 def _apply_snapshot(ss: MutableMapping[str, Any], snap: Dict[str, Any]) -> None:
@@ -223,6 +275,8 @@ def v2_flow_signature_part(ss: MutableMapping[str, Any]) -> str:
     mini_n = len(mini) if isinstance(mini, list) else 0
     mock = ss.get("mock_v2_answers")
     mock_n = len(mock) if isinstance(mock, list) else 0
+    topic = ss.get("topic_v2_answers")
+    topic_n = len(topic) if isinstance(topic, list) else 0
     return "|".join(
         str(p)
         for p in (
@@ -232,6 +286,9 @@ def v2_flow_signature_part(ss: MutableMapping[str, Any]) -> str:
             ss.get("mock_v2_step") or "",
             ss.get("mock_v2_index") or 0,
             mock_n,
+            ss.get("topic_v2_step") or "",
+            ss.get("topic_v2_question_index") or 0,
+            topic_n,
             ss.get("mock_mode") or "",
             bool(ss.get("mini_mock_v2_active")),
         )
@@ -251,7 +308,8 @@ def persist_v2_flows_now(ss: MutableMapping[str, Any]) -> None:
         logger.debug("trim_v2_flow_audio_blobs failed", exc_info=True)
     mini_snap = _build_mini_v2_snapshot(ss)
     mock_snap = _build_mock_v2_snapshot(ss)
-    if not mini_snap and not mock_snap:
+    topic_snap = _build_topic_v2_snapshot(ss)
+    if not mini_snap and not mock_snap and not topic_snap:
         return
 
     data = load_user_progress()
@@ -259,14 +317,18 @@ def persist_v2_flows_now(ss: MutableMapping[str, Any]) -> None:
         data["mini_v2_snapshot"] = mini_snap
     if mock_snap:
         data["mock_v2_snapshot"] = mock_snap
+    if topic_snap:
+        data["topic_v2_snapshot"] = topic_snap
     save_user_progress(data)
     try:
         logger.info(
-            "[V2_FLOW_PERSIST] mini=%s mock=%s answers=(%s,%s) audio_excluded=True",
+            "[V2_FLOW_PERSIST] mini=%s mock=%s topic=%s answers=(%s,%s,%s) audio_excluded=True",
             bool(mini_snap),
             bool(mock_snap),
+            bool(topic_snap),
             len(mini_snap.get("mini_v2_answers") or []) if mini_snap else 0,
             len(mock_snap.get("mock_v2_answers") or []) if mock_snap else 0,
+            len(topic_snap.get("topic_v2_answers") or []) if topic_snap else 0,
         )
     except Exception:
         pass
@@ -278,6 +340,10 @@ def clear_mini_v2_disk_snapshot(ss: MutableMapping[str, Any]) -> None:
 
 def clear_mock_v2_disk_snapshot(ss: MutableMapping[str, Any]) -> None:
     _clear_disk_key(ss, "mock_v2_snapshot")
+
+
+def clear_topic_v2_disk_snapshot(ss: MutableMapping[str, Any]) -> None:
+    _clear_disk_key(ss, "topic_v2_snapshot")
 
 
 def _clear_disk_key(ss: MutableMapping[str, Any], key: str) -> None:
@@ -302,6 +368,7 @@ def maybe_restore_v2_flows_from_disk(ss: MutableMapping[str, Any]) -> bool:
     data = load_user_progress()
     mini_snap = data.get("mini_v2_snapshot") or {}
     mock_snap = data.get("mock_v2_snapshot") or {}
+    topic_snap = data.get("topic_v2_snapshot") or {}
 
     restored = False
     if _snapshot_meaningful_mini(mini_snap) and not _mini_v2_in_memory(ss):
@@ -326,6 +393,16 @@ def maybe_restore_v2_flows_from_disk(ss: MutableMapping[str, Any]) -> bool:
             len(ss.get("mock_v2_answers") or []),
         )
 
+    if _snapshot_meaningful_topic_v2(topic_snap) and not _topic_v2_in_memory(ss):
+        _apply_snapshot(ss, topic_snap)
+        restored = True
+        logger.info(
+            "[V2_FLOW_RESTORE] topic_v2 step=%s index=%s answers=%s",
+            ss.get("topic_v2_step"),
+            ss.get("topic_v2_question_index"),
+            len(ss.get("topic_v2_answers") or []),
+        )
+
     if restored:
         logger.info("[V2_FLOW_RESTORE] data_only=True (no forced nav)")
     return restored
@@ -339,6 +416,7 @@ def get_v2_resume_offer(
     data = prog_disk if isinstance(prog_disk, dict) else {}
     mini_snap = data.get("mini_v2_snapshot") or {}
     mock_snap = data.get("mock_v2_snapshot") or {}
+    topic_snap = data.get("topic_v2_snapshot") or {}
 
     if _mini_v2_in_memory(ss) or _snapshot_meaningful_mini(mini_snap):
         answers = ss.get("mini_v2_answers") if _mini_v2_in_memory(ss) else mini_snap.get("mini_v2_answers")
@@ -371,6 +449,22 @@ def get_v2_resume_offer(
             "total": 15,
             "question_label": f"Q{min(idx + 1, 15)}",
         }
+
+    if _topic_v2_in_memory(ss) or _snapshot_meaningful_topic_v2(topic_snap):
+        from views.topic_practice_v2 import build_topic_v2_resume_offer_meta
+
+        source: Dict[str, Any] = dict(ss) if _topic_v2_in_memory(ss) else dict(topic_snap)
+        meta = build_topic_v2_resume_offer_meta(source)
+        return {
+            "flow": "topic_v2",
+            "label": "주제별 연습 이어서 풀기",
+            "practice_label": meta.get("practice_label") or "",
+            "completed": int(meta.get("completed") or 0),
+            "total": int(meta.get("total") or 0),
+            "current_display": int(meta.get("current_display") or 1),
+            "question_label": str(meta.get("progress_label") or ""),
+            "mode": str(meta.get("mode") or "topic"),
+        }
     return None
 
 
@@ -391,6 +485,13 @@ def resume_v2_flow(ss: MutableMapping[str, Any], *, flow: str) -> None:
             "practice_portal_selected": True,
             "mock_page": "PICK",
         }
+    elif flow == "topic_v2":
+        hint = {
+            "flow": "topic_v2",
+            "mock_mode": "topic_practice_v2",
+            "practice_portal_selected": True,
+            "mock_page": "TOPIC_V2",
+        }
     else:
         return
     _apply_routing(ss, hint)
@@ -403,17 +504,26 @@ def attach_v2_snapshots_to_progress_payload(
 ) -> None:
     mini = _build_mini_v2_snapshot(ss)
     mock = _build_mock_v2_snapshot(ss)
+    topic = _build_topic_v2_snapshot(ss)
     if mini:
         payload["mini_v2_snapshot"] = mini
     if mock:
         payload["mock_v2_snapshot"] = mock
+    if topic:
+        payload["topic_v2_snapshot"] = topic
 
 
 def v2_flows_empty_in_memory(ss: MutableMapping[str, Any]) -> bool:
-    return not _mini_v2_in_memory(ss) and not _mock_v2_in_memory(ss)
+    return (
+        not _mini_v2_in_memory(ss)
+        and not _mock_v2_in_memory(ss)
+        and not _topic_v2_in_memory(ss)
+    )
 
 
 def disk_has_meaningful_v2_snapshot(data: Dict[str, Any]) -> bool:
-    return _snapshot_meaningful_mini(data.get("mini_v2_snapshot") or {}) or _snapshot_meaningful_mock(
-        data.get("mock_v2_snapshot") or {}
+    return (
+        _snapshot_meaningful_mini(data.get("mini_v2_snapshot") or {})
+        or _snapshot_meaningful_mock(data.get("mock_v2_snapshot") or {})
+        or _snapshot_meaningful_topic_v2(data.get("topic_v2_snapshot") or {})
     )

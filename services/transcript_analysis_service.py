@@ -107,24 +107,10 @@ def _build_transcript_scoring_prompt(
 
 
 def _extract_json_object(raw_text: str) -> Optional[Dict[str, Any]]:
-    from services.evaluation.gemini_multimodal_pipeline import strip_json_fence
+    from services.gemini_json_client import parse_llm_json_response
 
-    text = strip_json_fence(raw_text or "")
-    if not text:
-        return None
-    try:
-        parsed = __import__("json").loads(text)
-        return parsed if isinstance(parsed, dict) else None
-    except Exception:
-        pass
-    m = re.search(r"\{[\s\S]*\}", text)
-    if not m:
-        return None
-    try:
-        parsed = __import__("json").loads(m.group(0))
-        return parsed if isinstance(parsed, dict) else None
-    except Exception:
-        return None
+    parsed, _err = parse_llm_json_response(raw_text, log_tag="TRANSCRIPT_ANALYSIS")
+    return parsed
 
 
 def _gemini_text_json(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import time
 from typing import FrozenSet, List, Tuple
 
@@ -66,6 +67,38 @@ STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (1, 2, 3)
 # timeout, so it does not block the websocket — longer backoff is safe here.
 REPORT_MAX_ATTEMPTS = 2
 REPORT_RETRY_DELAYS_SEC: Tuple[int, ...] = (3, 8)
+
+# Gemini text→JSON feedback / script coaching — exponential backoff + jitter.
+GEMINI_JSON_RETRY_BASE_SEC: Tuple[float, ...] = (0.5, 1.5, 3.0)
+GEMINI_JSON_RETRY_JITTER_SEC = 0.3
+GEMINI_JSON_MAX_TOTAL_SLEEP_SEC = 8.0
+OPENAI_FALLBACK_MAX_ATTEMPTS = 2
+
+_gemini_json_sleep_accumulator = 0.0
+
+
+def reset_gemini_json_sleep_budget() -> None:
+    global _gemini_json_sleep_accumulator
+    _gemini_json_sleep_accumulator = 0.0
+
+
+def record_gemini_json_sleep(delay_sec: float) -> None:
+    global _gemini_json_sleep_accumulator
+    _gemini_json_sleep_accumulator += max(0.0, float(delay_sec))
+
+
+def gemini_json_total_sleep_budget_exceeded() -> bool:
+    return _gemini_json_sleep_accumulator >= GEMINI_JSON_MAX_TOTAL_SLEEP_SEC
+
+
+def gemini_json_retry_delay_sec(attempt_index: int) -> float:
+    """attempt_index is 1-based count of completed failures before next retry."""
+    if attempt_index <= 0:
+        return 0.0
+    idx = min(attempt_index - 1, len(GEMINI_JSON_RETRY_BASE_SEC) - 1)
+    base = float(GEMINI_JSON_RETRY_BASE_SEC[idx])
+    jitter = random.uniform(-GEMINI_JSON_RETRY_JITTER_SEC, GEMINI_JSON_RETRY_JITTER_SEC)
+    return max(0.0, base + jitter)
 
 
 def is_retryable_error(category: str) -> bool:

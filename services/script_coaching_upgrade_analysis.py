@@ -14,12 +14,8 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from services.api_retry_policy import (
-    STT_RETRY_DELAYS_SEC,
-    is_retryable_error,
-    sleep_before_retry,
-)
 from services.evaluation.eval_config import build_topic_feedback_model_candidates
+from services.gemini_json_client import run_gemini_json_model_chain
 from services.script_coaching_metrics import build_script_text_metrics
 from services.script_coaching_upgrade_rubric import (
     RUBRIC_VERSION,
@@ -33,7 +29,6 @@ GEMINI_REQUEST_TIMEOUT_SEC = 40
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 
 MIN_SCRIPT_WORDS = 5
-_UPGRADE_MODEL_ATTEMPTS = 2
 
 _LEVEL_ORDER = ("NH", "IL", "IM1", "IM2", "IM3", "IH", "AL")
 
@@ -94,81 +89,6 @@ def _validate_target(current_level: str, target_level: str) -> Tuple[bool, str]:
     if gap < 1 or gap > 2:
         return False, "target_out_of_range"
     return True, ""
-
-
-def _is_model_not_found_error(exc: BaseException) -> bool:
-    msg = f"{type(exc).__name__}: {exc}"
-    low = msg.lower()
-    if "404" in msg or "not_found" in low or "not found" in low:
-        return True
-    if "no longer available" in low or "not available" in low:
-        return True
-    return getattr(exc, "status_code", None) == 404
-
-
-def _parse_json_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
-    from services.evaluation.gemini_multimodal_pipeline import strip_json_fence
-    from services.transcript_analysis_service import _extract_json_object
-
-    parsed = _extract_json_object(raw_text)
-    if parsed:
-        return parsed, ""
-    fence = strip_json_fence(raw_text)
-    if fence != raw_text:
-        parsed = _extract_json_object(fence)
-        if parsed:
-            return parsed, ""
-    return None, "json_parse_failed"
-
-
-def _invoke_model(
-    api_key: str, prompt: str, model_name: str
-) -> Tuple[Optional[Dict[str, Any]], str]:
-    """Returns (parsed_json, error_token). error_token is '' on success."""
-    from google import genai
-    from google.genai import types as genai_types
-
-    client = genai.Client(
-        api_key=api_key,
-        http_options=genai_types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
-    )
-    parts = [genai_types.Part.from_text(text=prompt)]
-    contents = [genai_types.Content(role="user", parts=parts)]
-    # Higher token budget than diagnose — the upgraded script can be long.
-    config = genai_types.GenerateContentConfig(temperature=0.3, max_output_tokens=2048)
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
-        )
-    except Exception as exc:
-        if _is_model_not_found_error(exc):
-            return None, "model_not_found"
-        try:
-            logger.warning(
-                "[SCRIPT_UPGRADE] model=%s error_category=api_error exc_type=%s",
-                model_name,
-                type(exc).__name__,
-            )
-        except Exception:
-            pass
-        return None, "api_error"
-
-    raw_text = (getattr(response, "text", "") or "").strip()
-    if not raw_text:
-        for cand in getattr(response, "candidates", None) or []:
-            content = getattr(cand, "content", None)
-            for part in getattr(content, "parts", None) or []:
-                t = getattr(part, "text", None)
-                if t:
-                    raw_text = (raw_text + "\n" + t).strip()
-    if not raw_text:
-        return None, "empty_response"
-    parsed, err = _parse_json_response(raw_text)
-    if parsed:
-        return parsed, ""
-    return None, err or "json_parse_failed"
 
 
 def _build_prompt(
@@ -287,57 +207,51 @@ def upgrade_script(
         question_en, question_ko, original_script, current_level, target_level, mode
     )
     models = build_topic_feedback_model_candidates()
-    saw_model_not_found = False
-    saw_other_failure = False
 
-    for model_name in models:
-        for attempt_idx in range(1, _UPGRADE_MODEL_ATTEMPTS + 1):
-            if attempt_idx > 1:
-                sleep_before_retry(attempt_idx, STT_RETRY_DELAYS_SEC)
-            try:
-                logger.info(
-                    "[SCRIPT_UPGRADE] model=%s attempt=%s mode=%s %s->%s",
-                    model_name,
-                    attempt_idx,
-                    mode,
-                    current_level,
-                    target_level,
-                )
-            except Exception:
-                pass
-            parsed, err = _invoke_model(api_key, prompt, model_name)
-            if parsed:
-                out = _normalize_success(
-                    parsed,
-                    mode=mode,
-                    current_level=current_level,
-                    target_level=target_level,
-                )
-                if not out["upgraded_script"]:
-                    # A rewrite with no script is not usable.
-                    saw_other_failure = True
-                    break
-                try:
-                    logger.info(
-                        "[SCRIPT_UPGRADE] success model=%s mode=%s %s->%s guides=%s",
-                        model_name,
-                        mode,
-                        current_level,
-                        target_level,
-                        len(out["fill_in_guides"]),
-                    )
-                except Exception:
-                    pass
-                return out
-            if err == "model_not_found":
-                saw_model_not_found = True
-                break
-            saw_other_failure = True
-            if attempt_idx < _UPGRADE_MODEL_ATTEMPTS and is_retryable_error(err):
-                continue
-            break
+    def _log_attempt(model_name: str, attempt_no: int) -> None:
+        try:
+            logger.info(
+                "[SCRIPT_UPGRADE] model=%s attempt=%s mode=%s %s->%s",
+                model_name,
+                attempt_no,
+                mode,
+                current_level,
+                target_level,
+            )
+        except Exception:
+            pass
 
-    final_cat = (
-        "model_not_found" if saw_model_not_found and not saw_other_failure else "api_error"
+    parsed, err = run_gemini_json_model_chain(
+        api_key=api_key,
+        prompt=prompt,
+        models=models,
+        temperature=0.3,
+        max_output_tokens=2048,
+        timeout_ms=GEMINI_REQUEST_TIMEOUT_MS,
+        log_tag="SCRIPT_UPGRADE",
+        on_attempt=_log_attempt,
     )
+    if parsed:
+        out = _normalize_success(
+            parsed,
+            mode=mode,
+            current_level=current_level,
+            target_level=target_level,
+        )
+        if not out["upgraded_script"]:
+            final_cat = "api_error"
+            return _failure(category=final_cat, message=_UPGRADE_UNAVAILABLE)
+        try:
+            logger.info(
+                "[SCRIPT_UPGRADE] success mode=%s %s->%s guides=%s",
+                mode,
+                current_level,
+                target_level,
+                len(out["fill_in_guides"]),
+            )
+        except Exception:
+            pass
+        return out
+
+    final_cat = "model_not_found" if err == "model_not_found" else "api_error"
     return _failure(category=final_cat, message=_UPGRADE_UNAVAILABLE)

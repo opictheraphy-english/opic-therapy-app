@@ -222,16 +222,44 @@ def _detect_in_progress_snapshot(
 
 
 def _render_v2_resume_card(offer: Dict[str, Any]) -> None:
-    """Home hero when a V2 mini / mock exam is saved but not forced open."""
+    """Home hero when a V2 mini / mock / topic exam is saved but not forced open."""
     flow = str(offer.get("flow") or "")
-    label = html.escape(str(offer.get("label") or "모의고사"))
-    completed = int(offer.get("completed") or 0)
-    total = int(offer.get("total") or 0)
-    q_label = html.escape(str(offer.get("question_label") or ""))
+    if flow == "topic_v2":
+        label = "주제별 연습 이어서 풀기"
+        desc_raw = str(offer.get("question_label") or "").strip()
+        if not desc_raw:
+            practice_label = str(offer.get("practice_label") or "").strip()
+            current = int(offer.get("current_display") or 1)
+            total = int(offer.get("total") or 0)
+            desc_raw = (
+                f"{practice_label} · {current}/{total}문항"
+                if practice_label
+                else f"{current}/{total}문항"
+            )
+        desc = html.escape(desc_raw)
+        title_html = html.escape(label)
+        st.markdown(
+            f"""
+        <section class="continue-card continue-card--resume" role="region"
+                 aria-label="주제별 연습 이어하기">
+          <div class="cc-row-top">
+            <div class="cc-eyebrow">이어하기</div>
+          </div>
+          <div class="cc-title">{title_html}</div>
+          <div class="cc-desc">{desc}</div>
+        </section>
+        """,
+            unsafe_allow_html=True,
+        )
+    else:
+        label = html.escape(str(offer.get("label") or "모의고사"))
+        completed = int(offer.get("completed") or 0)
+        total = int(offer.get("total") or 0)
+        q_label = html.escape(str(offer.get("question_label") or ""))
 
-    desc = q_label if q_label else "저장된 답변을 이어서 풀 수 있어요"
-    st.markdown(
-        f"""
+        desc = q_label if q_label else "저장된 답변을 이어서 풀 수 있어요"
+        st.markdown(
+            f"""
         <section class="continue-card continue-card--resume" role="region"
                  aria-label="모의고사 이어하기">
           <div class="cc-row-top">
@@ -241,8 +269,8 @@ def _render_v2_resume_card(offer: Dict[str, Any]) -> None:
           <div class="cc-desc">{desc}</div>
         </section>
         """,
-        unsafe_allow_html=True,
-    )
+            unsafe_allow_html=True,
+        )
     st.markdown('<div class="home-continue-actions-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     if st.button("이어서 풀기", type="primary", use_container_width=True, key=f"home_v2_resume_{flow}"):
         from utils.v2_flow_persistence import resume_v2_flow
@@ -250,6 +278,8 @@ def _render_v2_resume_card(offer: Dict[str, Any]) -> None:
         resume_v2_flow(st.session_state, flow=flow)
         if flow == "mini_mock_v2":
             navigate_to("MOCK", mock="MINI_MOCK")
+        elif flow == "topic_v2":
+            navigate_to("MOCK", mock="TOPIC_V2")
         else:
             navigate_to("MOCK", mock="PICK")
         st.rerun()

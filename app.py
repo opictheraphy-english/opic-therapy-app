@@ -80,6 +80,12 @@ if not st.session_state.get("entry_gate_completed") or not st.session_state.get(
     render_onboarding()
     st.stop()
 
+if st.session_state.pop("auth_session_expired_notice", None):
+    st.warning(
+        "로그인 세션이 만료되었어요. 학습 기록 동기화를 위해 **설정** 탭에서 "
+        "다시 로그인해 주세요. 주제별 연습·녹음은 로그인 없이도 계속할 수 있어요."
+    )
+
 
 def _q_one(name: str) -> str | None:
     v = st.query_params.get(name)

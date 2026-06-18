@@ -7,7 +7,6 @@ import html
 import logging
 import time
 import uuid
-import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -258,6 +257,14 @@ def _clear_feedback_guard(answer_id: str) -> None:
     counts = _feedback_attempt_counts()
     counts.pop(answer_id, None)
     st.session_state[_KEY_FB_ATTEMPTS] = counts
+
+
+def _reset_feedback_guard_for_question() -> None:
+    """Clear feedback retry/cooldown flags before question UI widgets render."""
+    st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
+    st.session_state.pop(_KEY_FB_NOTICE, None)
+    st.session_state.pop(_KEY_FB_IN_FLIGHT, None)
+    st.session_state[_KEY_FB_ATTEMPTS] = {}
 
 
 def _can_request_topic_v2_feedback(answer_id: str) -> Tuple[bool, str]:
@@ -579,6 +586,9 @@ def _log_tpv2_state_clear(phase: str, function: str) -> None:
 def clear_topic_v2_session() -> None:
     """Remove Topic Practice V2 practice keys (portal / reset)."""
     _log_tpv2_state_clear("ENTER", "clear_topic_v2_session")
+    from utils.v2_flow_persistence import clear_topic_v2_disk_snapshot
+
+    clear_topic_v2_disk_snapshot(st.session_state)
     for k in (
         _KEY_PAGE,
         _KEY_STEP,
@@ -600,6 +610,13 @@ def clear_topic_v2_session() -> None:
     ):
         st.session_state.pop(k, None)
     _log_tpv2_state_clear("EXIT", "clear_topic_v2_session")
+
+
+def _clear_topic_v2_flow_disk_snapshot() -> None:
+    """Drop in-progress topic_v2 disk snapshot (practice complete or reset)."""
+    from utils.v2_flow_persistence import clear_topic_v2_disk_snapshot
+
+    clear_topic_v2_disk_snapshot(st.session_state)
 
 
 def _topic_id_valid(topic_id: str) -> bool:
@@ -902,8 +919,10 @@ def _persist_topic_v2_answer(row: Dict[str, Any]) -> None:
     """Upsert active answer row for saved screen, feedback, and retry flow."""
     _upsert_topic_v2_answer(row)
     from utils.recording_blob_memory import trim_topic_v2_audio_blobs
+    from utils.v2_flow_persistence import persist_v2_flows_now
 
     trim_topic_v2_audio_blobs(st.session_state)
+    persist_v2_flows_now(st.session_state)
     _log_after_save_counts(row)
 
 
@@ -953,6 +972,79 @@ def _keyword_constraint_set_title() -> str:
         if str(ent.get("set_id") or "").strip() == sid:
             return str(ent.get("title_ko") or "").strip()
     return sid
+
+
+def _practice_label_from_payload(payload: Dict[str, Any]) -> str:
+    """Mode-aware practice label from session_state or disk snapshot fields."""
+    mode = str(payload.get(_KEY_MODE) or payload.get("topic_v2_mode") or "topic").strip()
+    topic_id = str(payload.get(_KEY_TOPIC) or payload.get("topic_v2_topic") or "").strip()
+    if mode == "roleplay":
+        sid = str(
+            payload.get(_KEY_ROLEPLAY_SET_ID) or payload.get("topic_v2_roleplay_set_id") or ""
+        ).strip()
+        for ent in ROLEPLAY_PRACTICE_SETS:
+            if isinstance(ent, dict) and str(ent.get("set_id") or "").strip() == sid:
+                title = str(ent.get("title_ko") or "").strip()
+                if title:
+                    return title
+        return _topic_display_title(topic_id) or sid or "롤플레이"
+    if mode == "advanced":
+        sid = str(payload.get(_KEY_ADVANCED_SET_ID) or payload.get("topic_v2_advanced_set_id") or "").strip()
+        for ent in list_advanced_sets():
+            if str(ent.get("set_id") or "").strip() == sid:
+                title = str(ent.get("title_ko") or "").strip()
+                if title:
+                    return title
+        return _topic_display_title(topic_id) or sid or "AL 고난도"
+    if mode == "keyword_constraint":
+        sid = str(
+            payload.get(_KEY_KEYWORD_CONSTRAINT_SET_ID)
+            or payload.get("topic_v2_keyword_constraint_set_id")
+            or ""
+        ).strip()
+        for ent in list_keyword_constraint_sets():
+            if str(ent.get("set_id") or "").strip() == sid:
+                title = str(ent.get("title_ko") or "").strip()
+                if title:
+                    return title
+        return _topic_display_title(topic_id) or sid or "키워드 표현"
+    return _topic_display_title(topic_id) or topic_id or "주제별 연습"
+
+
+def _question_total_from_payload(payload: Dict[str, Any]) -> int:
+    mode = str(payload.get(_KEY_MODE) or payload.get("topic_v2_mode") or "topic").strip()
+    questions = payload.get(_KEY_QUESTIONS) or payload.get("topic_v2_questions")
+    if not isinstance(questions, list):
+        questions = []
+    if mode == "advanced":
+        return 2
+    if mode in ("keyword_constraint", "roleplay"):
+        return max(len(questions), 1)
+    return max(len(questions), 3) if questions else 3
+
+
+def build_topic_v2_resume_offer_meta(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Resume-card metadata from live session or disk snapshot dict."""
+    answers = payload.get(_KEY_ANSWERS) or payload.get("topic_v2_answers")
+    if not isinstance(answers, list):
+        answers = []
+    try:
+        q_idx = int(payload.get(_KEY_Q_INDEX) or payload.get("topic_v2_question_index") or 0)
+    except (TypeError, ValueError):
+        q_idx = 0
+    total = _question_total_from_payload(payload)
+    current_display = min(max(q_idx + 1, 1), max(total, 1))
+    practice_label = _practice_label_from_payload(payload)
+    mode = str(payload.get(_KEY_MODE) or payload.get("topic_v2_mode") or "topic").strip()
+    return {
+        "practice_label": practice_label,
+        "completed": len(answers),
+        "total": total,
+        "question_index": q_idx,
+        "current_display": current_display,
+        "progress_label": f"{practice_label} · {current_display}/{total}문항",
+        "mode": mode,
+    }
 
 
 def _practice_chip_title(topic_id: str) -> str:
@@ -1334,23 +1426,75 @@ def _topic_catalog_index(topic_id: str) -> int:
     return -1
 
 
-def _topic_v2_mic_key(topic: str, q_idx: int) -> str:
-    # Internal widget keys must never be rendered as labels.
-    # Use them only as key=... arguments (or omit key for this component if the UI leaks it).
-    """ASCII-only Streamlit widget key (avoid Unicode in topic titles leaking into UI)."""
-    ti = _topic_catalog_index(topic)
-    if ti < 0:
-        try:
-            logger.warning("[TOPIC_V2_MIC_KEY] unknown topic=%r — fallback key", topic)
-        except Exception:
-            pass
-        mark = zlib.adler32(str(topic).encode("utf-8")) & 0xFFFFFFFF
-        return f"topic_v2_mic_u{mark}_q{int(q_idx)}"
-    return f"topic_v2_mic_t{ti}_q{int(q_idx)}"
+def _topic_v2_mic_key(q_idx: int) -> str:
+    """Per-question mic stash key — stable for the same practice run + question index."""
+    sig = str(st.session_state.get(_KEY_PRACTICE_SIG) or "nosig").strip() or "nosig"
+    return f"topicv2_mic_{sig}_{int(q_idx)}"
 
 
 def _topic_v2_mic_output_key(mic_key: str) -> str:
     return f"{mic_key}_output"
+
+
+def _clear_topic_v2_mic_cache(mic_key: str) -> None:
+    if mic_key:
+        st.session_state.pop(_topic_v2_mic_output_key(mic_key), None)
+
+
+def _stash_topic_v2_mic_result(mic_result: Any, mic_key: str) -> None:
+    """Cache mic capture; commit runs on the next rerun before mic_recorder renders."""
+    if mic_result is None or not mic_key:
+        return
+    st.session_state[_topic_v2_mic_output_key(mic_key)] = mic_result
+    st.rerun()
+
+
+def _process_pending_topic_v2_recording(
+    topic_id: str,
+    q_idx: int,
+    q: Dict[str, Any],
+    *,
+    mic_key: str,
+    timer_id: str,
+) -> bool:
+    """Commit cached mic audio from a prior rerun — call only before mic_recorder."""
+    if not mic_key:
+        return False
+    cached = st.session_state.get(_topic_v2_mic_output_key(mic_key))
+    if cached is None:
+        return False
+
+    dismiss_answer_timer_signal(timer_id)
+    audio_bytes, mime_type = _extract_topic_v2_audio_bytes(cached, mic_key=mic_key)
+    try:
+        logger.info(
+            "[TOPIC_V2_MIC_RESULT] topic=%s q=%s audio_len=%s mime_type=%s source=stash",
+            topic_id,
+            q_idx,
+            len(audio_bytes),
+            (mime_type or "audio/webm") or "audio/webm",
+        )
+    except Exception:
+        pass
+
+    _clear_topic_v2_mic_cache(mic_key)
+    if len(audio_bytes) <= 0:
+        st.warning("녹음 파일이 저장되지 않았어요. 다시 시도해 주세요.")
+        st.rerun()
+        return True
+
+    with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
+        _commit_topic_v2_recording(
+            topic_id,
+            q_idx,
+            str(q.get("en") or ""),
+            str(q.get("ko") or ""),
+            audio_bytes,
+            mime_type or "audio/webm",
+            mic_result=cached,
+        )
+    st.rerun()
+    return True
 
 
 def _topic_v2_mime_from_mic_dict(mic_dict: Dict[str, Any], audio_bytes: bytes) -> str:
@@ -2698,6 +2842,7 @@ def _render_topic_answer_card_top_html(topic_id: str) -> str:
 
 
 def _render_question() -> None:
+    _reset_feedback_guard_for_question()
     topic_id = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
     _log_topic_v2_mode(step="question", q_idx=q_idx)
@@ -2775,6 +2920,17 @@ def _render_question() -> None:
     )
     _render_topic_wave_mic_observer()
 
+    mic_key = _topic_v2_mic_key(q_idx)
+    # Commit cached mic audio before mic_recorder — just_once clears return on rerun.
+    if _process_pending_topic_v2_recording(
+        topic_id,
+        q_idx,
+        q,
+        mic_key=mic_key,
+        timer_id=timer_id,
+    ):
+        return
+
     from streamlit_mic_recorder import mic_recorder
 
     # Do not pass key=... — some Streamlit / component builds surface internal keys as visible "key..." UI.
@@ -2788,31 +2944,7 @@ def _render_question() -> None:
 
     if mic_result is not None:
         dismiss_answer_timer_signal(timer_id)
-        audio_bytes, mime_type = _extract_topic_v2_audio_bytes(mic_result, mic_key="")
-        try:
-            logger.info(
-                "[TOPIC_V2_MIC_RESULT] topic=%s q=%s audio_len=%s mime_type=%s",
-                topic_id,
-                q_idx,
-                len(audio_bytes),
-                (mime_type or "audio/webm") or "audio/webm",
-            )
-        except Exception:
-            pass
-        if len(audio_bytes) <= 0:
-            st.warning("녹음 파일이 저장되지 않았어요. 다시 시도해 주세요.")
-        else:
-            with st.spinner("답변을 저장하고 음성을 인식하고 있어요…"):
-                _commit_topic_v2_recording(
-                    topic_id,
-                    q_idx,
-                    str(q.get("en") or ""),
-                    str(q.get("ko") or ""),
-                    audio_bytes,
-                    mime_type or "audio/webm",
-                    mic_result=mic_result,
-                )
-            st.rerun()
+        _stash_topic_v2_mic_result(mic_result, mic_key)
 
     q_en = str(q.get("en") or "")
     q_ko = str(q.get("ko") or "")
@@ -2828,11 +2960,12 @@ def _render_question() -> None:
                 mime_type or "audio/webm",
                 mic_result=mic_payload,
             )
+        _clear_topic_v2_mic_cache(mic_key)
 
     if handle_answer_timer_expiry(
         timer_id,
         mic_result=mic_result,
-        extract_audio=lambda: _extract_topic_v2_audio_bytes(None, mic_key=""),
+        extract_audio=lambda: _extract_topic_v2_audio_bytes(None, mic_key=mic_key),
         commit_audio=_commit_from_timer,
         commit_empty=lambda: _commit_topic_v2_timer_expired(topic_id, q_idx, q_en, q_ko),
     ):
@@ -3211,6 +3344,7 @@ def _maybe_persist_topic_v2_history(topic_id: str) -> None:
 
 def _render_saved_complete(topic: str) -> None:
     _maybe_persist_topic_v2_history(topic)
+    _clear_topic_v2_flow_disk_snapshot()
     title = _topic_display_title(topic)
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=f"{title} · 완료")
     _render_topic_v2_accent_scope(
@@ -3266,6 +3400,7 @@ def _render_saved() -> None:
 
 
 def _render_roleplay_complete() -> None:
+    _clear_topic_v2_flow_disk_snapshot()
     topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     title = _roleplay_set_title() or "롤플레이"
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=_practice_eyebrow("완료"))
@@ -3288,6 +3423,7 @@ def _render_roleplay_complete() -> None:
 
 
 def _render_advanced_complete() -> None:
+    _clear_topic_v2_flow_disk_snapshot()
     render_top_bar("주제별 연습", back_href="?nav=MOCK", eyebrow=_practice_eyebrow("완료"))
     _render_topic_v2_accent_scope(
         str(_topic_visual_for_id(str(st.session_state.get(_KEY_TOPIC) or "")).get("accent") or "teal")
@@ -3321,6 +3457,7 @@ def _render_advanced_complete() -> None:
 
 
 def _render_keyword_constraint_complete() -> None:
+    _clear_topic_v2_flow_disk_snapshot()
     if _is_portal_keyword_entry():
         render_top_bar(
             "키워드 표현 연습",

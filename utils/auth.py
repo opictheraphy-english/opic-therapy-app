@@ -107,6 +107,7 @@ def _restore_auth_from_cookie(ss: MutableMapping[str, Any]) -> None:
     refreshed = refresh_access_token(str(rt))
     if not refreshed or not refreshed.get("id"):
         clear_refresh_token()
+        ss["auth_session_expired_notice"] = True
         logger.warning("[AUTH] opic_rt restore failed (refresh rejected)")
         return
     ss["user_authenticated"] = True

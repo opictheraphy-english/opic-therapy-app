@@ -17,7 +17,14 @@ from utils.recording_blob_memory import (
 from utils.v2_flow_persistence import (
     _build_mini_v2_snapshot,
     _build_mock_v2_snapshot,
+    _build_topic_v2_snapshot,
     _apply_snapshot,
+    _snapshot_meaningful_topic_v2,
+    clear_topic_v2_disk_snapshot,
+    get_v2_resume_offer,
+    maybe_restore_v2_flows_from_disk,
+    persist_v2_flows_now,
+    resume_v2_flow,
 )
 
 
@@ -171,6 +178,122 @@ class V2SnapshotAudioExclusionTests(unittest.TestCase):
         saved = _save.call_args[0][0]
         snap = saved.get("mock_v2_snapshot") or {}
         self.assertNotIn("mock_v2_audio_blobs", snap)
+
+
+class TopicV2SnapshotTests(unittest.TestCase):
+    def test_topic_v2_snapshot_excludes_audio_blobs(self) -> None:
+        ss = {
+            "topic_v2_step": "saved",
+            "topic_v2_question_index": 0,
+            "topic_v2_mode": "topic",
+            "topic_v2_topic": "movies_tv",
+            "topic_v2_practice_sig": "abc123",
+            "topic_v2_questions": [{"en": "Q1", "ko": "질문1"}],
+            "topic_v2_current_question": {"en": "Q1", "ko": "질문1"},
+            "topic_v2_answers": [{"q_index": 0, "transcript": "hello", "topic": "movies_tv"}],
+            "topic_v2_audio_blobs": {"movies_tv\t0": _blob(5000)},
+            "topicv2_mic_abc123_0_output": {"bytes": b"mic"},
+        }
+        snap = _build_topic_v2_snapshot(ss)
+        self.assertIn("topic_v2_answers", snap)
+        self.assertIn("topic_v2_step", snap)
+        self.assertIn("topic_v2_questions", snap)
+        self.assertNotIn("topic_v2_audio_blobs", snap)
+        self.assertNotIn("topicv2_mic_abc123_0_output", snap)
+        self.assertEqual(snap["_resume_hint"]["mock_page"], "TOPIC_V2")
+
+    def test_snapshot_meaningful_topic_v2_requires_answers(self) -> None:
+        self.assertFalse(_snapshot_meaningful_topic_v2({}))
+        self.assertFalse(
+            _snapshot_meaningful_topic_v2(
+                {"topic_v2_step": "select_topic", "topic_v2_answers": []}
+            )
+        )
+        self.assertTrue(
+            _snapshot_meaningful_topic_v2(
+                {"topic_v2_step": "saved", "topic_v2_answers": [{"q_index": 0}]}
+            )
+        )
+
+    @patch("utils.user_progress_store.save_user_progress")
+    @patch("utils.user_progress_store.load_user_progress", return_value={})
+    def test_persist_writes_topic_v2_snapshot(self, _load, _save) -> None:
+        ss: Dict[str, Any] = {
+            "entry_gate_completed": True,
+            "topic_v2_step": "saved",
+            "topic_v2_question_index": 0,
+            "topic_v2_mode": "topic",
+            "topic_v2_topic": "cafe",
+            "topic_v2_practice_sig": "sig1",
+            "topic_v2_questions": [{"en": "Q1", "ko": "질문"}],
+            "topic_v2_current_question": {"en": "Q1", "ko": "질문"},
+            "topic_v2_answers": [{"q_index": 0, "transcript": "hi", "topic": "cafe"}],
+            "topic_v2_audio_blobs": {"cafe\t0": _blob(8000)},
+        }
+        persist_v2_flows_now(ss)
+        saved = _save.call_args[0][0]
+        snap = saved.get("topic_v2_snapshot") or {}
+        self.assertIn("topic_v2_answers", snap)
+        self.assertNotIn("topic_v2_audio_blobs", snap)
+
+    @patch("utils.user_progress_store.save_user_progress")
+    @patch("utils.user_progress_store.load_user_progress", return_value={"topic_v2_snapshot": {"topic_v2_answers": []}})
+    def test_clear_topic_v2_disk_snapshot(self, _load, _save) -> None:
+        ss: Dict[str, Any] = {}
+        clear_topic_v2_disk_snapshot(ss)
+        saved = _save.call_args[0][0]
+        self.assertNotIn("topic_v2_snapshot", saved)
+
+
+class TopicV2RestoreResumeTests(unittest.TestCase):
+    def _topic_snap(self) -> Dict[str, Any]:
+        return {
+            "topic_v2_step": "saved",
+            "topic_v2_question_index": 1,
+            "topic_v2_mode": "topic",
+            "topic_v2_topic": "cafe",
+            "topic_v2_practice_sig": "sig1",
+            "topic_v2_questions": [{"en": "Q1"}, {"en": "Q2"}, {"en": "Q3"}],
+            "topic_v2_current_question": {"en": "Q2"},
+            "topic_v2_answers": [{"q_index": 0, "transcript": "hello", "topic": "cafe"}],
+            "topic_v2_feedback": None,
+            "topic_v2_feedback_by_q": {},
+            "_resume_hint": {"mock_page": "TOPIC_V2"},
+        }
+
+    @patch("utils.user_progress_store.load_user_progress")
+    def test_maybe_restore_topic_v2_data_only(self, load_prog) -> None:
+        load_prog.return_value = {"topic_v2_snapshot": self._topic_snap()}
+        ss: Dict[str, Any] = {"entry_gate_completed": True}
+        self.assertTrue(maybe_restore_v2_flows_from_disk(ss))
+        self.assertEqual(ss.get("topic_v2_step"), "saved")
+        self.assertEqual(ss.get("topic_v2_question_index"), 1)
+        self.assertEqual(len(ss.get("topic_v2_answers") or []), 1)
+        self.assertNotIn("mock_page", ss)
+
+    def test_get_v2_resume_offer_topic_v2(self) -> None:
+        ss: Dict[str, Any] = {}
+        prog = {"topic_v2_snapshot": self._topic_snap()}
+        offer = get_v2_resume_offer(ss, prog)
+        self.assertIsNotNone(offer)
+        assert offer is not None
+        self.assertEqual(offer.get("flow"), "topic_v2")
+        self.assertEqual(offer.get("label"), "주제별 연습 이어서 풀기")
+        self.assertIn("카페", str(offer.get("practice_label") or ""))
+
+    def test_get_v2_resume_offer_skips_empty_topic_answers(self) -> None:
+        snap = dict(self._topic_snap())
+        snap["topic_v2_answers"] = []
+        offer = get_v2_resume_offer({}, {"topic_v2_snapshot": snap})
+        self.assertIsNone(offer)
+
+    def test_resume_v2_flow_topic_routing(self) -> None:
+        ss: Dict[str, Any] = {"mock": {}}
+        resume_v2_flow(ss, flow="topic_v2")
+        self.assertEqual(ss.get("mock_mode"), "topic_practice_v2")
+        self.assertEqual(ss.get("mock_page"), "TOPIC_V2")
+        self.assertTrue(ss.get("practice_portal_selected"))
+        self.assertTrue(ss.get("_v2_user_resumed"))
 
 
 if __name__ == "__main__":
