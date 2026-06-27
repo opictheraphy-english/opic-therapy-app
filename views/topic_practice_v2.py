@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import concurrent.futures
 import html
 import logging
 import time
@@ -94,9 +95,11 @@ _KEY_FEEDBACK = "topic_v2_feedback"
 _KEY_DRAFT_TRANSCRIPT = "topic_v2_practice_transcript"
 _KEY_SINGLE_RETRY = "topic_v2_single_question_retry"
 _KEY_FB_IN_FLIGHT = "topic_v2_feedback_in_flight"
+_KEY_FB_IN_FLIGHT_AT = "topic_v2_feedback_in_flight_at"
 _KEY_FB_COOLDOWN_UNTIL = "topic_v2_feedback_cooldown_until"
 _KEY_FB_ATTEMPTS = "topic_v2_feedback_attempts"
 _KEY_FB_NOTICE = "topic_v2_feedback_user_notice"
+_TOPIC_V2_STT_IN_FLIGHT = "topic_v2_stt_in_flight"
 _KEY_PRACTICE_SIG = "topic_v2_practice_sig"
 _KEY_FEEDBACK_BY_Q = "topic_v2_feedback_by_q"
 
@@ -104,6 +107,8 @@ _FEEDBACK_COOLDOWN_BASE_SEC = 45
 _FEEDBACK_COOLDOWN_STEP_SEC = 15
 _FEEDBACK_COOLDOWN_MAX_SEC = 90
 _FEEDBACK_MAX_ATTEMPTS_PER_ANSWER = 4
+_TOPIC_V2_FEEDBACK_WRAPPER_TIMEOUT_SEC = 50
+_FEEDBACK_IN_FLIGHT_STALE_SEC = 55
 
 _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE = (
     "AI 피드백 서버가 잠시 바빠요.\n\n"
@@ -263,11 +268,115 @@ def _reset_feedback_guard_for_question() -> None:
     """Clear feedback retry/cooldown flags before question UI widgets render."""
     st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
     st.session_state.pop(_KEY_FB_NOTICE, None)
-    st.session_state.pop(_KEY_FB_IN_FLIGHT, None)
+    _set_feedback_in_flight(False)
     st.session_state[_KEY_FB_ATTEMPTS] = {}
 
 
+def _set_feedback_in_flight(active: bool) -> None:
+    if active:
+        st.session_state[_KEY_FB_IN_FLIGHT] = True
+        st.session_state[_KEY_FB_IN_FLIGHT_AT] = time.time()
+    else:
+        st.session_state.pop(_KEY_FB_IN_FLIGHT, None)
+        st.session_state.pop(_KEY_FB_IN_FLIGHT_AT, None)
+
+
+def _clear_stale_feedback_in_flight() -> None:
+    """Drop a stuck in-flight flag after disconnect or server kill mid-request."""
+    if not st.session_state.get(_KEY_FB_IN_FLIGHT):
+        return
+    try:
+        started = float(st.session_state.get(_KEY_FB_IN_FLIGHT_AT) or 0.0)
+    except (TypeError, ValueError):
+        started = 0.0
+    if started <= 0 or (time.time() - started) > _FEEDBACK_IN_FLIGHT_STALE_SEC:
+        try:
+            logger.warning(
+                "[TOPIC_V2_FEEDBACK] clearing stale in_flight started=%s age=%.1fs",
+                started,
+                time.time() - started if started > 0 else -1.0,
+            )
+        except Exception:
+            pass
+        _set_feedback_in_flight(False)
+
+
+def _topic_v2_feedback_failure_result(*, category: str) -> Dict[str, Any]:
+    if _is_keyword_constraint_mode():
+        return {
+            "ok": False,
+            "summary": "",
+            "coaching": "",
+            "naturalness_note": "",
+            "patterns_used": False,
+            "pattern_quote": "",
+            "targets": [],
+            "banned": [],
+            "target_used_count": 0,
+            "target_total": 0,
+            "banned_hit_count": 0,
+            "error_category": category,
+            "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
+        }
+    return {
+        "ok": False,
+        "answer_level": "",
+        "summary": "",
+        "strength": "",
+        "correction_focus": "",
+        "better_expression": "",
+        "upgrade_sample": "",
+        "keyword_drill": [],
+        "practice_mission": "",
+        "error_category": category,
+        "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
+    }
+
+
+def _invoke_topic_v2_feedback_analysis(
+    row: Dict[str, Any],
+    *,
+    set_meta: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Run short feedback off the Streamlit main thread with a hard wall-clock cap."""
+
+    def _job() -> Dict[str, Any]:
+        if set_meta is not None:
+            from services.keyword_constraint_analysis import analyze_keyword_constraint_answer
+
+            return analyze_keyword_constraint_answer(dict(row), set_meta)
+        from services.topic_practice_v2_analysis import analyze_topic_practice_v2_answer
+
+        return analyze_topic_practice_v2_answer(dict(row))
+
+    started = time.perf_counter()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_job)
+        try:
+            result = future.result(timeout=_TOPIC_V2_FEEDBACK_WRAPPER_TIMEOUT_SEC)
+            if isinstance(result, dict):
+                return result
+            return _topic_v2_feedback_failure_result(category="exception")
+        except concurrent.futures.TimeoutError:
+            try:
+                logger.warning(
+                    "[TOPIC_V2_FEEDBACK] wrapper_timeout elapsed=%.1fs limit=%ss",
+                    time.perf_counter() - started,
+                    _TOPIC_V2_FEEDBACK_WRAPPER_TIMEOUT_SEC,
+                )
+            except Exception:
+                pass
+            return _topic_v2_feedback_failure_result(category="timeout")
+        except Exception as exc:
+            try:
+                logger.exception("[TOPIC_V2_FEEDBACK] wrapper_error: %s", exc)
+            except Exception:
+                pass
+            return _topic_v2_feedback_failure_result(category="exception")
+
+
 def _can_request_topic_v2_feedback(answer_id: str) -> Tuple[bool, str]:
+    _clear_stale_feedback_in_flight()
     if st.session_state.get(_KEY_FB_IN_FLIGHT):
         return False, "피드백을 생성 중입니다. 완료될 때까지 잠시만 기다려 주세요."
     rem = _cooldown_seconds_remaining()
@@ -289,6 +398,7 @@ def _can_request_topic_v2_feedback(answer_id: str) -> Tuple[bool, str]:
 
 def _feedback_request_button_state(answer_id: str) -> Tuple[bool, str]:
     """(disabled, label) for AI feedback buttons."""
+    _clear_stale_feedback_in_flight()
     if st.session_state.get(_KEY_FB_IN_FLIGHT):
         return True, "피드백 생성 중…"
     rem = _cooldown_seconds_remaining()
@@ -1820,6 +1930,41 @@ def _commit_topic_v2_recording(
     *,
     mic_result: Any = None,
 ) -> None:
+    if st.session_state.get(_TOPIC_V2_STT_IN_FLIGHT):
+        try:
+            logger.info(
+                "[TOPIC_V2_STT_SKIP] reason=already_in_flight topic=%s q=%s",
+                topic,
+                q_idx,
+            )
+        except Exception:
+            pass
+        return
+    st.session_state[_TOPIC_V2_STT_IN_FLIGHT] = True
+    try:
+        _commit_topic_v2_recording_impl(
+            topic,
+            q_idx,
+            q_en,
+            q_ko,
+            audio_bytes,
+            mime_type,
+            mic_result=mic_result,
+        )
+    finally:
+        st.session_state.pop(_TOPIC_V2_STT_IN_FLIGHT, None)
+
+
+def _commit_topic_v2_recording_impl(
+    topic: str,
+    q_idx: int,
+    q_en: str,
+    q_ko: str,
+    audio_bytes: bytes,
+    mime_type: str,
+    *,
+    mic_result: Any = None,
+) -> None:
     blob = bytes(audio_bytes) if audio_bytes else b""
     audio_len = len(blob)
     resolved_mime = (mime_type or "audio/webm").strip() or "audio/webm"
@@ -1935,6 +2080,16 @@ def _commit_topic_v2_manual_text_draft(topic: str, q_idx: int, q: Dict[str, Any]
 
 
 def _retry_topic_v2_stt_for_current(topic: str, q_idx: int) -> bool:
+    if st.session_state.get(_TOPIC_V2_STT_IN_FLIGHT):
+        try:
+            logger.info(
+                "[TOPIC_V2_STT_SKIP] reason=already_in_flight retry topic=%s q=%s",
+                topic,
+                q_idx,
+            )
+        except Exception:
+            pass
+        return False
     last = _last_answer_row_for_q(q_idx)
     if not isinstance(last, dict):
         return False
@@ -1943,32 +2098,36 @@ def _retry_topic_v2_stt_for_current(topic: str, q_idx: int) -> bool:
     audio_bytes, mime_type = _get_topic_v2_audio_blob(topic, q_idx)
     if len(audio_bytes) <= 0:
         return False
-    stt_result = _run_topic_v2_stt(topic, q_idx, q_en, audio_bytes, mime_type)
-    opic = str(last.get("opic_type") or "").strip()
-    row = _build_topic_v2_row_from_mic(
-        topic,
-        q_idx,
-        q_en,
-        q_ko,
-        audio_bytes,
-        mime_type or "audio/webm",
-        stt_result,
-        opic_type=opic,
-    )
-    prev_aid = str(last.get("answer_id") or "").strip()
-    if prev_aid:
-        row["answer_id"] = prev_aid
-    aid = str(row.get("answer_id") or "").strip()
-    if aid:
-        _save_topic_v2_audio_blob(
-            topic, q_idx, audio_bytes, mime_type or "audio/webm", answer_id=aid
-        )
-    _persist_topic_v2_answer(row)
+    st.session_state[_TOPIC_V2_STT_IN_FLIGHT] = True
     try:
-        logger.info("[TOPIC_V2_STT_RETRY] topic=%s q=%s", topic, q_idx)
-    except Exception:
-        pass
-    return True
+        stt_result = _run_topic_v2_stt(topic, q_idx, q_en, audio_bytes, mime_type)
+        opic = str(last.get("opic_type") or "").strip()
+        row = _build_topic_v2_row_from_mic(
+            topic,
+            q_idx,
+            q_en,
+            q_ko,
+            audio_bytes,
+            mime_type or "audio/webm",
+            stt_result,
+            opic_type=opic,
+        )
+        prev_aid = str(last.get("answer_id") or "").strip()
+        if prev_aid:
+            row["answer_id"] = prev_aid
+        aid = str(row.get("answer_id") or "").strip()
+        if aid:
+            _save_topic_v2_audio_blob(
+                topic, q_idx, audio_bytes, mime_type or "audio/webm", answer_id=aid
+            )
+        _persist_topic_v2_answer(row)
+        try:
+            logger.info("[TOPIC_V2_STT_RETRY] topic=%s q=%s", topic, q_idx)
+        except Exception:
+            pass
+        return True
+    finally:
+        st.session_state.pop(_TOPIC_V2_STT_IN_FLIGHT, None)
 
 
 def _transcript_from_row(row: Dict[str, Any]) -> str:
@@ -3025,11 +3184,13 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
     render_saved_transcript(transcript=tr, accent=accent)
 
     if has_audio and not (tr or "").strip():
+        stt_busy = bool(st.session_state.get(_TOPIC_V2_STT_IN_FLIGHT))
         if st.button(
             "AI 음성 인식 다시 시도",
             type="secondary",
             use_container_width=True,
             key="topic_v2_retry_stt",
+            disabled=stt_busy,
         ):
             _retry_topic_v2_stt_for_current(topic, q_idx)
             st.rerun()
@@ -3140,7 +3301,7 @@ def _run_topic_v2_feedback_request(
         st.rerun()
         return
 
-    st.session_state[_KEY_FB_IN_FLIGHT] = True
+    _set_feedback_in_flight(True)
     st.session_state.pop(_KEY_FB_NOTICE, None)
     result: Dict[str, Any]
     spinner_msg = (
@@ -3151,55 +3312,18 @@ def _run_topic_v2_feedback_request(
     try:
         with st.spinner(spinner_msg):
             if _is_keyword_constraint_mode():
-                from services.keyword_constraint_analysis import (
-                    analyze_keyword_constraint_answer,
-                )
-
                 set_meta = _keyword_constraint_set_meta(q_idx)
-                result = analyze_keyword_constraint_answer(dict(row_in), set_meta)
+                result = _invoke_topic_v2_feedback_analysis(dict(row_in), set_meta=set_meta)
             else:
-                from services.topic_practice_v2_analysis import (
-                    analyze_topic_practice_v2_answer,
-                )
-
-                result = analyze_topic_practice_v2_answer(dict(row_in))
+                result = _invoke_topic_v2_feedback_analysis(dict(row_in))
     except Exception as exc:
         try:
             logger.exception("[TOPIC_V2_FEEDBACK] analyze_failed: %s", exc)
         except Exception:
             pass
-        if _is_keyword_constraint_mode():
-            result = {
-                "ok": False,
-                "summary": "",
-                "coaching": "",
-                "naturalness_note": "",
-                "patterns_used": False,
-                "pattern_quote": "",
-                "targets": [],
-                "banned": [],
-                "target_used_count": 0,
-                "target_total": 0,
-                "banned_hit_count": 0,
-                "error_category": "exception",
-                "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
-            }
-        else:
-            result = {
-                "ok": False,
-                "answer_level": "",
-                "summary": "",
-                "strength": "",
-                "correction_focus": "",
-                "better_expression": "",
-                "upgrade_sample": "",
-                "keyword_drill": [],
-                "practice_mission": "",
-                "error_category": "exception",
-                "error_message": _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE,
-            }
+        result = _topic_v2_feedback_failure_result(category="exception")
     finally:
-        st.session_state[_KEY_FB_IN_FLIGHT] = False
+        _set_feedback_in_flight(False)
 
     st.session_state[_KEY_FEEDBACK] = result
     if result.get("ok"):
@@ -3379,6 +3503,7 @@ def _topic_v2_fb_keywords(fb: Any) -> List[str]:
 
 
 def _render_saved() -> None:
+    _clear_stale_feedback_in_flight()
     topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
     _log_topic_v2_mode(step="saved", q_idx=q_idx)
@@ -3728,6 +3853,7 @@ def _render_feedback_ui() -> None:
 
 
 def _render_pending_ui() -> None:
+    _clear_stale_feedback_in_flight()
     topic = str(st.session_state.get(_KEY_TOPIC) or "").strip()
     q_idx = int(st.session_state.get(_KEY_Q_INDEX) or 0)
     if not _session_valid_for_practice():
