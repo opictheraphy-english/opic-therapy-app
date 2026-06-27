@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import concurrent.futures
+import io
 import logging
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -34,6 +36,21 @@ STT_TIMEOUT_SEC = 20
 # so the Streamlit main thread stays free to answer websocket keepalive pings.
 # Must stay below the browser's keepalive ping tolerance (~20-30s).
 STT_WRAPPER_TIMEOUT_SEC = 25
+
+# OpenAI Whisper fallback — single attempt after Gemini STT chain fails.
+OPENAI_STT_MODEL = (os.getenv("OPENAI_STT_MODEL") or "whisper-1").strip() or "whisper-1"
+OPENAI_STT_TIMEOUT_SEC = 22
+
+_MIME_TO_FILENAME_EXT: Dict[str, str] = {
+    "audio/webm": "webm",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/ogg": "ogg",
+    "audio/mp4": "m4a",
+    "audio/m4a": "m4a",
+}
 
 MIN_ENGLISH_WORDS_FOR_TRANSCRIPT = 5
 
@@ -269,6 +286,216 @@ def _invoke_stt_model(
         return None, category, message or f"{type(exc).__name__}: {exc}"
 
 
+def _filename_ext_for_mime(mime_type: str) -> str:
+    resolved = (mime_type or "").split(";", 1)[0].strip().lower()
+    return _MIME_TO_FILENAME_EXT.get(resolved, "webm")
+
+
+def _whisper_language_code(language_hint: str) -> Optional[str]:
+    hint = (language_hint or "").strip().lower().replace("_", "-")
+    if not hint:
+        return None
+    base = hint.split("-", 1)[0]
+    return base if len(base) == 2 else None
+
+
+def _build_stt_success_from_raw(
+    raw_transcript: str,
+    *,
+    model_used: str,
+    provider: str,
+    attempts: int,
+    elapsed: float,
+    audio_len: int,
+) -> Optional[Dict[str, Any]]:
+    """Normalize raw STT text; return success dict or None if unusable."""
+    raw = (raw_transcript or "").strip()
+    if not raw:
+        return None
+    transcript = _normalize_transcript(raw)
+    if not transcript:
+        transcript = raw
+    if transcript and looks_like_repetition_hallucination(transcript):
+        try:
+            logger.warning(
+                "[STT_HALLUCINATION] repetition/low-diversity detected "
+                "provider=%s model=%s words=%s audio_len=%s -> insufficient",
+                provider,
+                model_used,
+                count_english_words(transcript),
+                audio_len,
+            )
+        except Exception:
+            pass
+        transcript = ""
+    result = _stt_success_result(
+        transcript=transcript,
+        raw_transcript=raw,
+        model_used=model_used,
+        attempts=attempts,
+        provider=provider,
+    )
+    try:
+        logger.info(
+            "[STT_FINAL_RESULT] success=True provider=%s attempts=%s model_used=%s "
+            "error_category=—",
+            provider,
+            attempts,
+            model_used,
+        )
+    except Exception:
+        pass
+    log_api_call_result(
+        service="stt",
+        model_used=model_used,
+        attempts=attempts,
+        success=True,
+        error_category="",
+        elapsed=elapsed,
+    )
+    return result
+
+
+def _invoke_openai_stt_model(
+    *,
+    audio_bytes: bytes,
+    mime_type: str,
+    language_hint: str,
+    question_text: str,
+) -> Tuple[Optional[str], str, str]:
+    """Single OpenAI Whisper transcription. Returns (raw_text, error_category, message)."""
+    from services.gemini_json_client import classify_openai_exception, _is_openai_auth_skip_error
+    from utils.secrets import get_openai_api_key
+
+    api_key = get_openai_api_key()
+    if not api_key:
+        return None, "openai_skipped", "openai_api_key_not_configured"
+
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return None, "openai_skipped", "openai_sdk_not_installed"
+
+    ext = _filename_ext_for_mime(mime_type)
+    buf = io.BytesIO(audio_bytes)
+    buf.name = f"answer.{ext}"
+    lang = _whisper_language_code(language_hint)
+    prompt = (question_text or "").strip()[:500] or None
+
+    try:
+        client = OpenAI(api_key=api_key, timeout=float(OPENAI_STT_TIMEOUT_SEC))
+        response = client.audio.transcriptions.create(
+            model=OPENAI_STT_MODEL,
+            file=buf,
+            language=lang,
+            prompt=prompt,
+            response_format="text",
+        )
+    except Exception as exc:
+        if _is_openai_auth_skip_error(exc):
+            return None, "openai_skipped", str(exc)[:240]
+        category = classify_openai_exception(exc)
+        return None, category, str(exc)[:240] or f"{type(exc).__name__}: {exc}"
+
+    if isinstance(response, str):
+        raw_text = response.strip()
+    else:
+        raw_text = str(getattr(response, "text", "") or response or "").strip()
+    if raw_text:
+        return raw_text, "", ""
+    return None, "empty_response", "empty_openai_stt_response"
+
+
+def _run_openai_stt_fallback(
+    audio_bytes: bytes,
+    *,
+    mime_type: str,
+    language_hint: str,
+    question_text: str,
+    mode: str,
+    question_id: str,
+    gemini_attempts: int,
+    t0: float,
+) -> Optional[Dict[str, Any]]:
+    """Try OpenAI Whisper once after the Gemini STT chain fails."""
+    try:
+        audio_len = len(audio_bytes) if audio_bytes else 0
+    except Exception:
+        audio_len = 0
+
+    try:
+        logger.info(
+            "[STT_OPENAI_FALLBACK] mode=%s question_id=%s gemini_attempts=%s model=%s",
+            mode,
+            question_id,
+            gemini_attempts,
+            OPENAI_STT_MODEL,
+        )
+    except Exception:
+        pass
+
+    raw_text, err_cat, err_msg = _invoke_openai_stt_model(
+        audio_bytes=audio_bytes,
+        mime_type=mime_type,
+        language_hint=language_hint,
+        question_text=question_text,
+    )
+    elapsed = time.perf_counter() - t0
+
+    if raw_text is not None:
+        result = _build_stt_success_from_raw(
+            raw_text,
+            model_used=OPENAI_STT_MODEL,
+            provider="openai",
+            attempts=gemini_attempts + 1,
+            elapsed=elapsed,
+            audio_len=audio_len,
+        )
+        if result:
+            try:
+                logger.info(
+                    "[STT_OPENAI_FALLBACK] success mode=%s question_id=%s",
+                    mode,
+                    question_id,
+                )
+            except Exception:
+                pass
+            return result
+        err_cat = "empty_response"
+        err_msg = "empty_openai_stt_response"
+
+    if err_cat == "openai_skipped":
+        try:
+            logger.info(
+                "[STT_OPENAI_FALLBACK] skipped mode=%s question_id=%s reason=%s",
+                mode,
+                question_id,
+                err_msg or err_cat,
+            )
+        except Exception:
+            pass
+        return None
+
+    try:
+        logger.warning(
+            "[STT_OPENAI_FALLBACK] failed mode=%s question_id=%s error_category=%s",
+            mode,
+            question_id,
+            err_cat,
+        )
+    except Exception:
+        pass
+    log_api_call_result(
+        service="stt_openai_fallback",
+        model_used=OPENAI_STT_MODEL,
+        attempts=1,
+        success=False,
+        error_category=err_cat or "unknown",
+        elapsed=elapsed,
+    )
+    return None
+
+
 def derive_stt_status(stt: Dict[str, Any]) -> str:
     if not stt.get("ok"):
         cat = str(stt.get("error_category") or "")
@@ -384,141 +611,122 @@ def _transcribe_answer_audio_impl(
         from utils.secrets import get_gemini_api_key
 
         api_key = get_gemini_api_key()
-    if not api_key:
-        empty["error_category"] = "missing_api_key"
-        empty["error_message"] = "API key not configured"
-        return empty
 
-    models = build_stt_model_candidates()
-    if not models:
-        empty["error_category"] = "config_error"
-        empty["error_message"] = "no_stt_models_configured"
-        return empty
+    models = build_stt_model_candidates() if api_key else []
+    if api_key and not models:
+        last_category = "config_error"
+        last_message = "no_stt_models_configured"
+    else:
+        last_category = ""
+        last_message = ""
 
     t0 = time.perf_counter()
-    last_category = ""
-    last_message = ""
     model_idx = 0
     attempt_num = 0
 
-    while attempt_num < STT_MAX_ATTEMPTS and model_idx < len(models):
-        attempt_num += 1
-        sleep_before_retry(attempt_num, STT_RETRY_DELAYS_SEC)
-        model_name = models[model_idx]
+    if api_key and models:
+        while attempt_num < STT_MAX_ATTEMPTS and model_idx < len(models):
+            attempt_num += 1
+            sleep_before_retry(attempt_num, STT_RETRY_DELAYS_SEC)
+            model_name = models[model_idx]
 
-        try:
-            logger.info(
-                "[STT_API_CALL_START] provider=%s model=%s mime_type=%s audio_len=%s attempt=%s",
-                provider,
-                model_name,
-                mime_type,
-                audio_len,
-                attempt_num,
-            )
-        except Exception:
-            pass
-
-        raw_text, err_cat, err_msg = _invoke_stt_model(
-            api_key=api_key,
-            audio_bytes=audio_bytes,
-            mime_type=mime_type,
-            question_text=question_text,
-            language_hint=language_hint,
-            model_name=model_name,
-        )
-
-        if raw_text is not None:
-            raw_transcript = raw_text.strip()
-            transcript = _normalize_transcript(raw_transcript)
-            if not transcript and raw_transcript:
-                transcript = raw_transcript
-            if transcript and looks_like_repetition_hallucination(transcript):
-                try:
-                    logger.warning(
-                        "[STT_HALLUCINATION] repetition/low-diversity detected "
-                        "model=%s words=%s audio_len=%s -> insufficient",
-                        model_name,
-                        count_english_words(transcript),
-                        audio_len,
-                    )
-                except Exception:
-                    pass
-                # Keep raw_transcript for debugging, but drop the usable
-                # transcript so this routes to insufficient_response (not a
-                # retryable error — re-running STT would re-hallucinate).
-                transcript = ""
-            if raw_transcript:
-                elapsed = time.perf_counter() - t0
-                result = _stt_success_result(
-                    transcript=transcript,
-                    raw_transcript=raw_transcript,
-                    model_used=model_name,
-                    attempts=attempt_num,
-                    provider=provider,
+            try:
+                logger.info(
+                    "[STT_API_CALL_START] provider=%s model=%s mime_type=%s audio_len=%s attempt=%s",
+                    provider,
+                    model_name,
+                    mime_type,
+                    audio_len,
+                    attempt_num,
                 )
-                try:
-                    logger.info(
-                        "[STT_FINAL_RESULT] success=True attempts=%s model_used=%s "
-                        "error_category=—",
-                        attempt_num,
-                        model_name,
-                    )
-                except Exception:
-                    pass
-                log_api_call_result(
-                    service="stt",
-                    model_used=model_name,
-                    attempts=attempt_num,
-                    success=True,
-                    error_category="",
-                    elapsed=elapsed,
-                )
-                return result
-            err_cat = "empty_response"
-            err_msg = "empty_stt_response"
+            except Exception:
+                pass
 
-        last_category = err_cat or "unknown"
-        last_message = err_msg or last_category
-
-        try:
-            logger.warning(
-                "[STT_RETRY] attempt=%s model=%s delay_next=%s error_category=%s",
-                attempt_num,
-                model_name,
-                STT_RETRY_DELAYS_SEC[min(attempt_num - 1, len(STT_RETRY_DELAYS_SEC) - 1)]
-                if attempt_num < STT_MAX_ATTEMPTS
-                else 0,
-                last_category,
+            raw_text, err_cat, err_msg = _invoke_stt_model(
+                api_key=api_key,
+                audio_bytes=audio_bytes,
+                mime_type=mime_type,
+                question_text=question_text,
+                language_hint=language_hint,
+                model_name=model_name,
             )
-        except Exception:
-            pass
 
-        if last_category == "model_not_found":
-            model_idx += 1
-            continue
+            if raw_text is not None:
+                raw_transcript = raw_text.strip()
+                if raw_transcript:
+                    elapsed = time.perf_counter() - t0
+                    result = _build_stt_success_from_raw(
+                        raw_transcript,
+                        model_used=model_name,
+                        provider=provider,
+                        attempts=attempt_num,
+                        elapsed=elapsed,
+                        audio_len=audio_len,
+                    )
+                    if result:
+                        return result
+                err_cat = "empty_response"
+                err_msg = "empty_stt_response"
 
-        if last_category in STT_QUOTA_ERRORS:
+            last_category = err_cat or "unknown"
+            last_message = err_msg or last_category
+
             try:
                 logger.warning(
-                    "[STT_QUOTA_STOP] attempt=%s model=%s error_category=%s "
-                    "(no retry / no model fallback)",
+                    "[STT_RETRY] attempt=%s model=%s delay_next=%s error_category=%s",
                     attempt_num,
                     model_name,
+                    STT_RETRY_DELAYS_SEC[min(attempt_num - 1, len(STT_RETRY_DELAYS_SEC) - 1)]
+                    if attempt_num < STT_MAX_ATTEMPTS
+                    else 0,
                     last_category,
                 )
             except Exception:
                 pass
-            break
 
-        if not is_stt_retryable_error(last_category):
-            break
+            if last_category == "model_not_found":
+                model_idx += 1
+                continue
 
-        if should_try_next_model(last_category) and model_idx + 1 < len(models):
-            model_idx += 1
-            continue
+            if last_category in STT_QUOTA_ERRORS:
+                try:
+                    logger.warning(
+                        "[STT_QUOTA_STOP] attempt=%s model=%s error_category=%s "
+                        "(no retry / no model fallback)",
+                        attempt_num,
+                        model_name,
+                        last_category,
+                    )
+                except Exception:
+                    pass
+                break
 
-        if attempt_num >= STT_MAX_ATTEMPTS:
-            break
+            if not is_stt_retryable_error(last_category):
+                break
+
+            if should_try_next_model(last_category) and model_idx + 1 < len(models):
+                model_idx += 1
+                continue
+
+            if attempt_num >= STT_MAX_ATTEMPTS:
+                break
+    else:
+        if not api_key:
+            last_category = "missing_api_key"
+            last_message = "gemini_api_key_not_configured"
+
+    fallback = _run_openai_stt_fallback(
+        audio_bytes,
+        mime_type=mime_type,
+        language_hint=language_hint,
+        question_text=question_text,
+        mode=mode,
+        question_id=question_id,
+        gemini_attempts=attempt_num,
+        t0=t0,
+    )
+    if fallback is not None:
+        return fallback
 
     elapsed = time.perf_counter() - t0
     retry_exhausted = is_stt_retryable_error(last_category)
