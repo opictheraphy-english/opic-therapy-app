@@ -37,6 +37,16 @@ from components.final_report_hero import (
 )
 from components.score_donut_bars import render_score_donut_bars_html
 from components.topbar import render_top_bar
+from utils.analysis_request_guard import (
+    button_state as guard_button_state,
+    can_request as guard_can_request,
+    clear_guard as guard_clear_guard,
+    clear_stale_in_flight as guard_clear_stale_in_flight,
+    key_in_flight as guard_key_in_flight,
+    register_failure as guard_register_failure,
+    reset_guard as guard_reset_guard,
+    set_in_flight as guard_set_in_flight,
+)
 from utils.local_profile import iso_now
 
 logger = logging.getLogger(__name__)
@@ -64,6 +74,44 @@ _MIN_ANSWER_MIN_WORDS = 5
 _MIN_TEXT_MIN_WORDS = 5
 
 _ANALYSIS_TIMEOUT_SEC = 60
+
+# Analysis burst-prevention guards (utils/analysis_request_guard.py).
+_ANALYSIS_GUARD_PREFIX = "mini_v2_analysis"
+_STT_RETRY_GUARD_PREFIX = "mini_v2_stt_retry"
+_KEY_STT_RETRY_ACTIVE_QIDX = "mini_v2_stt_retry_active_q_idx"
+_ANALYSIS_ENTITY_ID = "default"
+
+_ANALYSIS_MAX_ATTEMPTS = 4
+_ANALYSIS_STALE_SEC = 60
+_ANALYSIS_COOLDOWN_BASE = 45
+_ANALYSIS_COOLDOWN_STEP = 15
+_ANALYSIS_COOLDOWN_MAX = 90
+
+_STT_RETRY_MAX_ATTEMPTS = 4
+_STT_RETRY_STALE_SEC = 30
+_STT_RETRY_COOLDOWN_BASE = 10
+_STT_RETRY_COOLDOWN_STEP = 5
+_STT_RETRY_COOLDOWN_MAX = 30
+
+_MINI_V2_ANALYSIS_LABELS: Dict[str, Any] = {
+    "idle": "AI 진단 리포트 받기",
+    "in_flight": "리포트 생성 중…",
+    "cooldown": lambda rem: f"{rem}초 후 다시",
+    "maxed": "잠시 후 다시 시도",
+}
+_MINI_V2_ANALYSIS_RETRY_LABELS: Dict[str, Any] = {
+    "idle": "저장된 답변으로 다시 분석하기",
+    "in_flight": "리포트 생성 중…",
+    "cooldown": lambda rem: f"{rem}초 후 다시",
+    "maxed": "잠시 후 다시 시도",
+}
+_STT_RETRY_IDLE_LABEL = "음성 인식 다시 시도"
+_MINI_V2_STT_RETRY_LABELS: Dict[str, Any] = {
+    "idle": _STT_RETRY_IDLE_LABEL,
+    "in_flight": "인식 중…",
+    "cooldown": lambda rem: f"{rem}초 후",
+    "maxed": "잠시 후 다시 시도",
+}
 
 _VALID_STEPS = frozenset({
     "question",
@@ -113,6 +161,95 @@ _OLD_MINI_MOCK_MX_KEYS = (
     "mini_mock_report_status",
     "mini_mock_last_saved_q_idx",
 )
+
+
+def _failure_category(result: Dict[str, Any]) -> str:
+    cat = str(result.get("error_category") or "").strip()
+    return cat or "api_error"
+
+
+def _analysis_button_state(*, retry: bool = False) -> Tuple[bool, str]:
+    labels = _MINI_V2_ANALYSIS_RETRY_LABELS if retry else _MINI_V2_ANALYSIS_LABELS
+    guard_clear_stale_in_flight(
+        st.session_state,
+        _ANALYSIS_GUARD_PREFIX,
+        stale_sec=_ANALYSIS_STALE_SEC,
+    )
+    return guard_button_state(
+        st.session_state,
+        _ANALYSIS_GUARD_PREFIX,
+        _ANALYSIS_ENTITY_ID,
+        labels=labels,
+        max_attempts=_ANALYSIS_MAX_ATTEMPTS,
+        stale_sec=_ANALYSIS_STALE_SEC,
+    )
+
+
+def _stt_retry_entity_id(q_idx: int) -> str:
+    return str(int(q_idx))
+
+
+def _stt_retry_button_state(q_idx: int) -> Tuple[bool, str]:
+    entity_id = _stt_retry_entity_id(q_idx)
+    guard_clear_stale_in_flight(
+        st.session_state,
+        _STT_RETRY_GUARD_PREFIX,
+        stale_sec=_STT_RETRY_STALE_SEC,
+    )
+    disabled, guard_label = guard_button_state(
+        st.session_state,
+        _STT_RETRY_GUARD_PREFIX,
+        entity_id,
+        labels=_MINI_V2_STT_RETRY_LABELS,
+        max_attempts=_STT_RETRY_MAX_ATTEMPTS,
+        stale_sec=_STT_RETRY_STALE_SEC,
+    )
+    if not disabled:
+        return False, _STT_RETRY_IDLE_LABEL
+    if st.session_state.get(guard_key_in_flight(_STT_RETRY_GUARD_PREFIX)):
+        active = str(st.session_state.get(_KEY_STT_RETRY_ACTIVE_QIDX) or "")
+        if active == entity_id:
+            return True, "인식 중…"
+        return True, _STT_RETRY_IDLE_LABEL
+    if guard_label != _STT_RETRY_IDLE_LABEL:
+        return True, guard_label
+    return True, _STT_RETRY_IDLE_LABEL
+
+
+def _release_v2_analysis_guard(result: Dict[str, Any]) -> None:
+    guard_set_in_flight(st.session_state, _ANALYSIS_GUARD_PREFIX, False)
+    if result.get("ok"):
+        guard_clear_guard(
+            st.session_state, _ANALYSIS_GUARD_PREFIX, _ANALYSIS_ENTITY_ID
+        )
+    else:
+        guard_register_failure(
+            st.session_state,
+            _ANALYSIS_GUARD_PREFIX,
+            _ANALYSIS_ENTITY_ID,
+            _failure_category(result),
+            base_cooldown=_ANALYSIS_COOLDOWN_BASE,
+            step=_ANALYSIS_COOLDOWN_STEP,
+            max_cooldown=_ANALYSIS_COOLDOWN_MAX,
+        )
+
+
+def _try_start_v2_analysis(*, retry: bool = False) -> bool:
+    """Guarded entry — blocks burst clicks before new attempt IDs are minted."""
+    allowed, block_msg = guard_can_request(
+        st.session_state,
+        _ANALYSIS_GUARD_PREFIX,
+        _ANALYSIS_ENTITY_ID,
+        max_attempts=_ANALYSIS_MAX_ATTEMPTS,
+        stale_sec=_ANALYSIS_STALE_SEC,
+    )
+    if not allowed:
+        if block_msg:
+            st.warning(block_msg)
+        return False
+    guard_set_in_flight(st.session_state, _ANALYSIS_GUARD_PREFIX, True)
+    _begin_v2_analysis(retry=retry)
+    return True
 
 
 def _questions() -> List[Dict[str, Any]]:
@@ -185,11 +322,18 @@ def is_mini_mock_v2_active() -> bool:
     return bool(st.session_state.get(_MINI_MOCK_V2_ACTIVE_KEY))
 
 
+def _reset_mini_v2_analysis_guards() -> None:
+    guard_reset_guard(st.session_state, _ANALYSIS_GUARD_PREFIX)
+    guard_reset_guard(st.session_state, _STT_RETRY_GUARD_PREFIX)
+    st.session_state.pop(_KEY_STT_RETRY_ACTIVE_QIDX, None)
+
+
 def reset_mini_mock_v2() -> None:
     """Clear only V2 session keys."""
     from utils.v2_flow_persistence import clear_mini_v2_disk_snapshot
 
     clear_mini_v2_disk_snapshot(st.session_state)
+    _reset_mini_v2_analysis_guards()
     st.session_state.pop(_KEY_STEP, None)
     st.session_state.pop(_KEY_INDEX, None)
     st.session_state.pop(_KEY_ANSWERS, None)
@@ -884,7 +1028,7 @@ def _build_mini_v2_row_from_stt(
     return row
 
 
-def _retry_mini_v2_stt(q_idx: int) -> bool:
+def _retry_mini_v2_stt_impl(q_idx: int) -> Tuple[bool, Dict[str, Any]]:
     """Re-run STT from stored audio; update existing answer row."""
     idx = max(0, min(_QUESTION_COUNT - 1, int(q_idx)))
     audio_bytes, mime_type = _get_v2_audio_blob(idx)
@@ -900,7 +1044,7 @@ def _retry_mini_v2_stt(q_idx: int) -> bool:
     except Exception:
         pass
     if not audio_bytes:
-        return False
+        return False, {}
     stt_result = _run_mini_v2_stt(idx, audio_bytes, mime_type)
     row = _build_mini_v2_row_from_stt(
         idx,
@@ -910,7 +1054,60 @@ def _retry_mini_v2_stt(q_idx: int) -> bool:
         prior_row=prior,
     )
     _upsert_v2_answer_row(row)
-    return True
+    transcript = str(
+        row.get("student_answer") or row.get("transcript") or ""
+    ).strip()
+    ok = bool(stt_result.get("ok")) and bool(transcript)
+    return ok, stt_result if isinstance(stt_result, dict) else {}
+
+
+def _retry_mini_v2_stt(q_idx: int) -> bool:
+    """Re-run STT with per-question burst guard (separate from commit in_flight)."""
+    idx = max(0, min(_QUESTION_COUNT - 1, int(q_idx)))
+    entity_id = _stt_retry_entity_id(idx)
+
+    allowed, block_msg = guard_can_request(
+        st.session_state,
+        _STT_RETRY_GUARD_PREFIX,
+        entity_id,
+        max_attempts=_STT_RETRY_MAX_ATTEMPTS,
+        stale_sec=_STT_RETRY_STALE_SEC,
+    )
+    if not allowed:
+        if block_msg:
+            st.warning(block_msg)
+        return False
+
+    st.session_state[_KEY_STT_RETRY_ACTIVE_QIDX] = entity_id
+    guard_set_in_flight(st.session_state, _STT_RETRY_GUARD_PREFIX, True)
+    stt_result: Dict[str, Any] = {}
+    ok = False
+    try:
+        with st.spinner("음성을 다시 인식하고 있어요…"):
+            ok, stt_result = _retry_mini_v2_stt_impl(idx)
+    except Exception as exc:
+        try:
+            logger.exception("[MINI_V2_STT_RETRY] failed q_idx=%s: %s", idx, exc)
+        except Exception:
+            pass
+        stt_result = {"ok": False, "error_category": "exception"}
+    finally:
+        guard_set_in_flight(st.session_state, _STT_RETRY_GUARD_PREFIX, False)
+        st.session_state.pop(_KEY_STT_RETRY_ACTIVE_QIDX, None)
+
+    if ok:
+        guard_clear_guard(st.session_state, _STT_RETRY_GUARD_PREFIX, entity_id)
+    else:
+        guard_register_failure(
+            st.session_state,
+            _STT_RETRY_GUARD_PREFIX,
+            entity_id,
+            _failure_category(stt_result),
+            base_cooldown=_STT_RETRY_COOLDOWN_BASE,
+            step=_STT_RETRY_COOLDOWN_STEP,
+            max_cooldown=_STT_RETRY_COOLDOWN_MAX,
+        )
+    return ok
 
 
 def _commit_mini_v2_recording_answer(
@@ -1237,26 +1434,29 @@ def _maybe_run_v2_analysis() -> str:
     if started_attempt == attempt:
         if _analysis_timed_out():
             if st.session_state.get(_KEY_ANALYSIS_FINISHED_ATTEMPT) != attempt:
-                _finalize_v2_analysis_attempt(
-                    attempt,
-                    _analysis_error_result("timeout", "analysis_timeout"),
-                )
+                timeout_result = _analysis_error_result("timeout", "analysis_timeout")
+                _finalize_v2_analysis_attempt(attempt, timeout_result)
                 _log_analysis_error("timeout", "analysis_timeout")
+                _release_v2_analysis_guard(timeout_result)
+            else:
+                guard_set_in_flight(st.session_state, _ANALYSIS_GUARD_PREFIX, False)
             return "pending"
         return "analyzing"
 
     if _analysis_timed_out():
         if st.session_state.get(_KEY_ANALYSIS_FINISHED_ATTEMPT) != attempt:
-            _finalize_v2_analysis_attempt(
-                attempt,
-                _analysis_error_result("timeout", "analysis_timeout"),
-            )
+            timeout_result = _analysis_error_result("timeout", "analysis_timeout")
+            _finalize_v2_analysis_attempt(attempt, timeout_result)
             _log_analysis_error("timeout", "analysis_timeout")
+            _release_v2_analysis_guard(timeout_result)
+        else:
+            guard_set_in_flight(st.session_state, _ANALYSIS_GUARD_PREFIX, False)
         return "pending"
 
     st.session_state[_KEY_ANALYSIS_STARTED_ATTEMPT] = attempt
     from services.mini_mock_v2_analysis import analyze_mini_mock_v2_answers
 
+    guard_set_in_flight(st.session_state, _ANALYSIS_GUARD_PREFIX, True)
     try:
         result = analyze_mini_mock_v2_answers(_answers())
     except Exception as exc:
@@ -1275,8 +1475,11 @@ def _maybe_run_v2_analysis() -> str:
                 str(result.get("error_category") or "unknown"),
                 str(result.get("error_message") or ""),
             )
+    finally:
+        guard_set_in_flight(st.session_state, _ANALYSIS_GUARD_PREFIX, False)
 
     _finalize_v2_analysis_attempt(attempt, result)
+    _release_v2_analysis_guard(result)
     if result.get("ok"):
         return "report"
     return "pending"
@@ -1532,21 +1735,24 @@ def _render_saved_step(q_idx: int) -> None:
         or stt_status in ("stt_failed", "stt_pending")
     )
     if needs_stt_retry:
+        stt_disabled, stt_label = _stt_retry_button_state(q_idx)
         if st.button(
-            "음성 인식 다시 시도",
+            stt_label,
             use_container_width=True,
             key=f"mini_v2_stt_retry_{q_idx}",
+            disabled=stt_disabled,
         ):
-            with st.spinner("음성을 다시 인식하고 있어요…"):
-                _retry_mini_v2_stt(q_idx)
+            _retry_mini_v2_stt(q_idx)
             st.rerun()
 
     if is_last:
+        analysis_disabled, analysis_label = _analysis_button_state()
         if st.button(
-            "AI 진단 리포트 받기",
+            analysis_label,
             type="primary",
             use_container_width=True,
             key="mini_v2_start_analysis",
+            disabled=analysis_disabled,
         ):
             rows = _answers()
             try:
@@ -1561,8 +1767,8 @@ def _render_saved_step(q_idx: int) -> None:
                 )
             except Exception:
                 pass
-            _begin_v2_analysis()
-            st.rerun()
+            if _try_start_v2_analysis():
+                st.rerun()
     else:
         if st.button(
             "다음 문항으로",
@@ -1656,14 +1862,16 @@ def _render_pending_step() -> None:
         row = _answer_for_index(i)
         st.markdown(f"- Q{i + 1} {_mini_v2_saved_answer_label(row)}")
 
+    retry_disabled, retry_label = _analysis_button_state(retry=True)
     if st.button(
-        "저장된 답변으로 다시 분석하기",
+        retry_label,
         type="primary",
         use_container_width=True,
         key="mini_v2_retry_analysis",
+        disabled=retry_disabled,
     ):
-        _begin_v2_analysis(retry=True)
-        st.rerun()
+        if _try_start_v2_analysis(retry=True):
+            st.rerun()
     st.markdown(render_recovery_retry_caption_html(), unsafe_allow_html=True)
 
     if st.button(

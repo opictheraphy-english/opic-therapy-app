@@ -64,6 +64,16 @@ from services.mock_exam.mock_exam_test_set_generator import (
     list_advanced_sets,
 )
 from services.stt_service import count_english_words
+from utils.analysis_request_guard import (
+    button_state as _guard_button_state,
+    can_request as _guard_can_request,
+    clear_guard as _guard_clear_guard,
+    clear_stale_in_flight as _guard_clear_stale_in_flight,
+    cooldown_remaining as _guard_cooldown_remaining,
+    register_failure as _guard_register_failure,
+    reset_guard as _guard_reset_guard,
+    set_in_flight as _guard_set_in_flight,
+)
 from utils.session_state import ensure_mock, mock_session
 from views.topic_icons import TOPIC_ICONS
 
@@ -94,14 +104,17 @@ _KEY_ANSWERS = "topic_v2_answers"
 _KEY_FEEDBACK = "topic_v2_feedback"
 _KEY_DRAFT_TRANSCRIPT = "topic_v2_practice_transcript"
 _KEY_SINGLE_RETRY = "topic_v2_single_question_retry"
-_KEY_FB_IN_FLIGHT = "topic_v2_feedback_in_flight"
-_KEY_FB_IN_FLIGHT_AT = "topic_v2_feedback_in_flight_at"
-_KEY_FB_COOLDOWN_UNTIL = "topic_v2_feedback_cooldown_until"
-_KEY_FB_ATTEMPTS = "topic_v2_feedback_attempts"
 _KEY_FB_NOTICE = "topic_v2_feedback_user_notice"
 _TOPIC_V2_STT_IN_FLIGHT = "topic_v2_stt_in_flight"
 _KEY_PRACTICE_SIG = "topic_v2_practice_sig"
 _KEY_FEEDBACK_BY_Q = "topic_v2_feedback_by_q"
+
+# Feedback burst-prevention guard (utils/analysis_request_guard.py).
+_FEEDBACK_GUARD_PREFIX = "topic_v2_feedback"
+_KEY_FB_IN_FLIGHT = f"{_FEEDBACK_GUARD_PREFIX}_in_flight"
+_KEY_FB_IN_FLIGHT_AT = f"{_FEEDBACK_GUARD_PREFIX}_in_flight_at"
+_KEY_FB_COOLDOWN_UNTIL = f"{_FEEDBACK_GUARD_PREFIX}_cooldown_until"
+_KEY_FB_ATTEMPTS = f"{_FEEDBACK_GUARD_PREFIX}_attempts"
 
 _FEEDBACK_COOLDOWN_BASE_SEC = 45
 _FEEDBACK_COOLDOWN_STEP_SEC = 15
@@ -109,6 +122,24 @@ _FEEDBACK_COOLDOWN_MAX_SEC = 90
 _FEEDBACK_MAX_ATTEMPTS_PER_ANSWER = 4
 _TOPIC_V2_FEEDBACK_WRAPPER_TIMEOUT_SEC = 50
 _FEEDBACK_IN_FLIGHT_STALE_SEC = 55
+
+_TOPIC_V2_FB_BLOCK_IN_FLIGHT = (
+    "피드백을 생성 중입니다. 완료될 때까지 잠시만 기다려 주세요."
+)
+_TOPIC_V2_FB_BLOCK_COOLDOWN = (
+    "서버가 잠시 바빠요. {remaining}초 후에 「피드백 다시 받기」를 눌러 주세요. "
+    "연속으로 누르면 API 호출만 늘고 같은 오류가 반복될 수 있어요."
+)
+_TOPIC_V2_FB_BLOCK_MAX_ATTEMPTS = (
+    "이 답변에 대한 자동 피드백 시도 횟수에 도달했어요. "
+    "같은 질문을 다시 말한 뒤 새 답변으로 피드백을 받아 보세요."
+)
+_TOPIC_V2_FB_BUTTON_LABELS: Dict[str, Any] = {
+    "idle": "AI 짧은 피드백 받기",
+    "in_flight": "피드백 생성 중…",
+    "cooldown": "피드백 다시 받기 ({remaining}초 후)",
+    "maxed": "피드백 시도 한도 도달",
+}
 
 _TOPIC_V2_FEEDBACK_FAIL_USER_MESSAGE = (
     "AI 피드백 서버가 잠시 바빠요.\n\n"
@@ -212,93 +243,38 @@ def _feedback_answer_id(
     return f"{topic}_{q_idx}"
 
 
-def _feedback_attempt_counts() -> Dict[str, int]:
-    raw = st.session_state.get(_KEY_FB_ATTEMPTS)
-    if not isinstance(raw, dict):
-        return {}
-    out: Dict[str, int] = {}
-    for k, v in raw.items():
-        try:
-            out[str(k)] = max(0, int(v))
-        except (TypeError, ValueError):
-            continue
-    return out
-
-
-def _cooldown_seconds_remaining() -> int:
-    try:
-        until = float(st.session_state.get(_KEY_FB_COOLDOWN_UNTIL) or 0.0)
-    except (TypeError, ValueError):
-        until = 0.0
-    return max(0, int(until - time.time()))
-
-
-def _feedback_fail_sets_cooldown(category: str) -> bool:
-    return str(category or "").strip() not in (
-        "api_key",
-        "insufficient_text",
-        "cooldown",
-        "blocked",
-    )
-
-
 def _register_feedback_failure(category: str, answer_id: str) -> None:
-    counts = _feedback_attempt_counts()
-    n = counts.get(answer_id, 0) + 1
-    counts[answer_id] = n
-    st.session_state[_KEY_FB_ATTEMPTS] = counts
-    if not _feedback_fail_sets_cooldown(category):
-        return
-    cd = min(
-        _FEEDBACK_COOLDOWN_MAX_SEC,
-        _FEEDBACK_COOLDOWN_BASE_SEC + _FEEDBACK_COOLDOWN_STEP_SEC * max(0, n - 1),
+    _guard_register_failure(
+        st.session_state,
+        _FEEDBACK_GUARD_PREFIX,
+        answer_id,
+        category,
+        base_cooldown=_FEEDBACK_COOLDOWN_BASE_SEC,
+        step=_FEEDBACK_COOLDOWN_STEP_SEC,
+        max_cooldown=_FEEDBACK_COOLDOWN_MAX_SEC,
     )
-    st.session_state[_KEY_FB_COOLDOWN_UNTIL] = time.time() + cd
 
 
 def _clear_feedback_guard(answer_id: str) -> None:
-    st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
-    st.session_state.pop(_KEY_FB_NOTICE, None)
-    counts = _feedback_attempt_counts()
-    counts.pop(answer_id, None)
-    st.session_state[_KEY_FB_ATTEMPTS] = counts
+    _guard_clear_guard(st.session_state, _FEEDBACK_GUARD_PREFIX, answer_id)
 
 
 def _reset_feedback_guard_for_question() -> None:
     """Clear feedback retry/cooldown flags before question UI widgets render."""
-    st.session_state.pop(_KEY_FB_COOLDOWN_UNTIL, None)
-    st.session_state.pop(_KEY_FB_NOTICE, None)
-    _set_feedback_in_flight(False)
-    st.session_state[_KEY_FB_ATTEMPTS] = {}
+    _guard_reset_guard(st.session_state, _FEEDBACK_GUARD_PREFIX)
 
 
 def _set_feedback_in_flight(active: bool) -> None:
-    if active:
-        st.session_state[_KEY_FB_IN_FLIGHT] = True
-        st.session_state[_KEY_FB_IN_FLIGHT_AT] = time.time()
-    else:
-        st.session_state.pop(_KEY_FB_IN_FLIGHT, None)
-        st.session_state.pop(_KEY_FB_IN_FLIGHT_AT, None)
+    _guard_set_in_flight(st.session_state, _FEEDBACK_GUARD_PREFIX, active)
 
 
 def _clear_stale_feedback_in_flight() -> None:
     """Drop a stuck in-flight flag after disconnect or server kill mid-request."""
-    if not st.session_state.get(_KEY_FB_IN_FLIGHT):
-        return
-    try:
-        started = float(st.session_state.get(_KEY_FB_IN_FLIGHT_AT) or 0.0)
-    except (TypeError, ValueError):
-        started = 0.0
-    if started <= 0 or (time.time() - started) > _FEEDBACK_IN_FLIGHT_STALE_SEC:
-        try:
-            logger.warning(
-                "[TOPIC_V2_FEEDBACK] clearing stale in_flight started=%s age=%.1fs",
-                started,
-                time.time() - started if started > 0 else -1.0,
-            )
-        except Exception:
-            pass
-        _set_feedback_in_flight(False)
+    _guard_clear_stale_in_flight(
+        st.session_state,
+        _FEEDBACK_GUARD_PREFIX,
+        stale_sec=_FEEDBACK_IN_FLIGHT_STALE_SEC,
+    )
 
 
 def _topic_v2_feedback_failure_result(*, category: str) -> Dict[str, Any]:
@@ -376,45 +352,36 @@ def _invoke_topic_v2_feedback_analysis(
 
 
 def _can_request_topic_v2_feedback(answer_id: str) -> Tuple[bool, str]:
-    _clear_stale_feedback_in_flight()
-    if st.session_state.get(_KEY_FB_IN_FLIGHT):
-        return False, "피드백을 생성 중입니다. 완료될 때까지 잠시만 기다려 주세요."
-    rem = _cooldown_seconds_remaining()
-    if rem > 0:
-        return (
-            False,
-            f"서버가 잠시 바빠요. {rem}초 후에 「피드백 다시 받기」를 눌러 주세요. "
-            "연속으로 누르면 API 호출만 늘고 같은 오류가 반복될 수 있어요.",
-        )
-    n = _feedback_attempt_counts().get(answer_id, 0)
-    if n >= _FEEDBACK_MAX_ATTEMPTS_PER_ANSWER:
-        return (
-            False,
-            "이 답변에 대한 자동 피드백 시도 횟수에 도달했어요. "
-            "같은 질문을 다시 말한 뒤 새 답변으로 피드백을 받아 보세요.",
-        )
-    return True, ""
+    allowed, block_msg = _guard_can_request(
+        st.session_state,
+        _FEEDBACK_GUARD_PREFIX,
+        answer_id,
+        max_attempts=_FEEDBACK_MAX_ATTEMPTS_PER_ANSWER,
+        stale_sec=_FEEDBACK_IN_FLIGHT_STALE_SEC,
+        block_in_flight=_TOPIC_V2_FB_BLOCK_IN_FLIGHT,
+        block_cooldown=_TOPIC_V2_FB_BLOCK_COOLDOWN,
+        block_max_attempts=_TOPIC_V2_FB_BLOCK_MAX_ATTEMPTS,
+    )
+    return allowed, block_msg or ""
 
 
 def _feedback_request_button_state(answer_id: str) -> Tuple[bool, str]:
     """(disabled, label) for AI feedback buttons."""
-    _clear_stale_feedback_in_flight()
-    if st.session_state.get(_KEY_FB_IN_FLIGHT):
-        return True, "피드백 생성 중…"
-    rem = _cooldown_seconds_remaining()
-    if rem > 0:
-        return True, f"피드백 다시 받기 ({rem}초 후)"
-    n = _feedback_attempt_counts().get(answer_id, 0)
-    if n >= _FEEDBACK_MAX_ATTEMPTS_PER_ANSWER:
-        return True, "피드백 시도 한도 도달"
-    return False, "AI 짧은 피드백 받기"
+    return _guard_button_state(
+        st.session_state,
+        _FEEDBACK_GUARD_PREFIX,
+        answer_id,
+        labels=_TOPIC_V2_FB_BUTTON_LABELS,
+        max_attempts=_FEEDBACK_MAX_ATTEMPTS_PER_ANSWER,
+        stale_sec=_FEEDBACK_IN_FLIGHT_STALE_SEC,
+    )
 
 
 def _render_feedback_guard_notice() -> None:
     notice = str(st.session_state.get(_KEY_FB_NOTICE) or "").strip()
     if notice:
         st.warning(notice)
-    rem = _cooldown_seconds_remaining()
+    rem = _guard_cooldown_remaining(st.session_state, _FEEDBACK_GUARD_PREFIX)
     if rem > 0 and not notice:
         st.info(
             f"AI 서버가 잠시 바빠요. {rem}초 후에 「피드백 다시 받기」를 한 번만 눌러 주세요."

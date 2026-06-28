@@ -27,6 +27,16 @@ from components.exam_question_screen import (
 from components.topbar import render_top_bar
 from services.mock_v2_question_selector import build_mock_v2_exam
 from services.stt_service import count_english_words
+from utils.analysis_request_guard import (
+    button_state as guard_button_state,
+    can_request as guard_can_request,
+    clear_guard as guard_clear_guard,
+    clear_stale_in_flight as guard_clear_stale_in_flight,
+    key_in_flight as guard_key_in_flight,
+    register_failure as guard_register_failure,
+    reset_guard as guard_reset_guard,
+    set_in_flight as guard_set_in_flight,
+)
 from utils.local_profile import iso_now
 from utils.question_audio_assets import load_question_mp3_bytes, mock_v2_question_audio_id
 
@@ -53,6 +63,44 @@ _VALID_STEPS = frozenset({
 _QUESTION_COUNT = 15
 _MIN_ANSWER_WORDS = 5
 _DEFAULT_MIME = "audio/webm"
+
+# Analysis burst-prevention guards (utils/analysis_request_guard.py).
+_REPORT_GUARD_PREFIX = "mock_v2_report"
+_STT_RETRY_GUARD_PREFIX = "mock_v2_stt_retry"
+_KEY_STT_RETRY_ACTIVE_QID = "mock_v2_stt_retry_active_question_id"
+_REPORT_ENTITY_ID = "default"
+
+_REPORT_MAX_ATTEMPTS = 4
+_REPORT_STALE_SEC = 60
+_REPORT_COOLDOWN_BASE = 45
+_REPORT_COOLDOWN_STEP = 15
+_REPORT_COOLDOWN_MAX = 90
+
+_STT_RETRY_MAX_ATTEMPTS = 4
+_STT_RETRY_STALE_SEC = 30
+_STT_RETRY_COOLDOWN_BASE = 10
+_STT_RETRY_COOLDOWN_STEP = 5
+_STT_RETRY_COOLDOWN_MAX = 30
+
+_MOCK_V2_REPORT_LABELS: Dict[str, Any] = {
+    "idle": "AI 최종 리포트 받기",
+    "in_flight": "리포트 생성 중…",
+    "cooldown": lambda rem: f"{rem}초 후 다시",
+    "maxed": "잠시 후 다시 시도",
+}
+_MOCK_V2_REPORT_RETRY_LABELS: Dict[str, Any] = {
+    "idle": "리포트 다시 시도",
+    "in_flight": "리포트 생성 중…",
+    "cooldown": lambda rem: f"{rem}초 후 다시",
+    "maxed": "잠시 후 다시 시도",
+}
+_STT_RETRY_IDLE_LABEL = "AI 음성 인식 다시 시도"
+_MOCK_V2_STT_RETRY_LABELS: Dict[str, Any] = {
+    "idle": _STT_RETRY_IDLE_LABEL,
+    "in_flight": "인식 중…",
+    "cooldown": lambda rem: f"{rem}초 후",
+    "maxed": "잠시 후 다시 시도",
+}
 
 _MOCK_V2_SESSION_KEYS = (
     _KEY_STEP,
@@ -131,10 +179,17 @@ def _mock_v2_difficulty_radio_index(current: Any) -> int:
     return _MOCK_V2_DIFFICULTY_OPTIONS.index(5)
 
 
+def _reset_mock_v2_analysis_guards() -> None:
+    guard_reset_guard(st.session_state, _REPORT_GUARD_PREFIX)
+    guard_reset_guard(st.session_state, _STT_RETRY_GUARD_PREFIX)
+    st.session_state.pop(_KEY_STT_RETRY_ACTIVE_QID, None)
+
+
 def clear_mock_v2_session() -> None:
     from utils.v2_flow_persistence import clear_mock_v2_disk_snapshot
 
     clear_mock_v2_disk_snapshot(st.session_state)
+    _reset_mock_v2_analysis_guards()
     for key in _MOCK_V2_SESSION_KEYS:
         st.session_state.pop(key, None)
     for key in (
@@ -186,6 +241,70 @@ def _log_mock_v2_route() -> None:
         )
     except Exception:
         pass
+
+
+def _failure_category(result: Dict[str, Any]) -> str:
+    cat = str(result.get("error_category") or "").strip()
+    return cat or "api_error"
+
+
+def _report_button_state(*, retry: bool = False) -> Tuple[bool, str]:
+    labels = _MOCK_V2_REPORT_RETRY_LABELS if retry else _MOCK_V2_REPORT_LABELS
+    guard_clear_stale_in_flight(
+        st.session_state,
+        _REPORT_GUARD_PREFIX,
+        stale_sec=_REPORT_STALE_SEC,
+    )
+    return guard_button_state(
+        st.session_state,
+        _REPORT_GUARD_PREFIX,
+        _REPORT_ENTITY_ID,
+        labels=labels,
+        max_attempts=_REPORT_MAX_ATTEMPTS,
+        stale_sec=_REPORT_STALE_SEC,
+    )
+
+
+def _stt_retry_entity_id(
+    q_idx: int,
+    row: Optional[Dict[str, Any]],
+    q: Optional[Dict[str, Any]],
+) -> str:
+    if isinstance(row, dict):
+        qid = str(row.get("question_id") or "").strip()
+        if qid:
+            return qid
+    if isinstance(q, dict):
+        qid = str(q.get("id") or q.get("question_id") or "").strip()
+        if qid:
+            return qid
+    return f"mock_v2_q{int(q_idx)}"
+
+
+def _stt_retry_button_state(question_id: str) -> Tuple[bool, str]:
+    guard_clear_stale_in_flight(
+        st.session_state,
+        _STT_RETRY_GUARD_PREFIX,
+        stale_sec=_STT_RETRY_STALE_SEC,
+    )
+    disabled, guard_label = guard_button_state(
+        st.session_state,
+        _STT_RETRY_GUARD_PREFIX,
+        question_id,
+        labels=_MOCK_V2_STT_RETRY_LABELS,
+        max_attempts=_STT_RETRY_MAX_ATTEMPTS,
+        stale_sec=_STT_RETRY_STALE_SEC,
+    )
+    if not disabled:
+        return False, _STT_RETRY_IDLE_LABEL
+    if st.session_state.get(guard_key_in_flight(_STT_RETRY_GUARD_PREFIX)):
+        active = str(st.session_state.get(_KEY_STT_RETRY_ACTIVE_QID) or "")
+        if active == question_id:
+            return True, "인식 중…"
+        return True, _STT_RETRY_IDLE_LABEL
+    if guard_label != _STT_RETRY_IDLE_LABEL:
+        return True, guard_label
+    return True, _STT_RETRY_IDLE_LABEL
 
 
 def _normalize_step() -> str:
@@ -842,14 +961,15 @@ def _commit_mock_v2_timer_expired(q: Dict[str, Any]) -> bool:
     return True
 
 
-def _retry_mock_v2_stt(q_idx: int) -> bool:
+def _retry_mock_v2_stt_impl(q_idx: int) -> Tuple[bool, Dict[str, Any]]:
+    """Run STT for one saved answer row; returns (updated_ok, stt_result)."""
     row = _answer_for_index(q_idx)
     if not row:
-        return False
+        return False, {}
     answer_id = str(row.get("answer_id") or "").strip()
     audio_bytes, mime_type = _get_mock_v2_audio_blob(answer_id)
     if not audio_bytes:
-        return False
+        return False, {}
 
     q = _current_question()
     if q is None:
@@ -857,25 +977,82 @@ def _retry_mock_v2_stt(q_idx: int) -> bool:
         if 0 <= q_idx < len(questions):
             q = questions[q_idx]
     if q is None:
+        return False, {}
+
+    stt_result = _run_mock_v2_stt(
+        str(row.get("question_id") or q.get("id") or ""),
+        str(row.get("question_text") or q.get("question_text") or ""),
+        audio_bytes,
+        mime_type,
+    )
+    updated = _build_mock_v2_answer_row(
+        q,
+        audio_bytes=audio_bytes,
+        mime_type=mime_type,
+        stt_result=stt_result,
+        prior_row=row,
+    )
+    updated["answer_id"] = answer_id
+    _upsert_mock_v2_answer(updated)
+    transcript = str(
+        updated.get("student_answer") or updated.get("transcript") or ""
+    ).strip()
+    ok = bool(stt_result.get("ok")) and bool(transcript)
+    return ok, stt_result if isinstance(stt_result, dict) else {}
+
+
+def _retry_mock_v2_stt(q_idx: int) -> bool:
+    row = _answer_for_index(q_idx)
+    q = _current_question()
+    if q is None:
+        questions = _questions_list()
+        if 0 <= q_idx < len(questions):
+            q = questions[q_idx]
+    entity_id = _stt_retry_entity_id(q_idx, row, q)
+
+    allowed, block_msg = guard_can_request(
+        st.session_state,
+        _STT_RETRY_GUARD_PREFIX,
+        entity_id,
+        max_attempts=_STT_RETRY_MAX_ATTEMPTS,
+        stale_sec=_STT_RETRY_STALE_SEC,
+    )
+    if not allowed:
+        if block_msg:
+            st.warning(block_msg)
         return False
 
-    with st.spinner("음성을 다시 인식하고 있어요…"):
-        stt_result = _run_mock_v2_stt(
-            str(row.get("question_id") or q.get("id") or ""),
-            str(row.get("question_text") or q.get("question_text") or ""),
-            audio_bytes,
-            mime_type,
+    st.session_state[_KEY_STT_RETRY_ACTIVE_QID] = entity_id
+    guard_set_in_flight(st.session_state, _STT_RETRY_GUARD_PREFIX, True)
+    stt_result: Dict[str, Any] = {}
+    ok = False
+    try:
+        with st.spinner("음성을 다시 인식하고 있어요…"):
+            ok, stt_result = _retry_mock_v2_stt_impl(q_idx)
+    except Exception as exc:
+        try:
+            logger.exception("[MOCK_V2_STT_RETRY] failed q_idx=%s: %s", q_idx, exc)
+        except Exception:
+            pass
+        stt_result = {"ok": False, "error_category": "exception"}
+    finally:
+        guard_set_in_flight(st.session_state, _STT_RETRY_GUARD_PREFIX, False)
+        st.session_state.pop(_KEY_STT_RETRY_ACTIVE_QID, None)
+
+    if ok:
+        guard_clear_guard(st.session_state, _STT_RETRY_GUARD_PREFIX, entity_id)
+    else:
+        cat = _failure_category(stt_result)
+        guard_register_failure(
+            st.session_state,
+            _STT_RETRY_GUARD_PREFIX,
+            entity_id,
+            cat,
+            base_cooldown=_STT_RETRY_COOLDOWN_BASE,
+            step=_STT_RETRY_COOLDOWN_STEP,
+            max_cooldown=_STT_RETRY_COOLDOWN_MAX,
         )
-        updated = _build_mock_v2_answer_row(
-            q,
-            audio_bytes=audio_bytes,
-            mime_type=mime_type,
-            stt_result=stt_result,
-            prior_row=row,
-        )
-        updated["answer_id"] = answer_id
-        _upsert_mock_v2_answer(updated)
-    return True
+    return ok
 
 
 def _render_mock_v2_survey() -> None:
@@ -1130,10 +1307,13 @@ def _render_mock_v2_saved() -> None:
 
     needs_stt_retry = bool(audio_bytes) and not transcript and has_audio
     if needs_stt_retry:
+        entity_id = _stt_retry_entity_id(idx, saved_row, q)
+        stt_disabled, stt_label = _stt_retry_button_state(entity_id)
         if st.button(
-            "AI 음성 인식 다시 시도",
+            stt_label,
             use_container_width=True,
             key=f"mock_v2_stt_retry_{qnum}",
+            disabled=stt_disabled,
         ):
             _retry_mock_v2_stt(idx)
             st.rerun()
@@ -1177,6 +1357,18 @@ def _run_mock_v2_report_generation() -> None:
     """Single button-triggered report attempt — not called on passive rerun."""
     from services.mock_v2_analysis import analyze_mock_v2_answers
 
+    allowed, block_msg = guard_can_request(
+        st.session_state,
+        _REPORT_GUARD_PREFIX,
+        _REPORT_ENTITY_ID,
+        max_attempts=_REPORT_MAX_ATTEMPTS,
+        stale_sec=_REPORT_STALE_SEC,
+    )
+    if not allowed:
+        if block_msg:
+            st.warning(block_msg)
+        return
+
     for key in (
         "mock_v2_new_final_bundle",
         "mock_v2_new_final_sig",
@@ -1184,10 +1376,23 @@ def _run_mock_v2_report_generation() -> None:
     ):
         st.session_state.pop(key, None)
 
-    with st.spinner("AI 리포트를 생성하고 있어요…"):
-        result = analyze_mock_v2_answers(_answers_list(), _questions_list())
+    guard_set_in_flight(st.session_state, _REPORT_GUARD_PREFIX, True)
+    result: Dict[str, Any]
+    try:
+        with st.spinner("AI 리포트를 생성하고 있어요…"):
+            result = analyze_mock_v2_answers(_answers_list(), _questions_list())
+    except Exception as exc:
+        try:
+            logger.exception("[MOCK_V2_REPORT] generation failed: %s", exc)
+        except Exception:
+            pass
+        result = {"ok": False, "error_category": "exception"}
+    finally:
+        guard_set_in_flight(st.session_state, _REPORT_GUARD_PREFIX, False)
+
     st.session_state[_KEY_REPORT] = result
     if result.get("ok"):
+        guard_clear_guard(st.session_state, _REPORT_GUARD_PREFIX, _REPORT_ENTITY_ID)
         st.session_state[_KEY_STEP] = "report"
         try:
             from utils.history_sync import save_mock_v2_report
@@ -1201,6 +1406,15 @@ def _run_mock_v2_report_generation() -> None:
         except Exception:
             pass
     else:
+        guard_register_failure(
+            st.session_state,
+            _REPORT_GUARD_PREFIX,
+            _REPORT_ENTITY_ID,
+            _failure_category(result),
+            base_cooldown=_REPORT_COOLDOWN_BASE,
+            step=_REPORT_COOLDOWN_STEP,
+            max_cooldown=_REPORT_COOLDOWN_MAX,
+        )
         st.session_state[_KEY_STEP] = "report_pending"
     st.rerun()
 
@@ -1213,7 +1427,13 @@ def _render_mock_v2_complete() -> None:
     st.markdown(f"저장된 답변: **{saved}/{_QUESTION_COUNT}**")
     st.markdown(f"음성 인식 완료: **{stt_done}/{_QUESTION_COUNT}**")
 
-    if st.button("AI 최종 리포트 받기", type="primary", key="mock_v2_request_report"):
+    report_disabled, report_label = _report_button_state()
+    if st.button(
+        report_label,
+        type="primary",
+        key="mock_v2_request_report",
+        disabled=report_disabled,
+    ):
         _run_mock_v2_report_generation()
 
     c1, c2 = st.columns(2)
@@ -1240,7 +1460,13 @@ def _render_mock_v2_report_pending() -> None:
         if err_cat:
             st.caption(f"오류 유형: {err_cat}")
 
-    if st.button("리포트 다시 시도", type="primary", key="mock_v2_report_retry"):
+    retry_disabled, retry_label = _report_button_state(retry=True)
+    if st.button(
+        retry_label,
+        type="primary",
+        key="mock_v2_report_retry",
+        disabled=retry_disabled,
+    ):
         _run_mock_v2_report_generation()
 
     if st.button("완료 화면으로", key="mock_v2_back_complete"):

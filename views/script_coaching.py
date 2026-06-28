@@ -16,8 +16,42 @@ from components.smart_feedback import (
     render_grammar_corrections,
 )
 from components.topbar import render_top_bar
+from utils.analysis_request_guard import (
+    button_state as guard_button_state,
+    can_request as guard_can_request,
+    clear_guard as guard_clear_guard,
+    clear_stale_in_flight as guard_clear_stale_in_flight,
+    key_in_flight as guard_key_in_flight,
+    register_failure as guard_register_failure,
+    reset_guard as guard_reset_guard,
+    set_in_flight as guard_set_in_flight,
+)
 
 logger = logging.getLogger(__name__)
+
+_GUARD_ENTITY_ID = "default"
+_DIAGNOSE_GUARD_PREFIX = "script_coaching_diagnose"
+_UPGRADE_GUARD_PREFIX = "script_coaching_upgrade"
+_KEY_UPGRADE_ACTIVE_BUTTON = "script_coaching_upgrade_active_button_key"
+
+_GUARD_MAX_ATTEMPTS = 4
+_GUARD_STALE_SEC = 55
+_GUARD_COOLDOWN_BASE = 45
+_GUARD_COOLDOWN_STEP = 15
+_GUARD_COOLDOWN_MAX = 90
+
+_SC_DIAGNOSE_LABELS: Dict[str, Any] = {
+    "idle": "진단받기",
+    "in_flight": "진단 중…",
+    "cooldown": lambda rem: f"{rem}초 후 다시",
+    "maxed": "잠시 후 다시 시도",
+}
+_SC_UPGRADE_GUARD_LABELS: Dict[str, Any] = {
+    "idle": "업그레이드",
+    "in_flight": "업그레이드 중…",
+    "cooldown": lambda rem: f"{rem}초 후 다시",
+    "maxed": "잠시 후 다시 시도",
+}
 
 _KEY_STEP = "script_coaching_step"
 _KEY_QUESTION_EN = "script_coaching_question_en"
@@ -39,6 +73,7 @@ _SCORE_LABELS: Dict[str, str] = {
 
 def clear_script_coaching_session() -> None:
     """Clear script coaching UI state (portal reset / leave flow)."""
+    _reset_all_analysis_guards()
     for k in (
         _KEY_STEP,
         _KEY_QUESTION_EN,
@@ -57,11 +92,139 @@ def _clear_script_coaching_mic_cache() -> None:
     st.session_state.pop(_KEY_STT_NOTICE, None)
 
 
+def _reset_diagnose_guard() -> None:
+    guard_reset_guard(st.session_state, _DIAGNOSE_GUARD_PREFIX)
+
+
+def _reset_upgrade_guard() -> None:
+    st.session_state.pop(_KEY_UPGRADE_ACTIVE_BUTTON, None)
+    guard_reset_guard(st.session_state, _UPGRADE_GUARD_PREFIX)
+
+
+def _reset_all_analysis_guards() -> None:
+    _reset_diagnose_guard()
+    _reset_upgrade_guard()
+
+
+def _diagnose_button_state() -> Tuple[bool, str]:
+    guard_clear_stale_in_flight(
+        st.session_state,
+        _DIAGNOSE_GUARD_PREFIX,
+        stale_sec=_GUARD_STALE_SEC,
+    )
+    return guard_button_state(
+        st.session_state,
+        _DIAGNOSE_GUARD_PREFIX,
+        _GUARD_ENTITY_ID,
+        labels=_SC_DIAGNOSE_LABELS,
+        max_attempts=_GUARD_MAX_ATTEMPTS,
+        stale_sec=_GUARD_STALE_SEC,
+    )
+
+
+def _upgrade_guard_disabled() -> Tuple[bool, str]:
+    guard_clear_stale_in_flight(
+        st.session_state,
+        _UPGRADE_GUARD_PREFIX,
+        stale_sec=_GUARD_STALE_SEC,
+    )
+    return guard_button_state(
+        st.session_state,
+        _UPGRADE_GUARD_PREFIX,
+        _GUARD_ENTITY_ID,
+        labels=_SC_UPGRADE_GUARD_LABELS,
+        max_attempts=_GUARD_MAX_ATTEMPTS,
+        stale_sec=_GUARD_STALE_SEC,
+    )
+
+
+def _upgrade_button_state(button_key: str, idle_label: str) -> Tuple[bool, str]:
+    disabled, guard_label = _upgrade_guard_disabled()
+    if not disabled:
+        return False, idle_label
+    if (
+        st.session_state.get(guard_key_in_flight(_UPGRADE_GUARD_PREFIX))
+        and str(st.session_state.get(_KEY_UPGRADE_ACTIVE_BUTTON) or "") == button_key
+    ):
+        return True, "업그레이드 중…"
+    if guard_label != _SC_UPGRADE_GUARD_LABELS["idle"]:
+        return True, guard_label
+    return True, idle_label
+
+
+def _failure_category(result: Dict[str, Any]) -> str:
+    cat = str(result.get("error_category") or "").strip()
+    return cat or "api_error"
+
+
+def _run_diagnose_guarded(question_en: str, script_text: str) -> None:
+    allowed, block_msg = guard_can_request(
+        st.session_state,
+        _DIAGNOSE_GUARD_PREFIX,
+        _GUARD_ENTITY_ID,
+        max_attempts=_GUARD_MAX_ATTEMPTS,
+        stale_sec=_GUARD_STALE_SEC,
+    )
+    if not allowed:
+        if block_msg:
+            st.warning(block_msg)
+        return
+
+    from services.script_coaching_diagnose_analysis import diagnose_script
+
+    q = str(question_en or "").strip()
+    s = str(script_text or "").strip()
+    result: Dict[str, Any]
+    guard_set_in_flight(st.session_state, _DIAGNOSE_GUARD_PREFIX, True)
+    try:
+        with st.spinner("AI가 스크립트를 진단하고 있어요…"):
+            result = diagnose_script(q, s)
+    except Exception as exc:
+        try:
+            logger.exception("[SCRIPT_COACHING_DIAGNOSE] analyze_failed: %s", exc)
+        except Exception:
+            pass
+        result = {
+            "ok": False,
+            "error_category": "exception",
+            "error_message": "진단 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
+        }
+    finally:
+        guard_set_in_flight(st.session_state, _DIAGNOSE_GUARD_PREFIX, False)
+
+    if result.get("ok"):
+        result = _merge_user_script_fields(result)
+        guard_clear_guard(st.session_state, _DIAGNOSE_GUARD_PREFIX, _GUARD_ENTITY_ID)
+        _reset_upgrade_guard()
+    else:
+        guard_register_failure(
+            st.session_state,
+            _DIAGNOSE_GUARD_PREFIX,
+            _GUARD_ENTITY_ID,
+            _failure_category(result),
+            base_cooldown=_GUARD_COOLDOWN_BASE,
+            step=_GUARD_COOLDOWN_STEP,
+            max_cooldown=_GUARD_COOLDOWN_MAX,
+        )
+
+    st.session_state[_KEY_DIAGNOSE_RESULT] = result
+    if result.get("ok"):
+        st.session_state[_KEY_STEP] = "result"
+        try:
+            from utils.history_sync import save_script_diagnose
+
+            save_script_diagnose(result, question=q, sig=str(time.time()))
+        except Exception:
+            pass
+    st.rerun()
+
+
 def _ensure_defaults() -> None:
     if st.session_state.pop(_KEY_CLEAR_INPUTS, False):
         st.session_state[_KEY_QUESTION_EN] = ""
         st.session_state[_KEY_SCRIPT_TEXT] = ""
         _clear_script_coaching_mic_cache()
+        _reset_all_analysis_guards()
     if _KEY_STEP not in st.session_state:
         st.session_state[_KEY_STEP] = "input"
     if _KEY_QUESTION_EN not in st.session_state:
@@ -284,30 +447,15 @@ def _render_input_form() -> None:
     if mic_result is not None:
         _stash_script_coaching_mic_result(mic_result)
 
+    diag_disabled, diag_label = _diagnose_button_state()
     if st.button(
-        "진단받기",
+        diag_label,
         type="primary",
         use_container_width=True,
         key="script_coaching_run_diagnose",
+        disabled=diag_disabled,
     ):
-        from services.script_coaching_diagnose_analysis import diagnose_script
-
-        q = str(question_en or "").strip()
-        s = str(script_text or "").strip()
-        with st.spinner("AI가 스크립트를 진단하고 있어요…"):
-            result = diagnose_script(q, s)
-        if result.get("ok"):
-            result = _merge_user_script_fields(result)
-        st.session_state[_KEY_DIAGNOSE_RESULT] = result
-        if result.get("ok"):
-            st.session_state[_KEY_STEP] = "result"
-            try:
-                from utils.history_sync import save_script_diagnose
-
-                save_script_diagnose(result, question=q, sig=str(time.time()))
-            except Exception:
-                pass
-        st.rerun()
+        _run_diagnose_guarded(question_en, script_text)
 
 
 def _sc_card(title: str, body_html: str) -> None:
@@ -349,21 +497,69 @@ def _sc_bullets_html(items: Any) -> str:
     return f"<ul>{lis}</ul>" if lis else ""
 
 
-def _run_upgrade(current_level: str, target_level: str = "") -> None:
+def _run_upgrade(
+    current_level: str,
+    target_level: str = "",
+    *,
+    button_key: str = "",
+) -> None:
+    allowed, block_msg = guard_can_request(
+        st.session_state,
+        _UPGRADE_GUARD_PREFIX,
+        _GUARD_ENTITY_ID,
+        max_attempts=_GUARD_MAX_ATTEMPTS,
+        stale_sec=_GUARD_STALE_SEC,
+    )
+    if not allowed:
+        if block_msg:
+            st.warning(block_msg)
+        return
+
     from services.script_coaching_upgrade_analysis import upgrade_script
 
     question_en = str(st.session_state.get(_KEY_QUESTION_EN) or "").strip()
     script_text = str(st.session_state.get(_KEY_SCRIPT_TEXT) or "").strip()
-    with st.spinner("AI가 스크립트를 변환하고 있어요…"):
-        result = upgrade_script(
-            question_en,
-            script_text,
-            current_level,
-            target_level=target_level,
-            question_ko="",
-        )
+    if button_key:
+        st.session_state[_KEY_UPGRADE_ACTIVE_BUTTON] = button_key
+    result: Dict[str, Any]
+    guard_set_in_flight(st.session_state, _UPGRADE_GUARD_PREFIX, True)
+    try:
+        with st.spinner("AI가 스크립트를 변환하고 있어요…"):
+            result = upgrade_script(
+                question_en,
+                script_text,
+                current_level,
+                target_level=target_level,
+                question_ko="",
+            )
+    except Exception as exc:
+        try:
+            logger.exception("[SCRIPT_COACHING_UPGRADE] analyze_failed: %s", exc)
+        except Exception:
+            pass
+        result = {
+            "ok": False,
+            "error_category": "exception",
+            "error_message": "변환 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
+        }
+    finally:
+        guard_set_in_flight(st.session_state, _UPGRADE_GUARD_PREFIX, False)
+        st.session_state.pop(_KEY_UPGRADE_ACTIVE_BUTTON, None)
+
     if result.get("ok"):
         result = _merge_user_script_fields(result)
+        guard_clear_guard(st.session_state, _UPGRADE_GUARD_PREFIX, _GUARD_ENTITY_ID)
+    else:
+        guard_register_failure(
+            st.session_state,
+            _UPGRADE_GUARD_PREFIX,
+            _GUARD_ENTITY_ID,
+            _failure_category(result),
+            base_cooldown=_GUARD_COOLDOWN_BASE,
+            step=_GUARD_COOLDOWN_STEP,
+            max_cooldown=_GUARD_COOLDOWN_MAX,
+        )
+
     st.session_state[_KEY_UPGRADE_RESULT] = result
     if result.get("ok"):
         st.session_state[_KEY_STEP] = "upgrade_result"
@@ -401,13 +597,17 @@ def _render_upgrade_section(report: Dict[str, Any]) -> None:
             "이미 최상위 등급이에요",
             "<p>표현을 한 단계 더 다듬은 보완본을 만들어 드릴까요?</p>",
         )
+        polish_key = "script_coaching_upgrade_polish"
+        polish_idle = "보완본 받기"
+        polish_disabled, polish_label = _upgrade_button_state(polish_key, polish_idle)
         if st.button(
-            "보완본 받기",
+            polish_label,
             type="primary",
             use_container_width=True,
-            key="script_coaching_upgrade_polish",
+            key=polish_key,
+            disabled=polish_disabled,
         ):
-            _run_upgrade(overall_level, target_level="")
+            _run_upgrade(overall_level, target_level="", button_key=polish_key)
         return
 
     if mode != "upgrade" or not one_step:
@@ -415,30 +615,42 @@ def _render_upgrade_section(report: Dict[str, Any]) -> None:
 
     if two_step:
         col1, col2 = st.columns(2)
+        one_key = "script_coaching_upgrade_one_step"
+        one_idle = f"한 단계 업그레이드 ({one_step})"
+        two_key = "script_coaching_upgrade_two_step"
+        two_idle = f"두 단계 업그레이드 ({two_step})"
         with col1:
+            one_disabled, one_label = _upgrade_button_state(one_key, one_idle)
             if st.button(
-                f"한 단계 업그레이드 ({one_step})",
+                one_label,
                 type="primary",
                 use_container_width=True,
-                key="script_coaching_upgrade_one_step",
+                key=one_key,
+                disabled=one_disabled,
             ):
-                _run_upgrade(overall_level, target_level=str(one_step))
+                _run_upgrade(overall_level, target_level=str(one_step), button_key=one_key)
         with col2:
+            two_disabled, two_label = _upgrade_button_state(two_key, two_idle)
             if st.button(
-                f"두 단계 업그레이드 ({two_step})",
+                two_label,
                 type="primary",
                 use_container_width=True,
-                key="script_coaching_upgrade_two_step",
+                key=two_key,
+                disabled=two_disabled,
             ):
-                _run_upgrade(overall_level, target_level=str(two_step))
+                _run_upgrade(overall_level, target_level=str(two_step), button_key=two_key)
     else:
+        only_key = "script_coaching_upgrade_one_step_only"
+        only_idle = f"한 단계 업그레이드 ({one_step})"
+        only_disabled, only_label = _upgrade_button_state(only_key, only_idle)
         if st.button(
-            f"한 단계 업그레이드 ({one_step})",
+            only_label,
             type="primary",
             use_container_width=True,
-            key="script_coaching_upgrade_one_step_only",
+            key=only_key,
+            disabled=only_disabled,
         ):
-            _run_upgrade(overall_level, target_level=str(one_step))
+            _run_upgrade(overall_level, target_level=str(one_step), button_key=only_key)
 
 
 def _render_diagnose_result(report: Dict[str, Any]) -> None:
@@ -561,6 +773,8 @@ def _render_diagnose_result(report: Dict[str, Any]) -> None:
     ):
         st.session_state.pop(_KEY_DIAGNOSE_RESULT, None)
         st.session_state[_KEY_STEP] = "input"
+        _reset_diagnose_guard()
+        _reset_upgrade_guard()
         st.rerun()
 
     if st.button(
