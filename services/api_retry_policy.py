@@ -74,6 +74,12 @@ GEMINI_JSON_RETRY_JITTER_SEC = 0.3
 GEMINI_JSON_MAX_TOTAL_SLEEP_SEC = 8.0
 OPENAI_FALLBACK_MAX_ATTEMPTS = 2
 
+# Per-model transient retry caps (inclusive: value N allows N+1 calls).
+GEMINI_JSON_TRANSIENT_RETRIES_FULL = 3
+GEMINI_JSON_TRANSIENT_RETRIES_FAST = 1
+# OpenAI key present: trip circuit after this many consecutive transient failures.
+GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT = 2
+
 _gemini_json_sleep_accumulator = 0.0
 
 

@@ -16,7 +16,7 @@ from services.topic_practice_v2_rubric import (
 
 logger = logging.getLogger(__name__)
 
-GEMINI_REQUEST_TIMEOUT_SEC = 35
+GEMINI_REQUEST_TIMEOUT_SEC = 20
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 
 _STUDENT_FEEDBACK_UNAVAILABLE = (

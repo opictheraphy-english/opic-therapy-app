@@ -126,6 +126,59 @@ class GeminiJsonRetryTests(unittest.TestCase):
 
 
 class OpenAiFallbackTests(unittest.TestCase):
+    @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
+    @patch("services.gemini_json_client.time.sleep")
+    @patch("services.gemini_json_client.invoke_openai_text_json")
+    @patch("services.gemini_json_client.invoke_gemini_text_json")
+    def test_circuit_break_jumps_to_openai_after_two_transient(
+        self, invoke_mock, openai_mock, _sleep, _key
+    ) -> None:
+        reset_gemini_json_sleep_budget()
+        invoke_mock.side_effect = [
+            (None, "api_error"),
+            (None, "api_error"),
+        ]
+        openai_mock.return_value = ({"summary": "fast-openai"}, "")
+        parsed, err = run_gemini_json_model_chain(
+            api_key="k",
+            prompt="p",
+            models=["model-a", "model-b", "model-c"],
+            temperature=0.2,
+            max_output_tokens=128,
+            timeout_ms=1000,
+            log_tag="TEST",
+        )
+        self.assertEqual(err, "")
+        self.assertEqual(parsed, {"summary": "fast-openai"})
+        self.assertEqual(invoke_mock.call_count, 2)
+        openai_mock.assert_called_once()
+
+    @patch("services.gemini_json_client.get_openai_api_key", return_value=None)
+    @patch("services.gemini_json_client.time.sleep")
+    @patch("services.gemini_json_client.invoke_gemini_text_json")
+    def test_no_openai_key_uses_full_transient_retries(
+        self, invoke_mock, _sleep, _key
+    ) -> None:
+        reset_gemini_json_sleep_budget()
+        invoke_mock.side_effect = [
+            (None, "api_error"),
+            (None, "api_error"),
+            (None, "api_error"),
+            ({"ok": True}, ""),
+        ]
+        parsed, err = run_gemini_json_model_chain(
+            api_key="k",
+            prompt="p",
+            models=["model-a"],
+            temperature=0.2,
+            max_output_tokens=128,
+            timeout_ms=1000,
+            log_tag="TEST",
+        )
+        self.assertEqual(parsed, {"ok": True})
+        self.assertEqual(err, "")
+        self.assertEqual(invoke_mock.call_count, 4)
+
     @patch("services.gemini_json_client.get_openai_api_key", return_value=None)
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")

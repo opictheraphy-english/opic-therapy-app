@@ -104,8 +104,8 @@ def build_mini_mock_v2_report_model_candidates() -> List[str]:
     )
 
 
-# Topic Practice V2 — short feedback (text-only), 2.5 Flash family only.
-_DEFAULT_TOPIC_FEEDBACK_MODEL = "gemini-2.5-flash-lite"
+# Topic Practice V2 — short feedback (text-only), 2.5 Flash first, 3.x cross-family.
+_DEFAULT_TOPIC_FEEDBACK_MODEL = "gemini-2.5-flash"
 TOPIC_FEEDBACK_MODEL_NAME = (
     (os.getenv("GEMINI_TOPIC_FEEDBACK_MODEL") or "").strip()
     or _DEFAULT_TOPIC_FEEDBACK_MODEL
@@ -113,12 +113,10 @@ TOPIC_FEEDBACK_MODEL_NAME = (
 
 
 def build_topic_feedback_model_candidates() -> List[str]:
-    """Topic Practice V2 AI feedback — env override, 2.5 Flash-Lite / Flash, then
-    3.x cross-family fallback to survive a 503 spike on the 2.5 family."""
+    """Topic Practice V2 AI feedback — env override, 2.5 Flash, then 3.x fallback."""
     return _dedupe_models(
         [
             TOPIC_FEEDBACK_MODEL_NAME,
-            "gemini-2.5-flash-lite",
             "gemini-2.5-flash",
             "gemini-3.5-flash",
         ]

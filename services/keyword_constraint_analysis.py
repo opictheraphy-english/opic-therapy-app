@@ -17,7 +17,7 @@ from services.stt_service import count_english_words
 
 logger = logging.getLogger(__name__)
 
-GEMINI_REQUEST_TIMEOUT_SEC = 35
+GEMINI_REQUEST_TIMEOUT_SEC = 20
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 _MIN_ANSWER_WORDS = 5
 _MODEL_ATTEMPTS = 2

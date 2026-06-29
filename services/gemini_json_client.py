@@ -10,6 +10,9 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from services.api_retry_policy import (
+    GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT,
+    GEMINI_JSON_TRANSIENT_RETRIES_FAST,
+    GEMINI_JSON_TRANSIENT_RETRIES_FULL,
     OPENAI_FALLBACK_MAX_ATTEMPTS,
     gemini_json_retry_delay_sec,
     gemini_json_total_sleep_budget_exceeded,
@@ -30,8 +33,12 @@ _OPENAI_JSON_SYSTEM = (
 )
 
 # Per same-model attempt caps (see product spec).
-_MAX_TRANSIENT_RETRIES_PER_MODEL = 3  # 5xx / 429 — up to 4 calls incl. first
+_MAX_TRANSIENT_RETRIES_PER_MODEL = GEMINI_JSON_TRANSIENT_RETRIES_FULL
 _MAX_JSON_PARSE_RETRIES_PER_MODEL = 1  # 1 retry after first parse fail
+
+_TRANSIENT_ERROR_TOKENS = frozenset(
+    {"api_error", "quota_or_rate_limit", "empty_response"}
+)
 
 
 def strip_json_code_fences(text: str) -> str:
@@ -470,14 +477,35 @@ def invoke_gemini_text_json(
     return None, "api_error"
 
 
-def _should_retry_same_model(err: str, transient_attempts: int, parse_attempts: int) -> bool:
+def _should_retry_same_model(
+    err: str,
+    transient_attempts: int,
+    parse_attempts: int,
+    *,
+    max_transient_retries: int,
+) -> bool:
     if err in ("model_not_found", "client_error"):
         return False
     if err == "json_parse_failed":
         return parse_attempts <= _MAX_JSON_PARSE_RETRIES_PER_MODEL
-    if err in ("api_error", "quota_or_rate_limit", "empty_response"):
-        return transient_attempts <= _MAX_TRANSIENT_RETRIES_PER_MODEL
+    if err in _TRANSIENT_ERROR_TOKENS:
+        return transient_attempts <= max_transient_retries
     return False
+
+
+def _gemini_retry_policy() -> Tuple[int, bool, int]:
+    """Return (max_transient_retries_per_model, circuit_break_enabled, circuit_threshold)."""
+    if get_openai_api_key():
+        return (
+            GEMINI_JSON_TRANSIENT_RETRIES_FAST,
+            True,
+            GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT,
+        )
+    return (
+        GEMINI_JSON_TRANSIENT_RETRIES_FULL,
+        False,
+        0,
+    )
 
 
 def _run_openai_fallback(
@@ -559,11 +587,16 @@ def run_gemini_json_model_chain(
 ) -> Tuple[Optional[Dict[str, Any]], str]:
     """Try each model with typed retries; respect total sleep budget."""
     reset_gemini_json_sleep_budget()
+    max_transient_retries, circuit_enabled, circuit_threshold = _gemini_retry_policy()
     last_err = "api_error"
     saw_model_not_found = False
     saw_other_failure = False
+    consecutive_transient = 0
+    circuit_tripped = False
 
     for model_name in models:
+        if circuit_tripped:
+            break
         transient_attempts = 0
         parse_attempts = 0
         attempt_no = 0
@@ -588,16 +621,42 @@ def run_gemini_json_model_chain(
             last_err = err or "api_error"
             if err == "model_not_found":
                 saw_model_not_found = True
+                consecutive_transient = 0
                 break
             saw_other_failure = True
             if err == "json_parse_failed":
                 parse_attempts += 1
-            elif err in ("api_error", "quota_or_rate_limit", "empty_response"):
+                consecutive_transient = 0
+            elif err in _TRANSIENT_ERROR_TOKENS:
                 transient_attempts += 1
+                consecutive_transient += 1
             elif err == "client_error":
+                consecutive_transient = 0
                 break
 
-            if not _should_retry_same_model(err, transient_attempts, parse_attempts):
+            if (
+                circuit_enabled
+                and consecutive_transient >= circuit_threshold
+            ):
+                try:
+                    logger.info(
+                        "[%s] gemini_circuit_break consecutive_transient=%s "
+                        "threshold=%s → openai_fallback",
+                        log_tag,
+                        consecutive_transient,
+                        circuit_threshold,
+                    )
+                except Exception:
+                    pass
+                circuit_tripped = True
+                break
+
+            if not _should_retry_same_model(
+                err,
+                transient_attempts,
+                parse_attempts,
+                max_transient_retries=max_transient_retries,
+            ):
                 break
             if gemini_json_total_sleep_budget_exceeded():
                 break
