@@ -10,7 +10,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from services.api_retry_policy import (
-    GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT,
+    GEMINI_JSON_CIRCUIT_BREAK_UNPRODUCTIVE,
     GEMINI_JSON_TRANSIENT_RETRIES_FAST,
     GEMINI_JSON_TRANSIENT_RETRIES_FULL,
     OPENAI_FALLBACK_MAX_ATTEMPTS,
@@ -39,6 +39,7 @@ _MAX_JSON_PARSE_RETRIES_PER_MODEL = 1  # 1 retry after first parse fail
 _TRANSIENT_ERROR_TOKENS = frozenset(
     {"api_error", "quota_or_rate_limit", "empty_response"}
 )
+_UNPRODUCTIVE_ERROR_TOKENS = _TRANSIENT_ERROR_TOKENS | frozenset({"json_parse_failed"})
 
 
 def strip_json_code_fences(text: str) -> str:
@@ -91,6 +92,14 @@ def _try_load_dict(text: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _json_looks_truncated(text: str) -> bool:
+    """Heuristic: response started a JSON object but braces never balanced."""
+    stripped = strip_json_code_fences(text or "")
+    if not stripped or "{" not in stripped:
+        return False
+    return _find_balanced_json_object(stripped) is None
+
+
 def parse_llm_json_response(
     raw_text: str,
     *,
@@ -115,11 +124,20 @@ def parse_llm_json_response(
         if parsed:
             return parsed, ""
 
+    tag = log_tag or "GEMINI_JSON"
     snippet = (raw_text or "")[:_PARSE_LOG_SNIPPET_LEN]
+    truncated = _json_looks_truncated(raw_text or "")
     try:
+        if truncated:
+            logger.warning(
+                "[%s] json_truncated snippet=%r",
+                tag,
+                snippet,
+            )
         logger.warning(
-            "[%s] json_parse_failed snippet=%r",
-            log_tag or "GEMINI_JSON",
+            "[%s] json_parse_failed truncated=%s snippet=%r",
+            tag,
+            truncated,
             snippet,
         )
     except Exception:
@@ -499,13 +517,33 @@ def _gemini_retry_policy() -> Tuple[int, bool, int]:
         return (
             GEMINI_JSON_TRANSIENT_RETRIES_FAST,
             True,
-            GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT,
+            GEMINI_JSON_CIRCUIT_BREAK_UNPRODUCTIVE,
         )
     return (
         GEMINI_JSON_TRANSIENT_RETRIES_FULL,
         False,
         0,
     )
+
+
+def _record_unproductive_failure(
+    err: str,
+    *,
+    streak: List[str],
+) -> Tuple[int, str]:
+    if err not in _UNPRODUCTIVE_ERROR_TOKENS:
+        return len(streak), (streak[-1] if streak else "")
+    streak.append(err)
+    return len(streak), err
+
+
+def _unproductive_breakdown(streak: List[str]) -> Tuple[int, int, int]:
+    transient = sum(
+        1 for e in streak if e in ("api_error", "quota_or_rate_limit")
+    )
+    parse_failed = sum(1 for e in streak if e == "json_parse_failed")
+    empty = sum(1 for e in streak if e == "empty_response")
+    return transient, parse_failed, empty
 
 
 def _run_openai_fallback(
@@ -591,7 +629,8 @@ def run_gemini_json_model_chain(
     last_err = "api_error"
     saw_model_not_found = False
     saw_other_failure = False
-    consecutive_transient = 0
+    consecutive_unproductive = 0
+    unproductive_streak: List[str] = []
     circuit_tripped = False
 
     for model_name in models:
@@ -621,29 +660,37 @@ def run_gemini_json_model_chain(
             last_err = err or "api_error"
             if err == "model_not_found":
                 saw_model_not_found = True
-                consecutive_transient = 0
+                unproductive_streak.clear()
                 break
             saw_other_failure = True
             if err == "json_parse_failed":
                 parse_attempts += 1
-                consecutive_transient = 0
             elif err in _TRANSIENT_ERROR_TOKENS:
                 transient_attempts += 1
-                consecutive_transient += 1
             elif err == "client_error":
-                consecutive_transient = 0
+                unproductive_streak.clear()
                 break
 
-            if (
-                circuit_enabled
-                and consecutive_transient >= circuit_threshold
-            ):
+            consecutive_unproductive, last_unproductive_err = _record_unproductive_failure(
+                err,
+                streak=unproductive_streak,
+            )
+
+            if circuit_enabled and consecutive_unproductive >= circuit_threshold:
+                transient_n, parse_n, empty_n = _unproductive_breakdown(
+                    unproductive_streak
+                )
                 try:
                     logger.info(
-                        "[%s] gemini_circuit_break consecutive_transient=%s "
-                        "threshold=%s → openai_fallback",
+                        "[%s] gemini_circuit_break reason=unproductive "
+                        "consecutive=%s transient=%s parse=%s empty=%s "
+                        "last=%s threshold=%s → openai_fallback",
                         log_tag,
-                        consecutive_transient,
+                        consecutive_unproductive,
+                        transient_n,
+                        parse_n,
+                        empty_n,
+                        last_unproductive_err or err,
                         circuit_threshold,
                     )
                 except Exception:

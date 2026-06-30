@@ -14,6 +14,7 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+from services.api_retry_policy import GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS
 from services.evaluation.eval_config import build_topic_feedback_model_candidates
 from services.gemini_json_client import run_gemini_json_model_chain
 from services.script_coaching_diagnose_rubric import (
@@ -285,7 +286,7 @@ def diagnose_script(
         prompt=prompt,
         models=models,
         temperature=0.2,
-        max_output_tokens=2816,
+        max_output_tokens=GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS,
         timeout_ms=GEMINI_REQUEST_TIMEOUT_MS,
         log_tag="SCRIPT_DIAGNOSE",
         on_attempt=_log_attempt,

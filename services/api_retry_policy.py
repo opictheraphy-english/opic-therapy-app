@@ -77,8 +77,13 @@ OPENAI_FALLBACK_MAX_ATTEMPTS = 2
 # Per-model transient retry caps (inclusive: value N allows N+1 calls).
 GEMINI_JSON_TRANSIENT_RETRIES_FULL = 3
 GEMINI_JSON_TRANSIENT_RETRIES_FAST = 1
-# OpenAI key present: trip circuit after this many consecutive transient failures.
-GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT = 2
+# OpenAI key present: trip circuit after this many consecutive unproductive failures.
+GEMINI_JSON_CIRCUIT_BREAK_UNPRODUCTIVE = 2
+# Backward-compatible alias (was transient-only).
+GEMINI_JSON_CIRCUIT_BREAK_TRANSIENT = GEMINI_JSON_CIRCUIT_BREAK_UNPRODUCTIVE
+
+# Short feedback / script diagnose JSON (Korean-heavy multi-field payloads).
+GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS = 4096
 
 _gemini_json_sleep_accumulator = 0.0
 

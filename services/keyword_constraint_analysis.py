@@ -7,11 +7,13 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.api_retry_policy import (
+    GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS,
     STT_RETRY_DELAYS_SEC,
     is_retryable_error,
     sleep_before_retry,
 )
 from services.evaluation.eval_config import build_topic_feedback_model_candidates
+from services.gemini_json_client import parse_llm_json_response
 from services.keyword_constraint_metrics import compute_keyword_constraint_metrics
 from services.stt_service import count_english_words
 
@@ -170,20 +172,6 @@ def _is_model_not_found_error(exc: BaseException) -> bool:
     return getattr(exc, "status_code", None) == 404
 
 
-def _parse_json_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str]:
-    from services.evaluation.gemini_multimodal_pipeline import strip_json_fence
-    from services.transcript_analysis_service import _extract_json_object
-
-    parsed = _extract_json_object(raw_text)
-    if parsed:
-        return parsed, ""
-    fence = strip_json_fence(raw_text)
-    if fence != raw_text:
-        parsed = _extract_json_object(fence)
-        if parsed:
-            return parsed, ""
-    return None, "json_parse_failed"
-
 
 def _invoke_model(
     api_key: str, prompt: str, model_name: str
@@ -197,7 +185,10 @@ def _invoke_model(
     )
     parts = [genai_types.Part.from_text(text=prompt)]
     contents = [genai_types.Content(role="user", parts=parts)]
-    config = genai_types.GenerateContentConfig(temperature=0.2, max_output_tokens=1024)
+    config = genai_types.GenerateContentConfig(
+        temperature=0.2,
+        max_output_tokens=GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS,
+    )
     try:
         response = client.models.generate_content(
             model=model_name,
@@ -227,7 +218,7 @@ def _invoke_model(
                     raw_text = (raw_text + "\n" + t).strip()
     if not raw_text:
         return None, "empty_response"
-    parsed, err = _parse_json_response(raw_text)
+    parsed, err = parse_llm_json_response(raw_text, log_tag="KEYWORD_CONSTRAINT")
     if parsed:
         return parsed, ""
     return None, err or "json_parse_failed"
