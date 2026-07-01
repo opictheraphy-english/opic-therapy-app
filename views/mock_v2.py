@@ -24,6 +24,7 @@ from components.exam_question_screen import (
     render_exam_question_shell,
     render_exam_wave_mic_observer,
 )
+from components.feedback_loading_card import render_feedback_loading_card
 from components.topbar import render_top_bar
 from services.mock_v2_question_selector import build_mock_v2_exam
 from services.stt_service import count_english_words
@@ -1379,6 +1380,7 @@ def _run_mock_v2_report_generation() -> None:
     guard_set_in_flight(st.session_state, _REPORT_GUARD_PREFIX, True)
     result: Dict[str, Any]
     try:
+        render_feedback_loading_card(message="AI 리포트를 생성하고 있어요…")
         with st.spinner("AI 리포트를 생성하고 있어요…"):
             result = analyze_mock_v2_answers(_answers_list(), _questions_list())
     except Exception as exc:

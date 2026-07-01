@@ -33,6 +33,7 @@ from components.exam_feedback_screen import (
     render_feedback_summary,
     render_keyword_constraint_feedback,
 )
+from components.feedback_loading_card import render_feedback_loading_card
 from components.exam_saved_screen import (
     render_saved_recording_header,
     render_saved_status,
@@ -3277,6 +3278,7 @@ def _run_topic_v2_feedback_request(
         else "AI 짧은 피드백을 만들고 있어요…"
     )
     try:
+        render_feedback_loading_card(message=spinner_msg)
         with st.spinner(spinner_msg):
             if _is_keyword_constraint_mode():
                 set_meta = _keyword_constraint_set_meta(q_idx)

@@ -27,6 +27,7 @@ from components.exam_question_screen import (
     render_exam_question_shell,
     render_exam_wave_mic_observer,
 )
+from components.feedback_loading_card import render_feedback_loading_card
 from components.recovery_card import (
     render_analysis_recovery_card,
     render_recovery_retry_caption_html,
@@ -1828,23 +1829,14 @@ def _render_analyzing_step() -> None:
     )
     st.markdown('<div class="mx-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
 
-    next_step = _maybe_run_v2_analysis()
+    render_feedback_loading_card(
+        message="AI가 3개 답변을 분석하고 있어요. 잠시만 기다려 주세요. (최대 60초)",
+    )
+    with st.spinner("분석 중…"):
+        next_step = _maybe_run_v2_analysis()
     if next_step != "analyzing":
         st.session_state[_KEY_STEP] = next_step
         st.rerun()
-
-    st.markdown(
-        """
-        <section class="continue-card continue-card--resume mx-landing-card" role="status">
-          <div class="cc-eyebrow">AI 분석</div>
-          <div class="cc-title">AI가 3개 답변을 분석하고 있어요</div>
-          <div class="cc-meta">묘사·경험·롤플레이 답변을 바탕으로 진단 리포트를 만들고 있습니다.<br/>
-          잠시만 기다려 주세요. (최대 60초)</div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.spinner("분석 중…")
 
 
 def _render_pending_step() -> None:
