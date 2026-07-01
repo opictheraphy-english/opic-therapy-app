@@ -188,6 +188,15 @@ def looks_like_repetition_hallucination(text: str) -> bool:
     return False
 
 
+def _flatten_transcript_whitespace(text: str) -> str:
+    """Collapse newlines and repeated spaces for UI-ready transcript text."""
+    if not text:
+        return ""
+    flattened = re.sub(r"[\r\n]+", " ", text)
+    flattened = re.sub(r" {2,}", " ", flattened)
+    return flattened.strip()
+
+
 def _normalize_transcript(raw: str) -> str:
     text = (raw or "").strip()
     if not text:
@@ -197,7 +206,7 @@ def _normalize_transcript(raw: str) -> str:
         return ""
     if lowered.startswith("(no speech"):
         return ""
-    return text
+    return _flatten_transcript_whitespace(text)
 
 
 def _stt_empty_result(*, provider: str = "gemini") -> Dict[str, Any]:

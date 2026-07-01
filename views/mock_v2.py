@@ -24,6 +24,7 @@ from components.exam_question_screen import (
     render_exam_question_shell,
     render_exam_wave_mic_observer,
 )
+from components.exam_saved_screen import render_saved_transcript
 from components.feedback_loading_card import render_feedback_loading_card
 from components.topbar import render_top_bar
 from services.mock_v2_question_selector import build_mock_v2_exam
@@ -1289,7 +1290,6 @@ def _render_mock_v2_saved() -> None:
     else:
         st.caption("녹음 파일이 없습니다.")
 
-    st.markdown("##### AI가 인식한 답변")
     transcript = str(
         saved_row.get("student_answer")
         or saved_row.get("transcript")
@@ -1300,10 +1300,12 @@ def _render_mock_v2_saved() -> None:
 
     row_status = str(saved_row.get("status") or "")
     if transcript:
-        st.info(transcript)
-    elif has_audio and (stt_status == "stt_pending" or row_status == "stt_pending"):
+        render_saved_transcript(transcript=transcript, accent="teal")
+    else:
+        st.markdown("##### AI가 인식한 답변")
+    if not transcript and has_audio and (stt_status == "stt_pending" or row_status == "stt_pending"):
         st.warning("녹음은 저장되었지만, 음성 인식이 지연되었어요.")
-    elif has_audio:
+    elif not transcript and has_audio:
         st.warning("녹음은 저장되었지만, 음성 인식이 지연되었어요.")
 
     needs_stt_retry = bool(audio_bytes) and not transcript and has_audio

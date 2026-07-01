@@ -27,6 +27,7 @@ from components.exam_question_screen import (
     render_exam_question_shell,
     render_exam_wave_mic_observer,
 )
+from components.exam_saved_screen import render_saved_transcript
 from components.feedback_loading_card import render_feedback_loading_card
 from components.recovery_card import (
     render_analysis_recovery_card,
@@ -1640,8 +1641,8 @@ def _render_v2_saved_audio_preview(q_idx: int, saved_row: Optional[Dict[str, Any
 
 
 def _render_v2_saved_transcript_preview(saved_row: Optional[Dict[str, Any]]) -> None:
-    st.markdown("##### AI가 인식한 답변")
     if not saved_row or not isinstance(saved_row, dict):
+        st.markdown("##### AI가 인식한 답변")
         st.caption("녹음 파일이 없어 인식할 수 없습니다.")
         return
 
@@ -1656,7 +1657,7 @@ def _render_v2_saved_transcript_preview(saved_row: Optional[Dict[str, Any]]) -> 
     ).strip()
 
     if transcript:
-        st.info(transcript)
+        render_saved_transcript(transcript=transcript, accent="teal")
         if _mini_v2_row_word_count(saved_row) < _MIN_ANSWER_MIN_WORDS:
             st.caption(
                 "답변은 인식되었지만, 평가하기에는 너무 짧아요. 20초 이상 말해 보세요."
@@ -1667,6 +1668,7 @@ def _render_v2_saved_transcript_preview(saved_row: Optional[Dict[str, Any]]) -> 
             )
         return
 
+    st.markdown("##### AI가 인식한 답변")
     if not has_audio or status == "recording_failed":
         st.caption("녹음 파일이 없어 인식할 수 없습니다.")
     elif stt_status == "stt_pending" or status == "stt_pending":

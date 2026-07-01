@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v8_honest_deflection"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v9_upgrade_required"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -89,7 +89,7 @@ relevance(관련성) 판단 — 느슨하게 적용할 것:
   자연스러운 대안을 **따옴표 영어로** 제시한다. 예: 반복되는 "song" 대신 "track",
   뭉뚱그린 "catchy and trendy" 대신 더 구체적인 형용사. 최소 1개, 가능하면
   2개의 교정을 "원문 표현 → 대안" 형태로 보여줄 것.
-- upgrade_sample: **영어만**, 학생 답을 살짝 다듬은 버전 **2~4문장**.
+- upgrade_sample: **절대 비우지 말 것(빈 문자열 금지).** **영어만**, 반드시 학생 답을 살짝 다듬은 **2~4문장** 예시를 작성한다.
   업그레이드 제약(반드시 지킬 것): 원문의 문장 수를 유지하고, 새 어휘는 **2개 이하**만 추가하며,
   원문에 없던 새 문법 구조는 도입하지 않는다. (학생이 따라 말할 수 있는 수준으로만 다듬는다.)
 - keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 금지.
@@ -106,11 +106,11 @@ answer_level (이 답변 1개에 대한 OPIc 레벨 — 학생의 최종·종합
 - summary, strength, practice_mission: 한국어 1~2문장.
 - correction_focus: 한국어 2~3문장 (원문 인용 포함).
 - better_expression: 한국어 설명 + 인용 구절. 너무 길지 않게.
-- upgrade_sample은 2~4 English sentences만.
+- upgrade_sample은 **반드시** 영어 2~4문장으로 채운다. JSON에서 빈 문자열·null 금지.
 - keyword_drill은 3~6개 짧은 항목.
 
 출력 형식: **JSON만** (마크다운 코드펜스 없음). 키는 정확히 이 여덟 개:
 "answer_level","summary","strength","correction_focus","better_expression","upgrade_sample","keyword_drill","practice_mission"
-- answer_level은 반드시 채운다(위 허용 토큰 1개). 나머지 텍스트 필드는 적절히 채우고,
+- answer_level은 반드시 채운다(위 허용 토큰 1개). upgrade_sample도 **반드시** 채운다(빈 문자열 금지).
   practice_mission도 비우지 말 것.
 - keyword_drill 값은 반드시 **문자열 배열** (예: ["because","actually","in my case"])."""

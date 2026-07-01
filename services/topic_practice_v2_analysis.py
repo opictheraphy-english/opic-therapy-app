@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.api_retry_policy import GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS
@@ -29,6 +30,18 @@ _STUDENT_FEEDBACK_UNAVAILABLE = (
 _FALLBACK_UPGRADE_SAMPLE = (
     "이번엔 업그레이드 예시를 만들지 못했어요. "
     "「같은 질문 다시 말하기」로 한 번 더 시도해 보세요."
+)
+
+_QUOTED_PHRASE_RE = re.compile(r'["「]([^"」]+)["」]')
+_REPLACEMENT_ARROW_RE = re.compile(
+    r'["「\']([^"」\']+)["」\']\s*(?:→|->)\s*["「\']([^"」\']+)["」\']',
+)
+_ENGLISHISH_RE = re.compile(r"[A-Za-z]")
+_LIGHT_TRANSCRIPT_SWAPS: Tuple[Tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\breally like\b", re.I), "really enjoy"),
+    (re.compile(r"\bI like\b", re.I), "I enjoy"),
+    (re.compile(r"\bI go\b", re.I), "I usually go"),
+    (re.compile(r"\bvery much\b", re.I), "a lot"),
 )
 TOPIC_V2_KEYWORD_DRILL_EMPTY_MESSAGE = (
     "이번엔 추천 키워드를 만들지 못했어요. "
@@ -211,6 +224,126 @@ def _fallback_keyword_drill_from_topic(answer: Dict[str, Any]) -> List[str]:
     return random.sample(pool, count)
 
 
+def _looks_englishish(text: str) -> bool:
+    raw = _coerce_str(text)
+    if not raw:
+        return False
+    letters = len(_ENGLISHISH_RE.findall(raw))
+    return letters >= max(3, len(raw) // 3)
+
+
+def _extract_quoted_phrases(text: str) -> List[str]:
+    out: List[str] = []
+    for match in _QUOTED_PHRASE_RE.finditer(text or ""):
+        phrase = _coerce_str(match.group(1))
+        if phrase and _looks_englishish(phrase) and phrase not in out:
+            out.append(phrase)
+    return out
+
+
+def _extract_replacement_pairs(text: str) -> List[Tuple[str, str]]:
+    pairs: List[Tuple[str, str]] = []
+    for match in _REPLACEMENT_ARROW_RE.finditer(text or ""):
+        old = _coerce_str(match.group(1))
+        new = _coerce_str(match.group(2))
+        if old and new and _looks_englishish(old) and _looks_englishish(new):
+            pairs.append((old, new))
+    return pairs
+
+
+def _replace_phrase_ci(text: str, old: str, new: str) -> str:
+    if not text or not old:
+        return text
+    pattern = re.compile(re.escape(old), re.I)
+    return pattern.sub(new, text, count=1)
+
+
+def _split_transcript_sentences(text: str) -> List[str]:
+    raw = re.sub(r"\s+", " ", (text or "").strip())
+    if not raw:
+        return []
+    parts = re.split(r"(?<=[.!?])\s+", raw)
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _polish_transcript_light(text: str) -> str:
+    out = re.sub(r"\s+", " ", (text or "").strip())
+    for pattern, repl in _LIGHT_TRANSCRIPT_SWAPS:
+        out = pattern.sub(repl, out)
+    return out.strip()
+
+
+def _upgrade_sample_from_transcript(text: str, *, max_sentences: int = 4) -> str:
+    polished = _polish_transcript_light(text)
+    sentences = _split_transcript_sentences(polished)
+    if not sentences:
+        return polished
+    return " ".join(sentences[:max_sentences]).strip()
+
+
+def _fallback_upgrade_sample_from_answer(
+    answer: Dict[str, Any],
+    norm: Dict[str, Any],
+) -> str:
+    """Build a substantive English upgrade sample when the model omits the field."""
+    transcript = _answer_transcript(answer)
+    correction = _coerce_str(norm.get("correction_focus"))
+    better = _coerce_str(norm.get("better_expression"))
+
+    pairs: List[Tuple[str, str]] = []
+    for field in (correction, better):
+        pairs.extend(_extract_replacement_pairs(field))
+
+    if transcript:
+        upgraded = transcript
+        for old, new in pairs:
+            upgraded = _replace_phrase_ci(upgraded, old, new)
+        upgraded = _polish_transcript_light(upgraded)
+        sample = _upgrade_sample_from_transcript(upgraded)
+        if sample and count_english_words(sample) >= 3:
+            if sample != transcript or pairs:
+                return sample
+            if count_english_words(sample) >= 5:
+                return sample
+
+    english_quotes: List[str] = []
+    for field in (better, correction):
+        for phrase in _extract_quoted_phrases(field):
+            if phrase not in english_quotes:
+                english_quotes.append(phrase)
+
+    if transcript and english_quotes:
+        base_sents = _split_transcript_sentences(_polish_transcript_light(transcript))
+        lead = base_sents[0] if base_sents else _polish_transcript_light(transcript)
+        alt = english_quotes[-1]
+        if alt.lower() not in lead.lower():
+            if lead.endswith((".", "!", "?")):
+                return f"{lead} For example, {alt}."
+            return f"{lead}. For example, {alt}."
+        if len(english_quotes) >= 2:
+            return f"{english_quotes[0]} {english_quotes[1]}."
+        return english_quotes[0]
+
+    if english_quotes:
+        return " ".join(english_quotes[:2]).strip()
+
+    if transcript:
+        sample = _upgrade_sample_from_transcript(transcript)
+        if sample and count_english_words(sample) >= 3:
+            return sample
+
+    hint = better or correction
+    if hint:
+        return (
+            "Try saying your answer again with this in mind: "
+            f"{hint[:180].rstrip()}…"
+            if len(hint) > 180
+            else f"Try saying your answer again with this in mind: {hint}"
+        )
+
+    return _FALLBACK_UPGRADE_SAMPLE
+
+
 def _apply_ok_field_fallbacks(norm: Dict[str, Any], answer: Dict[str, Any]) -> None:
     """Fill missing optional coaching fields after a successful model parse."""
     if not norm.get("summary"):
@@ -226,7 +359,7 @@ def _apply_ok_field_fallbacks(norm: Dict[str, Any], answer: Dict[str, Any]) -> N
             "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
         )
     if not _coerce_str(norm.get("upgrade_sample")):
-        norm["upgrade_sample"] = _FALLBACK_UPGRADE_SAMPLE
+        norm["upgrade_sample"] = _fallback_upgrade_sample_from_answer(answer, norm)
     if not norm.get("practice_mission"):
         norm["practice_mission"] = (
             "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."

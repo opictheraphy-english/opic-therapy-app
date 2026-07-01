@@ -10,12 +10,13 @@ from services.topic_practice_v2_analysis import (
     _FALLBACK_UPGRADE_SAMPLE,
     _apply_ok_field_fallbacks,
     _fallback_keyword_drill_from_topic,
+    _fallback_upgrade_sample_from_answer,
     _normalize_success,
 )
 
 
 class TopicV2FeedbackFallbackTests(unittest.TestCase):
-    def test_apply_ok_field_fallbacks_upgrade_sample(self) -> None:
+    def test_apply_ok_field_fallbacks_upgrade_sample_from_transcript(self) -> None:
         norm = _normalize_success(
             {
                 "summary": "ok",
@@ -27,8 +28,34 @@ class TopicV2FeedbackFallbackTests(unittest.TestCase):
                 "practice_mission": "ok",
             }
         )
-        _apply_ok_field_fallbacks(norm, {"topic": "unknown_topic_xyz"})
-        self.assertEqual(norm["upgrade_sample"], _FALLBACK_UPGRADE_SAMPLE)
+        answer = {
+            "topic": "unknown_topic_xyz",
+            "transcript": "I like to go to the cafe. I like coffee very much.",
+        }
+        _apply_ok_field_fallbacks(norm, answer)
+        self.assertNotEqual(norm["upgrade_sample"], _FALLBACK_UPGRADE_SAMPLE)
+        self.assertIn("enjoy", norm["upgrade_sample"].lower())
+
+    def test_fallback_upgrade_sample_uses_correction_arrow_pairs(self) -> None:
+        norm = _normalize_success(
+            {
+                "summary": "ok",
+                "strength": "ok",
+                "correction_focus": (
+                    '"what kind of songs you are interested" → "what kinds of songs you are interested in"'
+                ),
+                "better_expression": "ok",
+                "upgrade_sample": "",
+                "keyword_drill": ["because"],
+                "practice_mission": "ok",
+            }
+        )
+        answer = {
+            "transcript": "I like what kind of songs you are interested when I study.",
+        }
+        sample = _fallback_upgrade_sample_from_answer(answer, norm)
+        self.assertIn("interested in", sample.lower())
+        self.assertNotEqual(sample, _FALLBACK_UPGRADE_SAMPLE)
 
     def test_apply_ok_field_fallbacks_preserves_nonempty_upgrade(self) -> None:
         norm = _normalize_success(
