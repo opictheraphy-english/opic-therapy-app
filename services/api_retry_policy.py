@@ -72,7 +72,9 @@ REPORT_RETRY_DELAYS_SEC: Tuple[int, ...] = (3, 8)
 GEMINI_JSON_RETRY_BASE_SEC: Tuple[float, ...] = (0.5, 1.5, 3.0)
 GEMINI_JSON_RETRY_JITTER_SEC = 0.3
 GEMINI_JSON_MAX_TOTAL_SLEEP_SEC = 8.0
+# OpenAI primary (gpt-5-nano) transient retries before Gemini fallback.
 OPENAI_FALLBACK_MAX_ATTEMPTS = 2
+OPENAI_JSON_PRIMARY_MAX_ATTEMPTS = OPENAI_FALLBACK_MAX_ATTEMPTS
 
 # Per-model transient retry caps (inclusive: value N allows N+1 calls).
 GEMINI_JSON_TRANSIENT_RETRIES_FULL = 3

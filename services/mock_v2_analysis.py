@@ -9,15 +9,9 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from services.api_retry_policy import (
-    REPORT_MAX_ATTEMPTS,
-    REPORT_RETRY_DELAYS_SEC,
-    is_retryable_error,
-    log_api_call_result,
-    should_try_next_model,
-    sleep_before_retry,
-)
+from services.api_retry_policy import REPORT_MAX_ATTEMPTS, REPORT_RETRY_DELAYS_SEC
 from services.evaluation.eval_config import REAL_REPORT_MODEL_NAME, _dedupe_models
+from services.gemini_json_client import run_report_json_model_chain
 from services.mock_v2_rubric import RUBRIC_VERSION, build_mock_v2_rubric_prompt
 from services.speech_rate_scoring import (
     apply_speech_rate_to_report,
@@ -31,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 GEMINI_REQUEST_TIMEOUT_SEC = 45
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
-ANALYSIS_WRAPPER_TIMEOUT_SEC = 55
+# OpenAI primary (~15s) + Gemini fallback (HTTP 45s) needs headroom over old 55s.
+ANALYSIS_WRAPPER_TIMEOUT_SEC = 70
 # Visible JSON + thinking tokens share this cap (gemini-2.5-flash).
 MOCK_V2_REPORT_MAX_OUTPUT_TOKENS = 16384
 
@@ -263,18 +258,6 @@ def _insufficient_exam_report(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _response_finish_reason(response: Any) -> str:
-    for cand in getattr(response, "candidates", None) or []:
-        fr = getattr(cand, "finish_reason", None)
-        if fr is not None:
-            return str(fr).strip()
-    return ""
-
-
-def _is_max_tokens_finish(finish_reason: str) -> bool:
-    return "max_tokens" in (finish_reason or "").lower()
-
-
 def _classify_gemini_error(err: str) -> str:
     err_s = (err or "").strip()
     err_l = err_s.lower()
@@ -314,144 +297,6 @@ def _parse_report_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str
         if parsed:
             return parsed, ""
     return None, "json_parse_failed"
-
-
-def _log_report_call_failure(
-    *,
-    attempt: int,
-    model_name: str,
-    error_category: str,
-    error_message: str,
-    finish_reason: str,
-) -> None:
-    try:
-        logger.warning(
-            "[MOCK_V2_REPORT_RETRY] attempt=%s model=%s error_category=%s "
-            "error_message=%s finish_reason=%s",
-            attempt,
-            model_name or "—",
-            error_category or "—",
-            error_message or "—",
-            finish_reason or "—",
-        )
-    except Exception:
-        pass
-
-
-def _invoke_report_model(
-    api_key: str, prompt: str, model_name: str
-) -> Tuple[Optional[Dict[str, Any]], str, str, str]:
-    from google import genai
-    from google.genai import types as genai_types
-
-    client = genai.Client(
-        api_key=api_key,
-        http_options=genai_types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
-    )
-    parts = [genai_types.Part.from_text(text=prompt)]
-    contents = [genai_types.Content(role="user", parts=parts)]
-    config = genai_types.GenerateContentConfig(
-        temperature=0.25,
-        max_output_tokens=MOCK_V2_REPORT_MAX_OUTPUT_TOKENS,
-    )
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
-        )
-    except Exception as exc:
-        return None, f"{type(exc).__name__}: {exc}", model_name, ""
-
-    finish_reason = _response_finish_reason(response)
-    raw_text = (getattr(response, "text", "") or "").strip()
-    if not raw_text:
-        for cand in getattr(response, "candidates", None) or []:
-            content = getattr(cand, "content", None)
-            for part in getattr(content, "parts", None) or []:
-                t = getattr(part, "text", None)
-                if t:
-                    raw_text = (raw_text + "\n" + t).strip()
-    if not raw_text:
-        err = "empty_response"
-        if _is_max_tokens_finish(finish_reason):
-            err = "output_truncated"
-        return None, err, model_name, finish_reason
-
-    parsed, parse_err = _parse_report_response(raw_text)
-    if parsed:
-        return parsed, "", model_name, finish_reason
-
-    if _is_max_tokens_finish(finish_reason):
-        return None, "output_truncated", model_name, finish_reason
-    return None, parse_err or "json_parse_failed", model_name, finish_reason
-
-
-def _call_gemini(api_key: str, prompt: str) -> Tuple[Optional[Dict[str, Any]], str, str]:
-    models = build_mock_v2_report_model_candidates()
-    if not models:
-        return None, "no_report_models_configured", ""
-
-    t0 = time.perf_counter()
-    last_error = ""
-    last_category = ""
-    last_finish_reason = ""
-    model_idx = 0
-    attempt_num = 0
-
-    while attempt_num < REPORT_MAX_ATTEMPTS and model_idx < len(models):
-        attempt_num += 1
-        sleep_before_retry(attempt_num, REPORT_RETRY_DELAYS_SEC)
-        model_name = models[model_idx]
-
-        parsed, err_msg, _, finish_reason = _invoke_report_model(
-            api_key, prompt, model_name
-        )
-        if parsed:
-            elapsed = time.perf_counter() - t0
-            log_api_call_result(
-                service="mock_v2_report",
-                model_used=model_name,
-                attempts=attempt_num,
-                success=True,
-                error_category="",
-                elapsed=elapsed,
-            )
-            return parsed, "", model_name
-
-        last_error = err_msg or "gemini_failed"
-        last_category = _classify_gemini_error(last_error)
-        last_finish_reason = finish_reason
-
-        _log_report_call_failure(
-            attempt=attempt_num,
-            model_name=model_name,
-            error_category=last_category,
-            error_message=last_error,
-            finish_reason=last_finish_reason,
-        )
-
-        if last_category == "model_not_found" and model_idx + 1 < len(models):
-            model_idx += 1
-            continue
-        if not is_retryable_error(last_category):
-            break
-        if should_try_next_model(last_category) and model_idx + 1 < len(models):
-            model_idx += 1
-            continue
-        if attempt_num >= REPORT_MAX_ATTEMPTS:
-            break
-
-    elapsed = time.perf_counter() - t0
-    log_api_call_result(
-        service="mock_v2_report",
-        model_used=models[min(model_idx, len(models) - 1)] if models else "",
-        attempts=attempt_num,
-        success=False,
-        error_category=last_category,
-        elapsed=elapsed,
-    )
-    return None, last_error or last_category, models[min(model_idx, len(models) - 1)] if models else ""
 
 
 def _normalize_parsed(
@@ -577,7 +422,20 @@ def _analyze_core(
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     prompt = rubric + "\n\nStudent data JSON:\n" + payload_json
 
-    parsed, err, model = _call_gemini(api_key, prompt)
+    parsed, err, model = run_report_json_model_chain(
+        api_key=api_key,
+        prompt=prompt,
+        models=models,
+        temperature=0.25,
+        max_output_tokens=MOCK_V2_REPORT_MAX_OUTPUT_TOKENS,
+        openai_max_completion_tokens=MOCK_V2_REPORT_MAX_OUTPUT_TOKENS,
+        timeout_ms=GEMINI_REQUEST_TIMEOUT_MS,
+        log_tag="MOCK_V2_REPORT",
+        parser_fn=_parse_report_response,
+        retry_max_attempts=REPORT_MAX_ATTEMPTS,
+        retry_delays_sec=REPORT_RETRY_DELAYS_SEC,
+        detect_truncation=True,
+    )
     if not parsed:
         category = _classify_gemini_error(err or "")
         message = "analysis_timeout" if category == "timeout" else (err or category)
@@ -660,7 +518,7 @@ def analyze_mock_v2_answers(
 ) -> Dict[str, Any]:
     """
     Run one Mock V2 final report from saved answer rows (text only).
-    Does not read audio blobs. Max 2 API attempts (see REPORT_MAX_ATTEMPTS).
+    OpenAI-first when OPENAI_API_KEY is set; HTTP timeout 45s + wrapper 70s.
     """
     from utils.secrets import get_gemini_api_key
 

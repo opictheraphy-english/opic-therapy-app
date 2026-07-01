@@ -16,8 +16,11 @@ from services.api_retry_policy import (
     OPENAI_FALLBACK_MAX_ATTEMPTS,
     gemini_json_retry_delay_sec,
     gemini_json_total_sleep_budget_exceeded,
+    is_retryable_error,
     record_gemini_json_sleep,
     reset_gemini_json_sleep_budget,
+    should_try_next_model,
+    sleep_before_retry,
 )
 from utils.secrets import get_openai_api_key
 
@@ -40,6 +43,14 @@ _TRANSIENT_ERROR_TOKENS = frozenset(
     {"api_error", "quota_or_rate_limit", "empty_response"}
 )
 _UNPRODUCTIVE_ERROR_TOKENS = _TRANSIENT_ERROR_TOKENS | frozenset({"json_parse_failed"})
+_IMMEDIATE_FAIL_ERROR_TOKENS = frozenset({"output_truncated", "client_error", "model_not_found"})
+
+ParserFn = Callable[[str], Tuple[Optional[Dict[str, Any]], str]]
+
+
+def _is_truncated_finish_reason(finish_reason: str) -> bool:
+    low = (finish_reason or "").strip().lower()
+    return "max_tokens" in low or low == "length"
 
 
 def strip_json_code_fences(text: str) -> str:
@@ -272,11 +283,12 @@ def _log_openai_finish_reason(
     log_tag: str,
     model: str,
     finish_reason: str,
+    openai_log_role: str = "openai_fallback",
     note: str = "",
 ) -> None:
     suffix = f" {note}" if note else ""
     line = (
-        f"[{log_tag}] openai_fallback model={model} "
+        f"[{log_tag}] {openai_log_role} model={model} "
         f"finish_reason={finish_reason or '—'}{suffix}"
     )
     try:
@@ -285,8 +297,9 @@ def _log_openai_finish_reason(
         pass
     try:
         logger.info(
-            "[%s] openai_fallback model=%s finish_reason=%s%s",
+            "[%s] %s model=%s finish_reason=%s%s",
             log_tag,
+            openai_log_role,
             model,
             finish_reason or "—",
             suffix,
@@ -301,8 +314,11 @@ def invoke_openai_text_json(
     model: str = OPENAI_FALLBACK_MODEL,
     system: Optional[str] = None,
     log_tag: str = "",
+    openai_log_role: str = "openai_fallback",
     max_output_tokens: int = OPENAI_FALLBACK_MAX_COMPLETION_TOKENS,
     temperature: float = 0.2,
+    parser_fn: Optional[ParserFn] = None,
+    detect_truncation: bool = False,
 ) -> Tuple[Optional[Dict[str, Any]], str]:
     """Single OpenAI chat completion with JSON mode. Returns (parsed_dict, error_token)."""
     api_key = get_openai_api_key()
@@ -337,8 +353,9 @@ def invoke_openai_text_json(
         err = classify_openai_exception(exc)
         try:
             logger.warning(
-                "[%s] openai_fallback model=%s error_category=%s exc_type=%s",
+                "[%s] %s model=%s error_category=%s exc_type=%s",
                 log_tag,
+                openai_log_role,
                 model,
                 err,
                 type(exc).__name__,
@@ -348,7 +365,12 @@ def invoke_openai_text_json(
         return None, err
 
     raw_text, finish_reason = _openai_extract_choice_text(response)
-    _log_openai_finish_reason(log_tag=log_tag, model=model, finish_reason=finish_reason)
+    _log_openai_finish_reason(
+        log_tag=log_tag,
+        model=model,
+        finish_reason=finish_reason,
+        openai_log_role=openai_log_role,
+    )
 
     if not raw_text and _openai_model_restricts_sampling(model):
         retry_tokens = OPENAI_FALLBACK_EMPTY_RETRY_MAX_COMPLETION_TOKENS
@@ -367,13 +389,15 @@ def invoke_openai_text_json(
                 log_tag=log_tag,
                 model=model,
                 finish_reason=finish_reason,
+                openai_log_role=openai_log_role,
                 note="empty_retry",
             )
         except Exception as exc:
             try:
                 logger.warning(
-                    "[%s] openai_fallback model=%s empty_retry_failed exc_type=%s",
+                    "[%s] %s model=%s empty_retry_failed exc_type=%s",
                     log_tag,
+                    openai_log_role,
                     model,
                     type(exc).__name__,
                 )
@@ -385,11 +409,25 @@ def invoke_openai_text_json(
             log_tag=log_tag,
             model=model,
             finish_reason=finish_reason,
+            openai_log_role=openai_log_role,
             note="empty_response",
         )
+        if detect_truncation and _is_truncated_finish_reason(finish_reason):
+            return None, "output_truncated"
         return None, "empty_response"
 
-    parsed, parse_err = parse_llm_json_response(raw_text, log_tag=log_tag)
+    if detect_truncation and _is_truncated_finish_reason(finish_reason):
+        _log_openai_finish_reason(
+            log_tag=log_tag,
+            model=model,
+            finish_reason=finish_reason,
+            openai_log_role=openai_log_role,
+            note="output_truncated",
+        )
+        return None, "output_truncated"
+
+    parse = parser_fn or (lambda text: parse_llm_json_response(text, log_tag=log_tag))
+    parsed, parse_err = parse(raw_text)
     if parsed:
         return parsed, ""
     return None, parse_err or "json_parse_failed"
@@ -495,6 +533,87 @@ def invoke_gemini_text_json(
     return None, "api_error"
 
 
+def _gemini_response_finish_reason(response: Any) -> str:
+    for cand in getattr(response, "candidates", None) or []:
+        fr = getattr(cand, "finish_reason", None)
+        if fr is not None:
+            return str(fr).strip()
+    return ""
+
+
+def invoke_gemini_report_text_json(
+    *,
+    api_key: str,
+    prompt: str,
+    model_name: str,
+    temperature: float,
+    max_output_tokens: int,
+    timeout_ms: int,
+    log_tag: str,
+    parser_fn: ParserFn,
+    detect_truncation: bool = False,
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Single Gemini report call with injectable parser (no JSON mime mode)."""
+    from google import genai
+    from google.genai import types as genai_types
+
+    client = genai.Client(
+        api_key=api_key,
+        http_options=genai_types.HttpOptions(timeout=timeout_ms),
+    )
+    parts = [genai_types.Part.from_text(text=prompt)]
+    contents = [genai_types.Content(role="user", parts=parts)]
+    config = genai_types.GenerateContentConfig(
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+    )
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=config,
+        )
+    except Exception as exc:
+        err = classify_gemini_exception(exc)
+        try:
+            logger.warning(
+                "[%s] model=%s error_category=%s exc_type=%s",
+                log_tag,
+                model_name,
+                err,
+                type(exc).__name__,
+            )
+        except Exception:
+            pass
+        return None, err
+
+    finish_reason = _gemini_response_finish_reason(response)
+    raw_text = _collect_response_text(response)
+    if not raw_text:
+        if detect_truncation and _is_truncated_finish_reason(finish_reason):
+            return None, "output_truncated"
+        return None, "empty_response"
+
+    if detect_truncation and _is_truncated_finish_reason(finish_reason):
+        try:
+            logger.warning(
+                "[%s] model=%s finish_reason=%s error_category=output_truncated",
+                log_tag,
+                model_name,
+                finish_reason or "—",
+            )
+        except Exception:
+            pass
+        return None, "output_truncated"
+
+    parsed, parse_err = parser_fn(raw_text)
+    if parsed:
+        return parsed, ""
+    if detect_truncation and _is_truncated_finish_reason(finish_reason):
+        return None, "output_truncated"
+    return None, parse_err or "json_parse_failed"
+
+
 def _should_retry_same_model(
     err: str,
     transient_attempts: int,
@@ -502,7 +621,7 @@ def _should_retry_same_model(
     *,
     max_transient_retries: int,
 ) -> bool:
-    if err in ("model_not_found", "client_error"):
+    if err in _IMMEDIATE_FAIL_ERROR_TOKENS:
         return False
     if err == "json_parse_failed":
         return parse_attempts <= _MAX_JSON_PARSE_RETRIES_PER_MODEL
@@ -511,7 +630,7 @@ def _should_retry_same_model(
     return False
 
 
-def _gemini_retry_policy() -> Tuple[int, bool, int]:
+def _json_chain_retry_policy() -> Tuple[int, bool, int]:
     """Return (max_transient_retries_per_model, circuit_break_enabled, circuit_threshold)."""
     if get_openai_api_key():
         return (
@@ -546,41 +665,72 @@ def _unproductive_breakdown(streak: List[str]) -> Tuple[int, int, int]:
     return transient, parse_failed, empty
 
 
-def _run_openai_fallback(
+def _openai_primary_max_transient_retries() -> int:
+    """Inclusive cap aligned with OPENAI_FALLBACK_MAX_ATTEMPTS (2 calls total)."""
+    return max(0, OPENAI_FALLBACK_MAX_ATTEMPTS - 1)
+
+
+def _run_openai_primary(
     *,
     prompt: str,
     temperature: float,
-    max_output_tokens: int,
     log_tag: str,
+    openai_model: str = OPENAI_FALLBACK_MODEL,
+    max_completion_tokens: int = OPENAI_FALLBACK_MAX_COMPLETION_TOKENS,
+    parser_fn: Optional[ParserFn] = None,
+    detect_truncation: bool = False,
 ) -> Tuple[Optional[Dict[str, Any]], str]:
-    """Last-resort OpenAI JSON call after Gemini chain exhaustion."""
+    """First provider when OPENAI_API_KEY is set; circuit-break → Gemini fallback."""
     if not get_openai_api_key():
         return None, "openai_skipped"
 
+    circuit_threshold = GEMINI_JSON_CIRCUIT_BREAK_UNPRODUCTIVE
+    max_transient_retries = _openai_primary_max_transient_retries()
+    last_err = "api_error"
+    consecutive_unproductive = 0
+    unproductive_streak: List[str] = []
+    transient_attempts = 0
+    parse_attempts = 0
+    attempt_no = 0
+
     try:
         logger.info(
-            "[%s] openai_fallback model=%s",
+            "[%s] openai_primary model=%s",
             log_tag,
-            OPENAI_FALLBACK_MODEL,
+            openai_model,
         )
     except Exception:
         pass
 
-    last_err = "api_error"
-    for attempt_no in range(1, OPENAI_FALLBACK_MAX_ATTEMPTS + 1):
+    while True:
+        attempt_no += 1
+        try:
+            logger.info(
+                "[%s] openai_primary attempt=%s model=%s",
+                log_tag,
+                attempt_no,
+                openai_model,
+            )
+        except Exception:
+            pass
+
         parsed, err = invoke_openai_text_json(
             prompt=prompt,
-            model=OPENAI_FALLBACK_MODEL,
+            model=openai_model,
             log_tag=log_tag,
-            max_output_tokens=OPENAI_FALLBACK_MAX_COMPLETION_TOKENS,
+            openai_log_role="openai_primary",
+            max_output_tokens=max_completion_tokens,
             temperature=temperature,
+            parser_fn=parser_fn,
+            detect_truncation=detect_truncation,
         )
         if parsed:
             try:
                 logger.info(
-                    "[%s] openai_fallback model=%s success",
+                    "[%s] openai_primary model=%s success attempt=%s",
                     log_tag,
-                    OPENAI_FALLBACK_MODEL,
+                    openai_model,
+                    attempt_no,
                 )
             except Exception:
                 pass
@@ -588,13 +738,50 @@ def _run_openai_fallback(
         last_err = err or "api_error"
         if err == "openai_skipped":
             return None, "openai_skipped"
-        if err not in ("api_error", "quota_or_rate_limit"):
+        if err in _IMMEDIATE_FAIL_ERROR_TOKENS:
             break
-        if attempt_no >= OPENAI_FALLBACK_MAX_ATTEMPTS:
+        if err == "json_parse_failed":
+            parse_attempts += 1
+        elif err in _TRANSIENT_ERROR_TOKENS:
+            transient_attempts += 1
+        elif err == "client_error":
+            unproductive_streak.clear()
+            break
+
+        consecutive_unproductive, last_unproductive_err = _record_unproductive_failure(
+            err,
+            streak=unproductive_streak,
+        )
+
+        if consecutive_unproductive >= circuit_threshold:
+            transient_n, parse_n, empty_n = _unproductive_breakdown(unproductive_streak)
+            try:
+                logger.info(
+                    "[%s] openai_circuit_break reason=unproductive "
+                    "consecutive=%s transient=%s parse=%s empty=%s "
+                    "last=%s threshold=%s → gemini_fallback",
+                    log_tag,
+                    consecutive_unproductive,
+                    transient_n,
+                    parse_n,
+                    empty_n,
+                    last_unproductive_err or err,
+                    circuit_threshold,
+                )
+            except Exception:
+                pass
+            break
+
+        if not _should_retry_same_model(
+            err,
+            transient_attempts,
+            parse_attempts,
+            max_transient_retries=max_transient_retries,
+        ):
             break
         if gemini_json_total_sleep_budget_exceeded():
             break
-        delay = gemini_json_retry_delay_sec(attempt_no)
+        delay = gemini_json_retry_delay_sec(transient_attempts + parse_attempts)
         if delay <= 0:
             break
         record_gemini_json_sleep(delay)
@@ -602,17 +789,18 @@ def _run_openai_fallback(
 
     try:
         logger.warning(
-            "[%s] openai_fallback model=%s failed err=%s",
+            "[%s] openai_primary model=%s failed err=%s attempts=%s",
             log_tag,
-            OPENAI_FALLBACK_MODEL,
+            openai_model,
             last_err,
+            attempt_no,
         )
     except Exception:
         pass
     return None, last_err
 
 
-def run_gemini_json_model_chain(
+def _run_gemini_json_chain(
     *,
     api_key: str,
     prompt: str,
@@ -621,17 +809,18 @@ def run_gemini_json_model_chain(
     max_output_tokens: int,
     timeout_ms: int,
     log_tag: str,
+    log_as_fallback: bool,
     on_attempt: Optional[Callable[[str, int], None]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str]:
-    """Try each model with typed retries; respect total sleep budget."""
-    reset_gemini_json_sleep_budget()
-    max_transient_retries, circuit_enabled, circuit_threshold = _gemini_retry_policy()
+    """Gemini model chain; fast circuit when OpenAI was already tried."""
+    max_transient_retries, circuit_enabled, circuit_threshold = _json_chain_retry_policy()
     last_err = "api_error"
     saw_model_not_found = False
     saw_other_failure = False
     consecutive_unproductive = 0
     unproductive_streak: List[str] = []
     circuit_tripped = False
+    gemini_log_role = "gemini_fallback" if log_as_fallback else "gemini_primary"
 
     for model_name in models:
         if circuit_tripped:
@@ -641,6 +830,16 @@ def run_gemini_json_model_chain(
         attempt_no = 0
         while True:
             attempt_no += 1
+            try:
+                logger.info(
+                    "[%s] %s model=%s attempt=%s",
+                    log_tag,
+                    gemini_log_role,
+                    model_name,
+                    attempt_no,
+                )
+            except Exception:
+                pass
             if on_attempt:
                 try:
                     on_attempt(model_name, attempt_no)
@@ -656,6 +855,16 @@ def run_gemini_json_model_chain(
                 log_tag=log_tag,
             )
             if parsed:
+                try:
+                    logger.info(
+                        "[%s] %s model=%s success attempt=%s",
+                        log_tag,
+                        gemini_log_role,
+                        model_name,
+                        attempt_no,
+                    )
+                except Exception:
+                    pass
                 return parsed, ""
             last_err = err or "api_error"
             if err == "model_not_found":
@@ -680,11 +889,281 @@ def run_gemini_json_model_chain(
                 transient_n, parse_n, empty_n = _unproductive_breakdown(
                     unproductive_streak
                 )
+                next_step = "stop" if log_as_fallback else "openai_fallback"
                 try:
                     logger.info(
                         "[%s] gemini_circuit_break reason=unproductive "
                         "consecutive=%s transient=%s parse=%s empty=%s "
-                        "last=%s threshold=%s → openai_fallback",
+                        "last=%s threshold=%s → %s",
+                        log_tag,
+                        consecutive_unproductive,
+                        transient_n,
+                        parse_n,
+                        empty_n,
+                        last_unproductive_err or err,
+                        circuit_threshold,
+                        next_step,
+                    )
+                except Exception:
+                    pass
+                circuit_tripped = True
+                break
+
+            if not _should_retry_same_model(
+                err,
+                transient_attempts,
+                parse_attempts,
+                max_transient_retries=max_transient_retries,
+            ):
+                break
+            if gemini_json_total_sleep_budget_exceeded():
+                break
+            delay = gemini_json_retry_delay_sec(transient_attempts + parse_attempts)
+            if delay <= 0:
+                break
+            record_gemini_json_sleep(delay)
+            time.sleep(delay)
+
+    if saw_model_not_found and not saw_other_failure:
+        return None, "model_not_found"
+    return None, last_err
+
+
+def run_gemini_json_model_chain(
+    *,
+    api_key: str,
+    prompt: str,
+    models: List[str],
+    temperature: float,
+    max_output_tokens: int,
+    timeout_ms: int,
+    log_tag: str,
+    on_attempt: Optional[Callable[[str, int], None]] = None,
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    """OpenAI primary (when key present), then Gemini model chain with typed retries."""
+    reset_gemini_json_sleep_budget()
+    openai_key_present = bool(get_openai_api_key())
+
+    if openai_key_present:
+        try:
+            logger.info("[%s] provider_order=openai_first", log_tag)
+        except Exception:
+            pass
+        parsed, openai_err = _run_openai_primary(
+            prompt=prompt,
+            temperature=temperature,
+            log_tag=log_tag,
+        )
+        if parsed:
+            return parsed, ""
+        if openai_err != "openai_skipped":
+            try:
+                logger.info(
+                    "[%s] openai_primary exhausted err=%s → gemini_fallback",
+                    log_tag,
+                    openai_err,
+                )
+            except Exception:
+                pass
+    else:
+        try:
+            logger.info("[%s] provider_order=gemini_only", log_tag)
+        except Exception:
+            pass
+
+    return _run_gemini_json_chain(
+        api_key=api_key,
+        prompt=prompt,
+        models=models,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        timeout_ms=timeout_ms,
+        log_tag=log_tag,
+        log_as_fallback=openai_key_present,
+        on_attempt=on_attempt,
+    )
+
+
+def _run_report_gemini_only_chain(
+    *,
+    api_key: str,
+    prompt: str,
+    models: List[str],
+    temperature: float,
+    max_output_tokens: int,
+    timeout_ms: int,
+    log_tag: str,
+    parser_fn: ParserFn,
+    detect_truncation: bool,
+    retry_max_attempts: int,
+    retry_delays_sec: Tuple[int, ...],
+) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    """Gemini-only report path — REPORT_MAX_ATTEMPTS + model fallback."""
+    if not models:
+        return None, "no_report_models_configured", ""
+
+    last_error = "api_error"
+    model_idx = 0
+    attempt_num = 0
+
+    while attempt_num < retry_max_attempts and model_idx < len(models):
+        attempt_num += 1
+        sleep_before_retry(attempt_num, retry_delays_sec)
+        model_name = models[model_idx]
+        try:
+            logger.info(
+                "[%s] gemini_primary model=%s attempt=%s",
+                log_tag,
+                model_name,
+                attempt_num,
+            )
+        except Exception:
+            pass
+
+        parsed, err = invoke_gemini_report_text_json(
+            api_key=api_key,
+            prompt=prompt,
+            model_name=model_name,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            timeout_ms=timeout_ms,
+            log_tag=log_tag,
+            parser_fn=parser_fn,
+            detect_truncation=detect_truncation,
+        )
+        if parsed:
+            try:
+                logger.info(
+                    "[%s] gemini_primary model=%s success attempt=%s",
+                    log_tag,
+                    model_name,
+                    attempt_num,
+                )
+            except Exception:
+                pass
+            return parsed, "", model_name
+
+        last_error = err or "api_error"
+        try:
+            logger.warning(
+                "[%s] gemini_primary model=%s attempt=%s error_category=%s",
+                log_tag,
+                model_name,
+                attempt_num,
+                last_error,
+            )
+        except Exception:
+            pass
+
+        if err == "model_not_found" and model_idx + 1 < len(models):
+            model_idx += 1
+            continue
+        if err in _IMMEDIATE_FAIL_ERROR_TOKENS:
+            if err == "model_not_found" and model_idx + 1 < len(models):
+                model_idx += 1
+                continue
+            break
+        if not is_retryable_error(err):
+            break
+        if should_try_next_model(err) and model_idx + 1 < len(models):
+            model_idx += 1
+            continue
+        if attempt_num >= retry_max_attempts:
+            break
+
+    used = models[min(model_idx, len(models) - 1)] if models else ""
+    return None, last_error, used
+
+
+def _run_report_gemini_fallback_chain(
+    *,
+    api_key: str,
+    prompt: str,
+    models: List[str],
+    temperature: float,
+    max_output_tokens: int,
+    timeout_ms: int,
+    log_tag: str,
+    parser_fn: ParserFn,
+    detect_truncation: bool,
+) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    """Gemini report fallback after OpenAI — fast circuit-break."""
+    max_transient_retries, circuit_enabled, circuit_threshold = _json_chain_retry_policy()
+    last_err = "api_error"
+    saw_model_not_found = False
+    saw_other_failure = False
+    consecutive_unproductive = 0
+    unproductive_streak: List[str] = []
+    circuit_tripped = False
+    last_model = models[0] if models else ""
+
+    for model_name in models:
+        if circuit_tripped:
+            break
+        last_model = model_name
+        transient_attempts = 0
+        parse_attempts = 0
+        attempt_no = 0
+        while True:
+            attempt_no += 1
+            try:
+                logger.info(
+                    "[%s] gemini_fallback model=%s attempt=%s",
+                    log_tag,
+                    model_name,
+                    attempt_no,
+                )
+            except Exception:
+                pass
+
+            parsed, err = invoke_gemini_report_text_json(
+                api_key=api_key,
+                prompt=prompt,
+                model_name=model_name,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+                timeout_ms=timeout_ms,
+                log_tag=log_tag,
+                parser_fn=parser_fn,
+                detect_truncation=detect_truncation,
+            )
+            if parsed:
+                try:
+                    logger.info(
+                        "[%s] gemini_fallback model=%s success attempt=%s",
+                        log_tag,
+                        model_name,
+                        attempt_no,
+                    )
+                except Exception:
+                    pass
+                return parsed, "", model_name
+
+            last_err = err or "api_error"
+            if err == "model_not_found":
+                saw_model_not_found = True
+                unproductive_streak.clear()
+                break
+            saw_other_failure = True
+            if err in _IMMEDIATE_FAIL_ERROR_TOKENS:
+                break
+            if err == "json_parse_failed":
+                parse_attempts += 1
+            elif err in _TRANSIENT_ERROR_TOKENS:
+                transient_attempts += 1
+
+            consecutive_unproductive, last_unproductive_err = _record_unproductive_failure(
+                err,
+                streak=unproductive_streak,
+            )
+
+            if circuit_enabled and consecutive_unproductive >= circuit_threshold:
+                transient_n, parse_n, empty_n = _unproductive_breakdown(unproductive_streak)
+                try:
+                    logger.info(
+                        "[%s] gemini_circuit_break reason=unproductive "
+                        "consecutive=%s transient=%s parse=%s empty=%s "
+                        "last=%s threshold=%s → stop",
                         log_tag,
                         consecutive_unproductive,
                         transient_n,
@@ -714,18 +1193,87 @@ def run_gemini_json_model_chain(
             time.sleep(delay)
 
     if saw_model_not_found and not saw_other_failure:
-        gemini_err = "model_not_found"
-    else:
-        gemini_err = last_err
+        return None, "model_not_found", last_model
+    return None, last_err, last_model
 
-    parsed, openai_err = _run_openai_fallback(
+
+def run_report_json_model_chain(
+    *,
+    api_key: str,
+    prompt: str,
+    models: List[str],
+    temperature: float = 0.25,
+    max_output_tokens: int,
+    timeout_ms: int = 45000,
+    log_tag: str,
+    parser_fn: ParserFn,
+    retry_max_attempts: int = 2,
+    retry_delays_sec: Tuple[int, ...] = (3, 8),
+    detect_truncation: bool = True,
+    openai_model: str = OPENAI_FALLBACK_MODEL,
+    openai_max_completion_tokens: Optional[int] = None,
+) -> Tuple[Optional[Dict[str, Any]], str, str]:
+    """OpenAI-primary report chain with injectable parser; Gemini-only uses report retries."""
+    reset_gemini_json_sleep_budget()
+    openai_key_present = bool(get_openai_api_key())
+    openai_tokens = (
+        max_output_tokens
+        if openai_max_completion_tokens is None
+        else openai_max_completion_tokens
+    )
+
+    if openai_key_present:
+        try:
+            logger.info("[%s] provider_order=openai_first", log_tag)
+        except Exception:
+            pass
+        parsed, openai_err = _run_openai_primary(
+            prompt=prompt,
+            temperature=temperature,
+            log_tag=log_tag,
+            openai_model=openai_model,
+            max_completion_tokens=openai_tokens,
+            parser_fn=parser_fn,
+            detect_truncation=detect_truncation,
+        )
+        if parsed:
+            return parsed, "", openai_model
+        if openai_err != "openai_skipped":
+            try:
+                logger.info(
+                    "[%s] openai_primary exhausted err=%s → gemini_fallback",
+                    log_tag,
+                    openai_err,
+                )
+            except Exception:
+                pass
+        parsed, gem_err, model_used = _run_report_gemini_fallback_chain(
+            api_key=api_key,
+            prompt=prompt,
+            models=models,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            timeout_ms=timeout_ms,
+            log_tag=log_tag,
+            parser_fn=parser_fn,
+            detect_truncation=detect_truncation,
+        )
+        return parsed, gem_err, model_used
+
+    try:
+        logger.info("[%s] provider_order=gemini_only", log_tag)
+    except Exception:
+        pass
+    return _run_report_gemini_only_chain(
+        api_key=api_key,
         prompt=prompt,
+        models=models,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
+        timeout_ms=timeout_ms,
         log_tag=log_tag,
+        parser_fn=parser_fn,
+        detect_truncation=detect_truncation,
+        retry_max_attempts=retry_max_attempts,
+        retry_delays_sec=retry_delays_sec,
     )
-    if parsed:
-        return parsed, ""
-    if openai_err != "openai_skipped":
-        return None, gemini_err
-    return None, gemini_err

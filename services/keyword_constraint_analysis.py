@@ -4,16 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-from services.api_retry_policy import (
-    GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS,
-    STT_RETRY_DELAYS_SEC,
-    is_retryable_error,
-    sleep_before_retry,
-)
+from services.api_retry_policy import GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS
 from services.evaluation.eval_config import build_topic_feedback_model_candidates
-from services.gemini_json_client import parse_llm_json_response
+from services.gemini_json_client import run_gemini_json_model_chain
 from services.keyword_constraint_metrics import compute_keyword_constraint_metrics
 from services.stt_service import count_english_words
 
@@ -22,7 +17,6 @@ logger = logging.getLogger(__name__)
 GEMINI_REQUEST_TIMEOUT_SEC = 20
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 _MIN_ANSWER_WORDS = 5
-_MODEL_ATTEMPTS = 2
 
 _UNAVAILABLE = (
     "AI 코칭 서버가 잠시 바빠요.\n\n"
@@ -162,68 +156,6 @@ def _code_only_fallback(metrics: Dict[str, Any], *, message: str = "") -> Dict[s
     return out
 
 
-def _is_model_not_found_error(exc: BaseException) -> bool:
-    msg = f"{type(exc).__name__}: {exc}"
-    low = msg.lower()
-    if "404" in msg or "not_found" in low or "not found" in low:
-        return True
-    if "no longer available" in low or "not available" in low:
-        return True
-    return getattr(exc, "status_code", None) == 404
-
-
-
-def _invoke_model(
-    api_key: str, prompt: str, model_name: str
-) -> Tuple[Optional[Dict[str, Any]], str]:
-    from google import genai
-    from google.genai import types as genai_types
-
-    client = genai.Client(
-        api_key=api_key,
-        http_options=genai_types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
-    )
-    parts = [genai_types.Part.from_text(text=prompt)]
-    contents = [genai_types.Content(role="user", parts=parts)]
-    config = genai_types.GenerateContentConfig(
-        temperature=0.2,
-        max_output_tokens=GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS,
-    )
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
-        )
-    except Exception as exc:
-        if _is_model_not_found_error(exc):
-            return None, "model_not_found"
-        try:
-            logger.warning(
-                "[KEYWORD_CONSTRAINT] model=%s error_category=api_error exc_type=%s",
-                model_name,
-                type(exc).__name__,
-            )
-        except Exception:
-            pass
-        return None, "api_error"
-
-    raw_text = (getattr(response, "text", "") or "").strip()
-    if not raw_text:
-        for cand in getattr(response, "candidates", None) or []:
-            content = getattr(cand, "content", None)
-            for part in getattr(content, "parts", None) or []:
-                t = getattr(part, "text", None)
-                if t:
-                    raw_text = (raw_text + "\n" + t).strip()
-    if not raw_text:
-        return None, "empty_response"
-    parsed, err = parse_llm_json_response(raw_text, log_tag="KEYWORD_CONSTRAINT")
-    if parsed:
-        return parsed, ""
-    return None, err or "json_parse_failed"
-
-
 def _build_prompt(
     *,
     question_en: str,
@@ -286,50 +218,45 @@ def analyze_keyword_constraint_answer(
     )
 
     models = build_topic_feedback_model_candidates()
-    saw_model_not_found = False
-    saw_other_failure = False
 
-    for model_name in models:
-        for attempt_idx in range(1, _MODEL_ATTEMPTS + 1):
-            if attempt_idx > 1:
-                sleep_before_retry(attempt_idx, STT_RETRY_DELAYS_SEC)
-            try:
-                logger.info(
-                    "[KEYWORD_CONSTRAINT] model=%s attempt=%s words=%s targets_used=%s/%s banned_hits=%s",
-                    model_name,
-                    attempt_idx,
-                    wc,
-                    metrics.get("target_used_count"),
-                    metrics.get("target_total"),
-                    metrics.get("banned_hit_count"),
-                )
-            except Exception:
-                pass
-            parsed, err = _invoke_model(api_key, prompt, model_name)
-            if parsed:
-                out = _normalize_success(parsed, metrics)
-                try:
-                    logger.info(
-                        "[KEYWORD_CONSTRAINT] success model=%s patterns_used=%s",
-                        model_name,
-                        out.get("patterns_used"),
-                    )
-                except Exception:
-                    pass
-                return out
-            if err == "model_not_found":
-                saw_model_not_found = True
-                break
-            saw_other_failure = True
-            if attempt_idx < _MODEL_ATTEMPTS and is_retryable_error(err):
-                continue
-            break
+    def _log_attempt(model_name: str, attempt_no: int) -> None:
+        try:
+            logger.info(
+                "[KEYWORD_CONSTRAINT] model=%s attempt=%s words=%s targets_used=%s/%s banned_hits=%s",
+                model_name,
+                attempt_no,
+                wc,
+                metrics.get("target_used_count"),
+                metrics.get("target_total"),
+                metrics.get("banned_hit_count"),
+            )
+        except Exception:
+            pass
 
-    final_cat = (
-        "model_not_found" if saw_model_not_found and not saw_other_failure else "api_error"
+    parsed, err = run_gemini_json_model_chain(
+        api_key=api_key,
+        prompt=prompt,
+        models=models,
+        temperature=0.2,
+        max_output_tokens=GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS,
+        timeout_ms=GEMINI_REQUEST_TIMEOUT_MS,
+        log_tag="KEYWORD_CONSTRAINT",
+        on_attempt=_log_attempt,
     )
+    if parsed:
+        out = _normalize_success(parsed, metrics)
+        try:
+            logger.info(
+                "[KEYWORD_CONSTRAINT] success patterns_used=%s",
+                out.get("patterns_used"),
+            )
+        except Exception:
+            pass
+        return out
+
+    final_cat = "model_not_found" if err == "model_not_found" else "api_error"
     try:
-        logger.warning("[KEYWORD_CONSTRAINT] ai_unavailable category=%s", final_cat)
+        logger.warning("[KEYWORD_CONSTRAINT] ai_unavailable category=%s err=%s", final_cat, err)
     except Exception:
         pass
     return _code_only_fallback(metrics, message=_UNAVAILABLE)

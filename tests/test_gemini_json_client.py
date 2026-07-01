@@ -16,6 +16,7 @@ from services.gemini_json_client import (
     invoke_openai_text_json,
     parse_llm_json_response,
     run_gemini_json_model_chain,
+    run_report_json_model_chain,
 )
 
 
@@ -135,20 +136,20 @@ class GeminiJsonRetryTests(unittest.TestCase):
         self.assertEqual(invoke_mock.call_count, 2)
 
 
-class OpenAiFallbackTests(unittest.TestCase):
+class OpenAiPrimaryTests(unittest.TestCase):
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
     @patch("services.gemini_json_client.time.sleep")
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")
-    def test_circuit_break_jumps_to_openai_after_two_json_parse(
+    def test_circuit_break_jumps_to_gemini_after_two_openai_json_parse(
         self, invoke_mock, openai_mock, _sleep, _key
     ) -> None:
         reset_gemini_json_sleep_budget()
-        invoke_mock.side_effect = [
+        openai_mock.side_effect = [
             (None, "json_parse_failed"),
             (None, "json_parse_failed"),
         ]
-        openai_mock.return_value = ({"summary": "parse-fallback"}, "")
+        invoke_mock.return_value = ({"summary": "parse-fallback"}, "")
         parsed, err = run_gemini_json_model_chain(
             api_key="k",
             prompt="p",
@@ -160,22 +161,22 @@ class OpenAiFallbackTests(unittest.TestCase):
         )
         self.assertEqual(err, "")
         self.assertEqual(parsed, {"summary": "parse-fallback"})
-        self.assertEqual(invoke_mock.call_count, 2)
-        openai_mock.assert_called_once()
+        self.assertEqual(openai_mock.call_count, 2)
+        invoke_mock.assert_called_once()
 
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
     @patch("services.gemini_json_client.time.sleep")
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")
-    def test_circuit_break_mixed_transient_and_parse(
+    def test_circuit_break_mixed_transient_and_parse_on_openai(
         self, invoke_mock, openai_mock, _sleep, _key
     ) -> None:
         reset_gemini_json_sleep_budget()
-        invoke_mock.side_effect = [
+        openai_mock.side_effect = [
             (None, "api_error"),
             (None, "json_parse_failed"),
         ]
-        openai_mock.return_value = ({"summary": "mixed-fallback"}, "")
+        invoke_mock.return_value = ({"summary": "mixed-fallback"}, "")
         parsed, err = run_gemini_json_model_chain(
             api_key="k",
             prompt="p",
@@ -187,22 +188,22 @@ class OpenAiFallbackTests(unittest.TestCase):
         )
         self.assertEqual(err, "")
         self.assertEqual(parsed, {"summary": "mixed-fallback"})
-        self.assertEqual(invoke_mock.call_count, 2)
-        openai_mock.assert_called_once()
+        self.assertEqual(openai_mock.call_count, 2)
+        invoke_mock.assert_called_once()
 
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
     @patch("services.gemini_json_client.time.sleep")
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")
-    def test_circuit_break_jumps_to_openai_after_two_transient(
+    def test_circuit_break_jumps_to_gemini_after_two_openai_transient(
         self, invoke_mock, openai_mock, _sleep, _key
     ) -> None:
         reset_gemini_json_sleep_budget()
-        invoke_mock.side_effect = [
+        openai_mock.side_effect = [
             (None, "api_error"),
             (None, "api_error"),
         ]
-        openai_mock.return_value = ({"summary": "fast-openai"}, "")
+        invoke_mock.return_value = ({"summary": "fast-gemini"}, "")
         parsed, err = run_gemini_json_model_chain(
             api_key="k",
             prompt="p",
@@ -213,9 +214,9 @@ class OpenAiFallbackTests(unittest.TestCase):
             log_tag="TEST",
         )
         self.assertEqual(err, "")
-        self.assertEqual(parsed, {"summary": "fast-openai"})
-        self.assertEqual(invoke_mock.call_count, 2)
-        openai_mock.assert_called_once()
+        self.assertEqual(parsed, {"summary": "fast-gemini"})
+        self.assertEqual(openai_mock.call_count, 2)
+        invoke_mock.assert_called_once()
 
     @patch("services.gemini_json_client.get_openai_api_key", return_value=None)
     @patch("services.gemini_json_client.time.sleep")
@@ -246,7 +247,7 @@ class OpenAiFallbackTests(unittest.TestCase):
     @patch("services.gemini_json_client.get_openai_api_key", return_value=None)
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")
-    def test_no_openai_key_skips_fallback(self, invoke_mock, openai_mock, _key) -> None:
+    def test_no_openai_key_skips_openai(self, invoke_mock, openai_mock, _key) -> None:
         reset_gemini_json_sleep_budget()
         invoke_mock.return_value = (None, "api_error")
         parsed, err = run_gemini_json_model_chain(
@@ -266,12 +267,12 @@ class OpenAiFallbackTests(unittest.TestCase):
     @patch("services.gemini_json_client.time.sleep")
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")
-    def test_openai_fallback_after_gemini_exhaustion(
+    def test_gemini_fallback_after_openai_exhaustion(
         self, invoke_mock, openai_mock, _sleep, _key
     ) -> None:
         reset_gemini_json_sleep_budget()
-        invoke_mock.return_value = (None, "api_error")
-        openai_mock.return_value = ({"summary": "from-openai"}, "")
+        openai_mock.return_value = (None, "api_error")
+        invoke_mock.return_value = ({"summary": "from-gemini"}, "")
         parsed, err = run_gemini_json_model_chain(
             api_key="k",
             prompt="p",
@@ -282,11 +283,9 @@ class OpenAiFallbackTests(unittest.TestCase):
             log_tag="TEST",
         )
         self.assertEqual(err, "")
-        self.assertEqual(parsed, {"summary": "from-openai"})
-        openai_mock.assert_called_once()
-        call_kwargs = openai_mock.call_args.kwargs
-        self.assertEqual(call_kwargs["model"], OPENAI_FALLBACK_MODEL)
-        self.assertEqual(call_kwargs["prompt"], "p")
+        self.assertEqual(parsed, {"summary": "from-gemini"})
+        self.assertGreaterEqual(openai_mock.call_count, 1)
+        invoke_mock.assert_called()
 
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
     def test_invoke_openai_uses_shared_parser(self, _key) -> None:
@@ -313,9 +312,9 @@ class OpenAiFallbackTests(unittest.TestCase):
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
     @patch("services.gemini_json_client.invoke_openai_text_json")
     @patch("services.gemini_json_client.invoke_gemini_text_json")
-    def test_gemini_success_never_calls_openai(self, invoke_mock, openai_mock, _key) -> None:
+    def test_openai_success_never_calls_gemini(self, invoke_mock, openai_mock, _key) -> None:
         reset_gemini_json_sleep_budget()
-        invoke_mock.return_value = ({"summary": "gemini"}, "")
+        openai_mock.return_value = ({"summary": "openai"}, "")
         parsed, err = run_gemini_json_model_chain(
             api_key="k",
             prompt="p",
@@ -325,8 +324,93 @@ class OpenAiFallbackTests(unittest.TestCase):
             timeout_ms=1000,
             log_tag="TEST",
         )
-        self.assertEqual(parsed, {"summary": "gemini"})
+        self.assertEqual(parsed, {"summary": "openai"})
         self.assertEqual(err, "")
+        invoke_mock.assert_not_called()
+        openai_mock.assert_called_once()
+        call_kwargs = openai_mock.call_args.kwargs
+        self.assertEqual(call_kwargs["model"], OPENAI_FALLBACK_MODEL)
+        self.assertEqual(call_kwargs["prompt"], "p")
+
+
+class ReportJsonModelChainTests(unittest.TestCase):
+    def _parser(self, raw: str):
+        import json
+
+        try:
+            return json.loads(raw), ""
+        except Exception:
+            return None, "json_parse_failed"
+
+    @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
+    @patch("services.gemini_json_client.invoke_openai_text_json")
+    @patch("services.gemini_json_client.invoke_gemini_report_text_json")
+    def test_openai_success_never_calls_gemini_report(
+        self, gemini_mock, openai_mock, _key
+    ) -> None:
+        reset_gemini_json_sleep_budget()
+        openai_mock.return_value = ({"overall_level": "IM2"}, "")
+        parsed, err, model = run_report_json_model_chain(
+            api_key="k",
+            prompt="p",
+            models=["gemini-a"],
+            max_output_tokens=4096,
+            log_tag="TEST_REPORT",
+            parser_fn=self._parser,
+        )
+        self.assertEqual(parsed, {"overall_level": "IM2"})
+        self.assertEqual(err, "")
+        self.assertEqual(model, OPENAI_FALLBACK_MODEL)
+        gemini_mock.assert_not_called()
+
+    @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
+    @patch("services.gemini_json_client.time.sleep")
+    @patch("services.gemini_json_client.invoke_openai_text_json")
+    @patch("services.gemini_json_client.invoke_gemini_report_text_json")
+    def test_openai_fail_falls_back_to_gemini_report(
+        self, gemini_mock, openai_mock, _sleep, _key
+    ) -> None:
+        reset_gemini_json_sleep_budget()
+        openai_mock.return_value = (None, "api_error")
+        gemini_mock.return_value = ({"overall_level": "IL"}, "")
+        parsed, err, model = run_report_json_model_chain(
+            api_key="k",
+            prompt="p",
+            models=["gemini-a"],
+            max_output_tokens=4096,
+            log_tag="TEST_REPORT",
+            parser_fn=self._parser,
+        )
+        self.assertEqual(parsed, {"overall_level": "IL"})
+        self.assertEqual(err, "")
+        self.assertEqual(model, "gemini-a")
+        gemini_mock.assert_called()
+
+    @patch("services.gemini_json_client.get_openai_api_key", return_value=None)
+    @patch("services.gemini_json_client.time.sleep")
+    @patch("services.gemini_json_client.invoke_openai_text_json")
+    @patch("services.gemini_json_client.invoke_gemini_report_text_json")
+    def test_gemini_only_report_uses_report_retries(
+        self, gemini_mock, openai_mock, _sleep, _key
+    ) -> None:
+        reset_gemini_json_sleep_budget()
+        gemini_mock.side_effect = [
+            (None, "api_error"),
+            ({"overall_level": "IM1"}, ""),
+        ]
+        parsed, err, model = run_report_json_model_chain(
+            api_key="k",
+            prompt="p",
+            models=["gemini-a"],
+            max_output_tokens=4096,
+            log_tag="TEST_REPORT",
+            parser_fn=self._parser,
+            retry_max_attempts=2,
+            retry_delays_sec=(3, 8),
+        )
+        self.assertEqual(parsed, {"overall_level": "IM1"})
+        self.assertEqual(err, "")
+        self.assertEqual(gemini_mock.call_count, 2)
         openai_mock.assert_not_called()
 
 

@@ -12,15 +12,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from services.api_retry_policy import (
     REPORT_MAX_ATTEMPTS,
     REPORT_RETRY_DELAYS_SEC,
-    is_retryable_error,
-    log_api_call_result,
-    should_try_next_model,
-    sleep_before_retry,
 )
 from services.evaluation.eval_config import (
     MINI_REPORT_MODEL_NAME,
     build_mini_mock_v2_report_model_candidates,
 )
+from services.gemini_json_client import run_report_json_model_chain
 from services.evaluation.eval_text import (
     count_sentences_punctuation_only,
     count_spoken_units,
@@ -47,7 +44,8 @@ logger = logging.getLogger(__name__)
 GEMINI_REQUEST_TIMEOUT_SEC = 45
 GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 # Outer thread-pool deadline (prompt build + JSON parse margin over HTTP timeout).
-ANALYSIS_WRAPPER_TIMEOUT_SEC = 50
+# 55s: Wi-Fi OpenAI primary (~25s) + Gemini fallback (up to 45s HTTP) needs headroom.
+ANALYSIS_WRAPPER_TIMEOUT_SEC = 55
 MIN_USABLE_WORDS = 5
 REPORT_MAX_ANSWER_WORDS = 180
 
@@ -709,122 +707,6 @@ def _parse_report_response(raw_text: str) -> Tuple[Optional[Dict[str, Any]], str
     return None, "json_parse_failed"
 
 
-def _invoke_report_model(api_key: str, prompt: str, model_name: str) -> Tuple[Optional[Dict[str, Any]], str, str]:
-    """Single report Gemini call. Returns (parsed_json, error_message, model_name)."""
-    from google import genai
-    from google.genai import types as genai_types
-
-    client = genai.Client(
-        api_key=api_key,
-        http_options=genai_types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
-    )
-    parts = [genai_types.Part.from_text(text=prompt)]
-    contents = [genai_types.Content(role="user", parts=parts)]
-    config = genai_types.GenerateContentConfig(temperature=0.25, max_output_tokens=4096)
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config,
-        )
-    except Exception as exc:
-        err_msg = f"{type(exc).__name__}: {exc}"
-        return None, err_msg, model_name
-
-    raw_text = (getattr(response, "text", "") or "").strip()
-    if not raw_text:
-        for cand in getattr(response, "candidates", None) or []:
-            content = getattr(cand, "content", None)
-            for part in getattr(content, "parts", None) or []:
-                t = getattr(part, "text", None)
-                if t:
-                    raw_text = (raw_text + "\n" + t).strip()
-    if not raw_text:
-        return None, "empty_response", model_name
-    parsed, parse_err = _parse_report_response(raw_text)
-    if parsed:
-        return parsed, "", model_name
-    return None, parse_err or "json_parse_failed", model_name
-
-
-def _call_gemini(api_key: str, prompt: str) -> Tuple[Optional[Dict[str, Any]], str, str]:
-    """Mini Mock V2 report — retry + model fallback (max 2 attempts)."""
-    models = build_mini_mock_v2_report_model_candidates()
-    if not models:
-        return None, "no_report_models_configured", ""
-
-    t0 = time.perf_counter()
-    last_error = ""
-    last_category = ""
-    model_idx = 0
-    attempt_num = 0
-
-    while attempt_num < REPORT_MAX_ATTEMPTS and model_idx < len(models):
-        attempt_num += 1
-        sleep_before_retry(attempt_num, REPORT_RETRY_DELAYS_SEC)
-        model_name = models[model_idx]
-
-        try:
-            logger.info(
-                "[MINI_V2_REPORT_API_START] model=%s attempt=%s",
-                model_name,
-                attempt_num,
-            )
-        except Exception:
-            pass
-
-        parsed, err_msg, _ = _invoke_report_model(api_key, prompt, model_name)
-        if parsed:
-            elapsed = time.perf_counter() - t0
-            log_api_call_result(
-                service="report",
-                model_used=model_name,
-                attempts=attempt_num,
-                success=True,
-                error_category="",
-                elapsed=elapsed,
-            )
-            return parsed, "", model_name
-
-        last_error = err_msg or "gemini_failed"
-        last_category = _classify_gemini_error(last_error)
-
-        try:
-            logger.warning(
-                "[MINI_V2_REPORT_RETRY] attempt=%s model=%s error_category=%s",
-                attempt_num,
-                model_name,
-                last_category,
-            )
-        except Exception:
-            pass
-
-        if last_category == "model_not_found" and model_idx + 1 < len(models):
-            model_idx += 1
-            continue
-
-        if not is_retryable_error(last_category):
-            break
-
-        if should_try_next_model(last_category) and model_idx + 1 < len(models):
-            model_idx += 1
-            continue
-
-        if attempt_num >= REPORT_MAX_ATTEMPTS:
-            break
-
-    elapsed = time.perf_counter() - t0
-    log_api_call_result(
-        service="report",
-        model_used=models[min(model_idx, len(models) - 1)] if models else "",
-        attempts=attempt_num,
-        success=False,
-        error_category=last_category,
-        elapsed=elapsed,
-    )
-    return None, last_error or last_category, models[min(model_idx, len(models) - 1)] if models else ""
-
-
 def _analyze_core(answers: List[Dict[str, Any]], *, api_key: str) -> Dict[str, Any]:
     _log_eval_config()
     inputs = build_mini_mock_v2_analysis_inputs(answers)
@@ -856,7 +738,20 @@ def _analyze_core(answers: List[Dict[str, Any]], *, api_key: str) -> Dict[str, A
         )
 
     prompt = _build_gemini_prompt(report_input)
-    parsed, err, model = _call_gemini(api_key, prompt)
+    models = build_mini_mock_v2_report_model_candidates()
+    parsed, err, model = run_report_json_model_chain(
+        api_key=api_key,
+        prompt=prompt,
+        models=models,
+        temperature=0.25,
+        max_output_tokens=4096,
+        timeout_ms=GEMINI_REQUEST_TIMEOUT_MS,
+        log_tag="MINI_MOCK_V2_REPORT",
+        parser_fn=_parse_report_response,
+        retry_max_attempts=REPORT_MAX_ATTEMPTS,
+        retry_delays_sec=REPORT_RETRY_DELAYS_SEC,
+        detect_truncation=True,
+    )
     if not parsed:
         category = _classify_gemini_error(err or "")
         if category == "quota_or_rate_limit":
@@ -903,8 +798,8 @@ def _analyze_core(answers: List[Dict[str, Any]], *, api_key: str) -> Dict[str, A
 
 def analyze_mini_mock_v2_answers(answers: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Run one Gemini diagnostic report from V2 saved answers (text only).
-    HTTP timeout 45s (google.genai) + outer wrapper 50s. Does not read audio blobs.
+    Run one diagnostic report from V2 saved answers (text only).
+    HTTP timeout 45s (google.genai) + outer wrapper 55s. Does not read audio blobs.
     """
     from utils.secrets import get_gemini_api_key
 
