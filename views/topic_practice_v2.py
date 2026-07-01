@@ -3759,7 +3759,13 @@ def _render_feedback_ui() -> None:
     render_feedback_section_card(
         "내 답변 업그레이드 예시", upgrade_disp, accent="purple", icon="message-up"
     )
-    render_feedback_keyword_chips(kwords, accent="teal")
+    from services.topic_practice_v2_analysis import TOPIC_V2_KEYWORD_DRILL_EMPTY_MESSAGE
+
+    render_feedback_keyword_chips(
+        kwords,
+        accent="teal",
+        empty_message=TOPIC_V2_KEYWORD_DRILL_EMPTY_MESSAGE if not kwords else "",
+    )
     render_feedback_section_card(
         "다음 연습 미션", mission, accent="amber", icon="flag", filled=True
     )

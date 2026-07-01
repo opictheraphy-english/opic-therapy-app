@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.api_retry_policy import GEMINI_JSON_FEEDBACK_MAX_OUTPUT_TOKENS
@@ -23,6 +24,15 @@ GEMINI_REQUEST_TIMEOUT_MS = GEMINI_REQUEST_TIMEOUT_SEC * 1000
 _STUDENT_FEEDBACK_UNAVAILABLE = (
     "방금 답변은 안전하게 보관 중이에요. "
     "재녹음 없이 분석만 다시 받을 수 있어요."
+)
+
+_FALLBACK_UPGRADE_SAMPLE = (
+    "이번엔 업그레이드 예시를 만들지 못했어요. "
+    "「같은 질문 다시 말하기」로 한 번 더 시도해 보세요."
+)
+TOPIC_V2_KEYWORD_DRILL_EMPTY_MESSAGE = (
+    "이번엔 추천 키워드를 만들지 못했어요. "
+    "「같은 질문 다시 말하기」로 한 번 더 시도해 보세요."
 )
 
 _ALLOWED_ANSWER_LEVELS = frozenset(
@@ -163,6 +173,70 @@ def _normalize_success(parsed: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def _topic_id_for_keyword_pool(answer: Dict[str, Any]) -> str:
+    for key in ("topic", "topic_id"):
+        val = _coerce_str(answer.get(key))
+        if val:
+            return val
+    return ""
+
+
+def _fallback_keyword_drill_from_topic(answer: Dict[str, Any]) -> List[str]:
+    """Curriculum target expressions for this topic (not model-invented drill words)."""
+    topic_id = _topic_id_for_keyword_pool(answer)
+    if not topic_id:
+        return []
+    try:
+        from data.keyword_constraint_sets import get_keyword_constraint_practice_set
+
+        rows = get_keyword_constraint_practice_set(topic_id)
+    except Exception:
+        return []
+    pool: List[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        for item in row.get("target_expressions") or []:
+            if isinstance(item, dict):
+                expr = _coerce_str(item.get("expr"))
+            else:
+                expr = _coerce_str(item)
+            if expr and expr not in pool:
+                pool.append(expr)
+    if not pool:
+        return []
+    count = min(3, len(pool))
+    if len(pool) <= count:
+        return pool[:count]
+    return random.sample(pool, count)
+
+
+def _apply_ok_field_fallbacks(norm: Dict[str, Any], answer: Dict[str, Any]) -> None:
+    """Fill missing optional coaching fields after a successful model parse."""
+    if not norm.get("summary"):
+        norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
+    if not norm.get("strength"):
+        norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
+    if not norm.get("correction_focus"):
+        norm["correction_focus"] = (
+            "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
+        )
+    if not norm.get("better_expression"):
+        norm["better_expression"] = (
+            "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
+        )
+    if not _coerce_str(norm.get("upgrade_sample")):
+        norm["upgrade_sample"] = _FALLBACK_UPGRADE_SAMPLE
+    if not norm.get("practice_mission"):
+        norm["practice_mission"] = (
+            "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
+        )
+    drills = _coerce_keyword_drill(norm.get("keyword_drill"))
+    if not drills:
+        drills = _fallback_keyword_drill_from_topic(answer)
+    norm["keyword_drill"] = drills
+
+
 def analyze_topic_practice_v2_answer(answer: dict) -> dict:
     """
     Try each feedback model once; skip unavailable (404) models immediately.
@@ -219,18 +293,7 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
     )
     if parsed:
         norm = _normalize_success(parsed)
-        if not norm["summary"]:
-            norm["summary"] = "짧은 피드백이 생성되었어요. 아래 항목을 함께 확인해 주세요."
-        if not norm["strength"]:
-            norm["strength"] = "요약에서 전체 흐름을 참고해 주세요."
-        if not norm["correction_focus"]:
-            norm["correction_focus"] = "다음에는 핵심부터 한 문장으로 시작하고, 이유나 예를 한 가지 더 붙여 보세요."
-        if not norm["better_expression"]:
-            norm["better_expression"] = "위 ‘바로 고칠 점’을 반영해 같은 내용을 한 번 더 자연스럽게 말해 보세요."
-        if not norm.get("upgrade_sample"):
-            norm["upgrade_sample"] = ""
-        if not norm["practice_mission"]:
-            norm["practice_mission"] = "같은 질문에 첫 문장만 바꿔서 20초 안팎으로 다시 말해 보세요."
+        _apply_ok_field_fallbacks(norm, answer)
         try:
             logger.info("[TOPIC_V2_FEEDBACK] success")
         except Exception:

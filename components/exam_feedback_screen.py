@@ -150,8 +150,13 @@ def build_feedback_section_card_html(
     )
 
 
-def build_feedback_keyword_chips_html(keywords, *, accent: str = "teal") -> str:
-    """Filled card with pill chips for ``keyword_drill`` (placeholder if empty)."""
+def build_feedback_keyword_chips_html(
+    keywords,
+    *,
+    accent: str = "teal",
+    empty_message: str = "",
+) -> str:
+    """Filled card with pill chips for ``keyword_drill`` (hint if empty)."""
     accent_key = html.escape(_normalize_accent(accent))
     svg = _FB_ICONS["key"]
     clean = [str(w or "").strip() for w in (keywords or []) if str(w or "").strip()]
@@ -163,7 +168,11 @@ def build_feedback_keyword_chips_html(keywords, *, accent: str = "teal") -> str:
         )
         body = f'<div class="tq-feedback-chips">{chips}</div>'
     else:
-        body = '<p class="tq-feedback-section-body">—</p>'
+        hint = str(empty_message or "").strip()
+        if hint:
+            body = f'<p class="tq-feedback-section-body">{html.escape(hint)}</p>'
+        else:
+            body = '<p class="tq-feedback-section-body">—</p>'
     return (
         f'<div class="tq-feedback-section tq-feedback-section--{accent_key} '
         f'tq-feedback-section--filled" role="region" aria-label="다시 말하기 키워드">'
@@ -197,9 +206,18 @@ def render_feedback_section_card(
     )
 
 
-def render_feedback_keyword_chips(keywords, *, accent: str = "teal") -> None:
+def render_feedback_keyword_chips(
+    keywords,
+    *,
+    accent: str = "teal",
+    empty_message: str = "",
+) -> None:
     st.markdown(
-        build_feedback_keyword_chips_html(keywords, accent=accent),
+        build_feedback_keyword_chips_html(
+            keywords,
+            accent=accent,
+            empty_message=empty_message,
+        ),
         unsafe_allow_html=True,
     )
 
