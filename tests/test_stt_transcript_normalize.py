@@ -79,6 +79,9 @@ class SavedTranscriptHtmlTests(unittest.TestCase):
         transcript = "1. Firstly, I go to work. 2. Secondly, I have lunch."
         html = build_saved_transcript_html(transcript=transcript, accent="teal")
         self.assertIn("tq-saved-transcript", html)
+        self.assertIn("tq-screen-marker", html)
+        self.assertIn('width="16"', html)
+        self.assertIn('height="16"', html)
         self.assertNotIn("<ol", html.lower())
         self.assertIn("1. Firstly, I go to work. 2. Secondly, I have lunch.", html)
 

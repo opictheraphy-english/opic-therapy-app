@@ -63,6 +63,12 @@ STT_QUOTA_ERRORS: FrozenSet[str] = frozenset(
 STT_MAX_ATTEMPTS = 4
 STT_RETRY_DELAYS_SEC: Tuple[int, ...] = (1, 2, 3)
 
+# How long transcribe_answer_audio waits on the worker (main thread blocks on
+# future.result). Topic practice keeps this short; exam flows allow longer
+# answers + Gemini retry + Whisper fallback (mini_mock_v2 timeout reports).
+STT_WRAPPER_TIMEOUT_SEC = 25
+STT_WRAPPER_TIMEOUT_EXAM_SEC = 50
+
 # Report analysis runs inside a ThreadPoolExecutor with its own wrapper
 # timeout, so it does not block the websocket — longer backoff is safe here.
 REPORT_MAX_ATTEMPTS = 2

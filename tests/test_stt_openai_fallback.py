@@ -8,6 +8,17 @@ from unittest.mock import MagicMock, patch
 from services import stt_service
 
 
+class SttWrapperTimeoutTests(unittest.TestCase):
+    def test_exam_modes_use_longer_wrapper(self) -> None:
+        self.assertEqual(stt_service.stt_wrapper_timeout_sec("mini_mock_v2"), 50)
+        self.assertEqual(stt_service.stt_wrapper_timeout_sec("mock_v2"), 50)
+        self.assertEqual(stt_service.stt_wrapper_timeout_sec("mini_mock"), 50)
+
+    def test_topic_practice_uses_default_wrapper(self) -> None:
+        self.assertEqual(stt_service.stt_wrapper_timeout_sec("topic_practice_v2"), 25)
+        self.assertEqual(stt_service.stt_wrapper_timeout_sec(""), 25)
+
+
 class SttOpenAiHelperTests(unittest.TestCase):
     def test_filename_ext_for_mime(self) -> None:
         self.assertEqual(stt_service._filename_ext_for_mime("audio/webm"), "webm")

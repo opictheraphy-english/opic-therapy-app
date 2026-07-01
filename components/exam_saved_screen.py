@@ -40,12 +40,17 @@ _RECORDING_SVG = (
 )
 
 _TRANSCRIPT_SVG = (
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
     'aria-hidden="true">'
     '<path d="M8 9h8" /><path d="M8 13h6" />'
     '<path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14l-4 -4h-6a2 2 0 0 1 -2 -2l0 -10" />'
     "</svg>"
+)
+
+_SAVED_SECTION_ICO_STYLE = (
+    "flex-shrink:0;width:28px;height:28px;border-radius:8px;"
+    "display:inline-flex;align-items:center;justify-content:center;"
 )
 
 _EMPTY_TRANSCRIPT = "(인식된 텍스트가 아직 없어요.)"
@@ -100,10 +105,12 @@ def build_saved_transcript_html(*, transcript: str, accent: str = "teal") -> str
             f"</p>"
         )
     return (
+        '<div class="tq-screen-marker" aria-hidden="true"></div>'
         f'<div class="tq-saved-section tq-saved-section--{accent_key}" role="region" '
         f'aria-label="AI가 인식한 답변">'
         f'<div class="tq-saved-section-head">'
-        f'<span class="tq-saved-section-ico tq-saved-section-ico--{accent_key}">'
+        f'<span class="tq-saved-section-ico tq-saved-section-ico--{accent_key}" '
+        f'style="{_SAVED_SECTION_ICO_STYLE}">'
         f"{_TRANSCRIPT_SVG}"
         f"</span>"
         f'<span class="tq-saved-label">AI가 인식한 답변</span>'

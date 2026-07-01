@@ -14,6 +14,8 @@ from services.api_retry_policy import (
     STT_MAX_ATTEMPTS,
     STT_QUOTA_ERRORS,
     STT_RETRY_DELAYS_SEC,
+    STT_WRAPPER_TIMEOUT_EXAM_SEC,
+    STT_WRAPPER_TIMEOUT_SEC,
     is_retryable_error,
     is_stt_retryable_error,
     log_api_call_result,
@@ -32,10 +34,21 @@ STT_TIMEOUT_SEC = 20
 
 # Wrapper timeout for the WHOLE STT job (all retries + model fallback combined).
 # transcribe_answer_audio runs the retry loop in a background thread and waits
-# at most this long. If exceeded, it returns an stt_pending result immediately
-# so the Streamlit main thread stays free to answer websocket keepalive pings.
-# Must stay below the browser's keepalive ping tolerance (~20-30s).
-STT_WRAPPER_TIMEOUT_SEC = 25
+# at most stt_wrapper_timeout_sec(mode) on future.result(). Topic practice
+# uses STT_WRAPPER_TIMEOUT_SEC (25s); mini/mock exam modes use
+# STT_WRAPPER_TIMEOUT_EXAM_SEC for longer recordings and retry+Whisper chain.
+
+_EXAM_STT_MODES = frozenset(
+    {"mini_mock_v2", "mock_v2", "mini_mock", "mock_exam"}
+)
+
+
+def stt_wrapper_timeout_sec(mode: str = "") -> int:
+    """Wall-clock cap for transcribe_answer_audio to wait on the STT worker."""
+    key = (mode or "").strip().lower()
+    if key in _EXAM_STT_MODES:
+        return STT_WRAPPER_TIMEOUT_EXAM_SEC
+    return STT_WRAPPER_TIMEOUT_SEC
 
 # OpenAI Whisper fallback — single attempt after Gemini STT chain fails.
 OPENAI_STT_MODEL = (os.getenv("OPENAI_STT_MODEL") or "whisper-1").strip() or "whisper-1"
@@ -771,8 +784,8 @@ def _transcribe_answer_audio_impl(
     return empty
 
 
-def _stt_timeout_result(*, provider: str = "gemini") -> Dict[str, Any]:
-    """Result returned when the STT job exceeds STT_WRAPPER_TIMEOUT_SEC.
+def _stt_timeout_result(*, provider: str = "gemini", wrapper_timeout_sec: int) -> Dict[str, Any]:
+    """Result returned when the STT job exceeds the mode wrapper timeout.
 
     error_category is 'timeout' (a retryable category), so derive_stt_status
     maps this to 'stt_pending' — the answer is saved and the student can
@@ -783,7 +796,7 @@ def _stt_timeout_result(*, provider: str = "gemini") -> Dict[str, Any]:
         {
             "error_category": "timeout",
             "error_message": (
-                f"stt_wrapper_timeout_{STT_WRAPPER_TIMEOUT_SEC}s"
+                f"stt_wrapper_timeout_{int(wrapper_timeout_sec)}s"
             ),
             "retry_exhausted": True,
         }
@@ -804,11 +817,7 @@ def transcribe_answer_audio(
     """Transcribe answer audio via Gemini with retry and model fallback.
 
     The STT retry loop runs in a background worker thread, and this function
-    waits at most STT_WRAPPER_TIMEOUT_SEC for it. This keeps the Streamlit
-    main thread free to answer websocket keepalive pings: a slow STT call
-    (e.g. Gemini `temporary_overload`) used to block the single-threaded
-    event loop long enough to trigger a keepalive ping timeout, which killed
-    the browser connection and kicked students out of the mock exam.
+    waits at most stt_wrapper_timeout_sec(mode) for it (25s topic / 50s exam).
 
     On wrapper timeout the answer is returned as stt_pending (retryable),
     so the exam continues uninterrupted and STT can be retried later.
@@ -818,6 +827,7 @@ def transcribe_answer_audio(
     work without modification.
     """
     provider = "gemini"
+    wrapper_timeout_sec = stt_wrapper_timeout_sec(mode)
 
     future = _STT_EXECUTOR.submit(
         _transcribe_answer_audio_impl,
@@ -830,7 +840,7 @@ def transcribe_answer_audio(
         api_key=api_key,
     )
     try:
-        return future.result(timeout=STT_WRAPPER_TIMEOUT_SEC)
+        return future.result(timeout=wrapper_timeout_sec)
     except concurrent.futures.TimeoutError:
         # The worker thread is abandoned but not cancelled — it will end on
         # its own once the underlying Gemini call hits STT_TIMEOUT_SEC. The
@@ -839,13 +849,16 @@ def transcribe_answer_audio(
             logger.warning(
                 "[STT_WRAPPER_TIMEOUT] timeout=%ss mode=%s question_id=%s "
                 "-> stt_pending",
-                STT_WRAPPER_TIMEOUT_SEC,
+                wrapper_timeout_sec,
                 mode,
                 question_id,
             )
         except Exception:
             pass
-        return _stt_timeout_result(provider=provider)
+        return _stt_timeout_result(
+            provider=provider,
+            wrapper_timeout_sec=wrapper_timeout_sec,
+        )
     except Exception as exc:
         # An unexpected failure inside the worker — surface it as a normal
         # failed STT result rather than letting it crash the caller.
