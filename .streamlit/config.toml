@@ -1,6 +1,12 @@
 [browser]
 gatherUsageStats = false
 
+# Production (Render/Docker): disable dev file watcher — saves CPU/RAM and avoids
+# watchdog RuntimeError on large repos.
+[server]
+fileWatcherType = "none"
+headless = true
+
 # Single entry (app.py) + custom bottom nav — hide Streamlit multipage sidebar UI.
 [client]
 showSidebarNavigation = false

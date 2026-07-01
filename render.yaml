@@ -1,0 +1,14 @@
+# Render native Python deploy (runtime.txt pins Python 3.11.9).
+# Sync dashboard Start Command with this if not using Blueprint deploy.
+services:
+  - type: web
+    name: opic-therapy-app
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      streamlit run app.py
+      --server.address=0.0.0.0
+      --server.port=$PORT
+      --server.headless=true
+      --server.fileWatcherType=none
+      --browser.gatherUsageStats=false

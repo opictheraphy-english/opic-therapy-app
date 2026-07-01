@@ -1,21 +1,21 @@
-# UI (>=1.30: client.showSidebarNavigation in config.toml)
-streamlit>=1.30.0
+# UI (1.30+: client.showSidebarNavigation; pinned for Render/Python 3.11 stability)
+streamlit>=1.30.0,<1.52.0
 streamlit-mic-recorder
 
 # AI / speech APIs
-google-genai
-openai>=1.30.0
-google-cloud-texttospeech
-gTTS
+google-genai>=1.0.0,<2.0.0
+openai>=1.30.0,<2.0.0
+google-cloud-texttospeech>=2.0.0,<3.0.0
+gTTS>=2.0.0,<3.0.0
 
 # Data & visualization
-pandas
-plotly
-matplotlib
+pandas>=2.0.0,<3.0.0
+plotly>=5.0.0,<6.0.0
+matplotlib>=3.7.0,<4.0.0
 
 # PDF export (final report download — install on Render with main app deps)
-pillow>=10.0.0
-reportlab>=4.0.0
+pillow>=10.0.0,<12.0.0
+reportlab>=4.0.0,<5.0.0
 
 # Auth / cloud (Supabase Google OAuth — login only; data sync is a later step)
-supabase>=2.0.0
+supabase>=2.0.0,<3.0.0

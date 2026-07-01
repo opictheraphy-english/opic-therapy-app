@@ -118,7 +118,7 @@ def is_real_speech_transcript(text: str) -> bool:
 
       * empty / whitespace only
       * too short to be meaningful speech (≤ 1 word once non-letters stripped)
-      * starts with structural markers (``{``, ``[``, ``\`\`\``)
+      * starts with structural markers (``{``, ``[``, or a fenced code block)
       * contains a known placeholder phrase (demo marker, Korean
         "(전사 결과 없음)", echo of the Q1 question template, etc.)
       * contains JSON-key hints suggesting the raw LLM response leaked
