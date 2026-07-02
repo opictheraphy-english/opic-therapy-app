@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
 import re
 import time
@@ -27,7 +28,18 @@ from utils.secrets import get_openai_api_key
 logger = logging.getLogger(__name__)
 
 _PARSE_LOG_SNIPPET_LEN = 200
-OPENAI_FALLBACK_MODEL = "gpt-5-nano"
+_DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
+OPENAI_FEEDBACK_MODEL = (
+    (os.getenv("OPENAI_FEEDBACK_MODEL") or "").strip() or _DEFAULT_OPENAI_MODEL
+)
+OPENAI_REPORT_MODEL = (
+    (os.getenv("OPENAI_REPORT_MODEL") or "").strip() or _DEFAULT_OPENAI_MODEL
+)
+OPENAI_REASONING_EFFORT = (
+    (os.getenv("OPENAI_REASONING_EFFORT") or "").strip() or "low"
+)
+# Backward-compatible alias (feedback path default).
+OPENAI_FALLBACK_MODEL = OPENAI_FEEDBACK_MODEL
 OPENAI_FALLBACK_MAX_COMPLETION_TOKENS = 4096
 OPENAI_FALLBACK_EMPTY_RETRY_MAX_COMPLETION_TOKENS = 8192
 _OPENAI_JSON_SYSTEM = (
@@ -205,6 +217,19 @@ def _openai_model_restricts_sampling(model: str) -> bool:
     return any(token in low for token in ("gpt-5", "o1", "o3", "o4"))
 
 
+def _resolve_openai_reasoning_effort(
+    model: str,
+    override: Optional[str] = None,
+) -> Optional[str]:
+    """Env/default reasoning for GPT-5 family; None skips the API param."""
+    raw = (override if override is not None else OPENAI_REASONING_EFFORT).strip()
+    if not raw or raw.lower() in ("none", "false", "off", "0"):
+        return None
+    if _openai_model_restricts_sampling(model):
+        return raw
+    return None
+
+
 def _openai_param_rejected(exc: BaseException, param: str) -> bool:
     msg = str(exc).lower()
     needle = param.lower()
@@ -311,7 +336,7 @@ def _log_openai_finish_reason(
 def invoke_openai_text_json(
     *,
     prompt: str,
-    model: str = OPENAI_FALLBACK_MODEL,
+    model: str = OPENAI_FEEDBACK_MODEL,
     system: Optional[str] = None,
     log_tag: str = "",
     openai_log_role: str = "openai_fallback",
@@ -319,6 +344,7 @@ def invoke_openai_text_json(
     temperature: float = 0.2,
     parser_fn: Optional[ParserFn] = None,
     detect_truncation: bool = False,
+    reasoning_effort: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str]:
     """Single OpenAI chat completion with JSON mode. Returns (parsed_dict, error_token)."""
     api_key = get_openai_api_key()
@@ -336,7 +362,7 @@ def invoke_openai_text_json(
         {"role": "user", "content": prompt},
     ]
 
-    reasoning_effort = "minimal" if _openai_model_restricts_sampling(model) else None
+    effort = _resolve_openai_reasoning_effort(model, reasoning_effort)
 
     try:
         response = _openai_chat_completions_create(
@@ -345,7 +371,7 @@ def invoke_openai_text_json(
             messages=messages,
             max_completion_tokens=max_output_tokens,
             temperature=temperature,
-            reasoning_effort=reasoning_effort,
+            reasoning_effort=effort,
         )
     except Exception as exc:
         if _is_openai_auth_skip_error(exc):
@@ -353,10 +379,11 @@ def invoke_openai_text_json(
         err = classify_openai_exception(exc)
         try:
             logger.warning(
-                "[%s] %s model=%s error_category=%s exc_type=%s",
+                "[%s] %s model=%s reasoning=%s error_category=%s exc_type=%s",
                 log_tag,
                 openai_log_role,
                 model,
+                effort or "—",
                 err,
                 type(exc).__name__,
             )
@@ -374,7 +401,7 @@ def invoke_openai_text_json(
 
     if not raw_text and _openai_model_restricts_sampling(model):
         retry_tokens = OPENAI_FALLBACK_EMPTY_RETRY_MAX_COMPLETION_TOKENS
-        retry_effort = "minimal"
+        retry_effort = effort
         try:
             response = _openai_chat_completions_create(
                 client,
@@ -675,15 +702,17 @@ def _run_openai_primary(
     prompt: str,
     temperature: float,
     log_tag: str,
-    openai_model: str = OPENAI_FALLBACK_MODEL,
+    openai_model: str = OPENAI_FEEDBACK_MODEL,
     max_completion_tokens: int = OPENAI_FALLBACK_MAX_COMPLETION_TOKENS,
     parser_fn: Optional[ParserFn] = None,
     detect_truncation: bool = False,
+    reasoning_effort: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str]:
     """First provider when OPENAI_API_KEY is set; circuit-break → Gemini fallback."""
     if not get_openai_api_key():
         return None, "openai_skipped"
 
+    effort = _resolve_openai_reasoning_effort(openai_model, reasoning_effort)
     circuit_threshold = GEMINI_JSON_CIRCUIT_BREAK_UNPRODUCTIVE
     max_transient_retries = _openai_primary_max_transient_retries()
     last_err = "api_error"
@@ -695,9 +724,10 @@ def _run_openai_primary(
 
     try:
         logger.info(
-            "[%s] openai_primary model=%s",
+            "[%s] openai_primary model=%s reasoning=%s",
             log_tag,
             openai_model,
+            effort or "—",
         )
     except Exception:
         pass
@@ -706,10 +736,11 @@ def _run_openai_primary(
         attempt_no += 1
         try:
             logger.info(
-                "[%s] openai_primary attempt=%s model=%s",
+                "[%s] openai_primary attempt=%s model=%s reasoning=%s",
                 log_tag,
                 attempt_no,
                 openai_model,
+                effort or "—",
             )
         except Exception:
             pass
@@ -723,6 +754,7 @@ def _run_openai_primary(
             temperature=temperature,
             parser_fn=parser_fn,
             detect_truncation=detect_truncation,
+            reasoning_effort=reasoning_effort,
         )
         if parsed:
             try:
@@ -953,6 +985,7 @@ def run_gemini_json_model_chain(
             prompt=prompt,
             temperature=temperature,
             log_tag=log_tag,
+            openai_model=OPENAI_FEEDBACK_MODEL,
         )
         if parsed:
             return parsed, ""
@@ -1210,8 +1243,9 @@ def run_report_json_model_chain(
     retry_max_attempts: int = 2,
     retry_delays_sec: Tuple[int, ...] = (3, 8),
     detect_truncation: bool = True,
-    openai_model: str = OPENAI_FALLBACK_MODEL,
+    openai_model: str = OPENAI_REPORT_MODEL,
     openai_max_completion_tokens: Optional[int] = None,
+    openai_reasoning_effort: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], str, str]:
     """OpenAI-primary report chain with injectable parser; Gemini-only uses report retries."""
     reset_gemini_json_sleep_budget()
@@ -1235,6 +1269,7 @@ def run_report_json_model_chain(
             max_completion_tokens=openai_tokens,
             parser_fn=parser_fn,
             detect_truncation=detect_truncation,
+            reasoning_effort=openai_reasoning_effort,
         )
         if parsed:
             return parsed, "", openai_model

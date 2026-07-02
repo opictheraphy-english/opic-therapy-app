@@ -12,6 +12,9 @@ from services.api_retry_policy import (
 )
 from services.gemini_json_client import (
     OPENAI_FALLBACK_MODEL,
+    OPENAI_FEEDBACK_MODEL,
+    OPENAI_REASONING_EFFORT,
+    OPENAI_REPORT_MODEL,
     classify_gemini_exception,
     invoke_openai_text_json,
     parse_llm_json_response,
@@ -306,7 +309,7 @@ class OpenAiPrimaryTests(unittest.TestCase):
         create_kwargs = mock_openai.OpenAI.return_value.chat.completions.create.call_args.kwargs
         self.assertEqual(create_kwargs["response_format"], {"type": "json_object"})
         self.assertEqual(create_kwargs.get("max_completion_tokens"), 4096)
-        self.assertEqual(create_kwargs.get("reasoning_effort"), "minimal")
+        self.assertEqual(create_kwargs.get("reasoning_effort"), OPENAI_REASONING_EFFORT)
         self.assertNotIn("temperature", create_kwargs)
 
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
@@ -329,7 +332,7 @@ class OpenAiPrimaryTests(unittest.TestCase):
         invoke_mock.assert_not_called()
         openai_mock.assert_called_once()
         call_kwargs = openai_mock.call_args.kwargs
-        self.assertEqual(call_kwargs["model"], OPENAI_FALLBACK_MODEL)
+        self.assertEqual(call_kwargs["model"], OPENAI_FEEDBACK_MODEL)
         self.assertEqual(call_kwargs["prompt"], "p")
 
 
@@ -360,7 +363,7 @@ class ReportJsonModelChainTests(unittest.TestCase):
         )
         self.assertEqual(parsed, {"overall_level": "IM2"})
         self.assertEqual(err, "")
-        self.assertEqual(model, OPENAI_FALLBACK_MODEL)
+        self.assertEqual(model, OPENAI_REPORT_MODEL)
         gemini_mock.assert_not_called()
 
     @patch("services.gemini_json_client.get_openai_api_key", return_value="sk-test")
