@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v9_upgrade_required"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v10_ih_al_recalibration"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -28,10 +28,13 @@ def build_topic_practice_v2_feedback_rubric() -> str:
 
 위 JSON이 레벨 앵커, 6개 score_axes, speech_rate_90s 밴드, question_type_guidance,
 decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
-honest_deflection_guidance, advanced_function_gate의 단일 기준이다. 밴드 숫자나 평가 축 의미, 게이트를 여기서
+honest_deflection_guidance, advanced_function_gate, delivery_quality_guidance,
+level_anti_deflation_guidance의 단일 기준이다. 밴드 숫자나 평가 축 의미, 게이트를 여기서
 다시 적거나 임의로 바꾸지 말 것. 레벨은 단어 수가 아니라 기능(function)·텍스트 타입으로
 먼저 판정하고(anchor_usage), 단어 수는 보조 근거로만 쓴다. IH와 AL의 구분은
-advanced_function_gate(과거·현재 시간틀 통제 + 문단 담화의 지속)를 따른다.
+advanced_function_gate(단일 비롤플레이 답변: 시제 통제 + 문단 담화 지속 + 전달 품질;
+롤플레이 포함 시에만 complication 요구)와 delivery_quality_guidance를 따른다.
+level_anti_deflation_guidance: 문단형 IH 답을 IM2/IM3으로 깎지 말 것.
 
 입력: question_en, question_ko, topic, transcript(학생 영어 답변 텍스트), speech_rate_metrics(선택).
 
@@ -42,9 +45,13 @@ advanced_function_gate(과거·현재 시간틀 통제 + 문단 담화의 지속
   필러 자체를 교정 대상으로 인용하지 말 것. 레벨 판정은 내용어 기준의 기능·텍스트 타입으로
   한다(anchor_usage).
 - speech_rate_metrics.words_normalized_90s / speech_rate_level / wpm 이 있으면, 위 JSON의
-  speech_rate_90s 밴드와 비교해 summary·correction_focus에서 **발화량 안내**를 할 수 있다.
-  (더 길게/구조 보강 등). 단, **레벨 토큰(NL, IM2, IH 등)은 텍스트 필드에 쓰지 말 것.**
-  발화 속도는 하향 전용 신호다 — 빠르다고 레벨을 올리지 않는다.
+  speech_rate_90s 밴드와 delivery_quality_guidance를 함께 참고한다. 높은 WPM(예: 110+)과
+  조직적 문단 담화·접속사가 결합되면 IH/AL 판정을 **지지**할 수 있다 — WPM 단독으로는
+  레벨을 올리지 않는다. 낮은 발화량·느린 속도는 하향 신호로 쓴다.
+  summary·correction_focus에서 **레벨 토큰(NL, IM2, IH 등)은 텍스트 필드에 쓰지 말 것.**
+- transcript의 필러(um, uh), 가벼운 백트래킹, STT 반복(예: "has has uh has")은
+  delivery_quality_guidance대로 관찰한다. 가벼운 필러는 IH와 양립 가능 — IM2/IM3으로
+  깎지 말 것(level_anti_deflation_guidance).
 - score_axis_philosophy와 structure_gate를 적용한다: 문법·어휘가 좋아도 구조가 단편적이면
   높은 레벨로 보지 않는다.
 
@@ -95,9 +102,11 @@ relevance(관련성) 판단 — 느슨하게 적용할 것:
 - keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 금지.
 
 answer_level (이 답변 1개에 대한 OPIc 레벨 — 학생의 최종·종합 등급이 아님):
-- 위 level_rules 앵커·게이트·anchor_usage 기준으로 **이 transcript 한 건**이 도달한 레벨을
+- 위 level_rules 앵커·게이트·anchor_usage·delivery_quality_guidance 기준으로 **이 transcript 한 건**이 도달한 레벨을
   NL, NM, NH, IL, IM1, IM2, IM3, IH, AL 중 **정확히 1개**만 JSON 문자열로 넣는다.
-- 단어 수만으로 올리지 말고, 기능·텍스트 타입·게이트(roleplay, structure 등)로 판정한다.
+- 단어 수만으로 올리지 말고, 기능·텍스트 타입·게이트(roleplay는 해당 문항에만, structure 등)로 판정한다.
+- 비롤플레이 단일 답변(description/comparison/experience 등): AL은 시제 통제 + 문단 담화 지속 +
+  delivery_quality_guidance 충족 시 가능 — 롤플레이 complication을 요구하지 않는다(advanced_function_gate MODE A).
 - **summary, strength, correction_focus, better_expression, practice_mission 등 다른
   텍스트 필드에는 레벨 토큰(IM2, IH, AL 등)을 절대 쓰지 말 것.** 레벨은 오직 answer_level
   필드로만 보고한다.

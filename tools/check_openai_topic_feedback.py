@@ -7,10 +7,12 @@ Run (local):
   export GEMINI_API_KEY=...
   export OPENAI_API_KEY=...   # optional; (b) skipped if missing
   python tools/check_openai_topic_feedback.py
+  python tools/check_openai_topic_feedback.py --sample real_ih
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -31,6 +33,7 @@ from services.topic_practice_v2_analysis import (
     GEMINI_REQUEST_TIMEOUT_MS,
     _build_prompt,
 )
+from tools.check_openai_mock_v2_report import _real_ih_q14_san_diego_transcript
 from utils.secrets import get_gemini_api_key, get_openai_api_key
 
 # --- Synthetic sample (not real student data) --------------------------------
@@ -49,6 +52,17 @@ SAMPLE_ANSWER: Dict[str, Any] = {
         "On weekends, I might meet a friend there and we chat for an hour or so."
     ),
 }
+
+REAL_IH_COMPARISON_ANSWER: Dict[str, Any] = {
+    "topic": "neighborhood",
+    "opic_type": "comparison",
+    "en": "Tell me about your neighborhood when you were younger and how it is different now.",
+    "ko": "어릴 때 살던 동네와 지금의 차이에 대해 말해 보세요.",
+    "duration_seconds": 110.0,
+    "transcript": _real_ih_q14_san_diego_transcript(),
+}
+
+_ACCEPTABLE_REAL_IH_LEVELS = frozenset({"IM3", "IH", "AL"})
 
 # LLM output keys (rubric v7) consumed by topic feedback UI after _normalize_success.
 # Source: services/topic_practice_v2_rubric.py output schema;
@@ -202,11 +216,21 @@ def _print_json_block(title: str, data: Optional[Dict[str, Any]], err: str) -> N
 
 
 def main() -> int:
-    transcript = _transcript_from_answer(SAMPLE_ANSWER)
-    prompt = _build_prompt(SAMPLE_ANSWER, transcript)
+    parser = argparse.ArgumentParser(description="Topic feedback JSON diagnostic")
+    parser.add_argument(
+        "--sample",
+        choices=("cafe", "real_ih"),
+        default="cafe",
+        help="cafe=default UI sample; real_ih=San Diego comparison IH calibration",
+    )
+    args = parser.parse_args()
+    answer = REAL_IH_COMPARISON_ANSWER if args.sample == "real_ih" else SAMPLE_ANSWER
 
-    print("Topic feedback JSON shape check (synthetic cafe sample)")
-    print(f"  topic={SAMPLE_ANSWER['topic']!r}  words≈{len(transcript.split())}")
+    transcript = _transcript_from_answer(answer)
+    prompt = _build_prompt(answer, transcript)
+
+    print(f"Topic feedback JSON shape check (sample={args.sample})")
+    print(f"  topic={answer['topic']!r}  words≈{len(transcript.split())}  duration={answer.get('duration_seconds')}")
     print(f"  gemini_key={'set' if get_gemini_api_key() else 'MISSING'}")
     print(f"  openai_key={'set' if get_openai_api_key() else 'MISSING'}")
 
@@ -234,6 +258,15 @@ def main() -> int:
 
     _check_ui_keys("Gemini", gemini_dict)
     _check_ui_keys("GPT", openai_dict)
+
+    if args.sample == "real_ih":
+        for label, data in (("Gemini", gemini_dict), ("GPT", openai_dict)):
+            if not isinstance(data, dict):
+                continue
+            level = str(data.get("answer_level") or "").strip().upper()
+            ok = level in _ACCEPTABLE_REAL_IH_LEVELS
+            mark = "PASS" if ok else "FAIL"
+            print(f"\n[calibration gate] real_ih {label}: {mark} — answer_level={level or '—'} (want IM3/IH/AL)")
 
     return 0
 

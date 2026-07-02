@@ -330,12 +330,32 @@ def _extract_script_coaching_audio_bytes(
 
 
 def _stt_user_message(stt: Dict[str, Any]) -> str:
+    user_msg = str(stt.get("user_message") or "").strip()
+    if user_msg:
+        return user_msg
     cat = str(stt.get("error_category") or "").strip()
     if cat == "empty_audio":
         return "소리가 녹음되지 않았어요. 다시 시도해 주세요."
+    if cat in ("audio_too_short", "no_speech", "hallucination_rejected"):
+        return "답변이 너무 짧거나 인식되지 않았어요. 다시 녹음해 주세요."
     if cat == "timeout":
         return "변환이 지연됐어요. 다시 시도해 주세요."
     return "음성 변환에 실패했어요. 다시 시도해 주세요."
+
+
+def _duration_from_script_coaching_mic(mic_result: Any) -> float | None:
+    if not isinstance(mic_result, dict):
+        return None
+    for key in ("duration_seconds", "duration", "seconds"):
+        if key not in mic_result:
+            continue
+        try:
+            val = float(mic_result[key])
+        except (TypeError, ValueError):
+            continue
+        if val > 0:
+            return val
+    return None
 
 
 def _append_transcript_to_script(transcript: str) -> None:
@@ -373,6 +393,7 @@ def _process_pending_script_coaching_stt() -> None:
     from services.stt_service import transcribe_answer_audio
 
     resolved_mime = (mime_type or "audio/webm").strip() or "audio/webm"
+    duration = _duration_from_script_coaching_mic(mic_result)
     with st.spinner("음성을 텍스트로 변환하고 있어요…"):
         stt = transcribe_answer_audio(
             audio_bytes,
@@ -381,6 +402,7 @@ def _process_pending_script_coaching_stt() -> None:
             question_text=question_en,
             mode="script_coaching",
             question_id="script_coaching_draft",
+            duration_seconds=duration,
         )
 
     transcript = str(stt.get("transcript") or stt.get("text") or "").strip()
@@ -390,7 +412,10 @@ def _process_pending_script_coaching_stt() -> None:
         st.rerun()
 
     if stt.get("ok") and not transcript:
-        _set_stt_notice("말씀 내용을 인식하지 못했어요. 다시 시도해 주세요.")
+        _set_stt_notice(
+            str(stt.get("user_message") or "").strip()
+            or "말씀 내용을 인식하지 못했어요. 다시 시도해 주세요."
+        )
     else:
         _set_stt_notice(_stt_user_message(stt if isinstance(stt, dict) else {}))
     st.rerun()

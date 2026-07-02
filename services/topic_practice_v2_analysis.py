@@ -52,6 +52,44 @@ _ALLOWED_ANSWER_LEVELS = frozenset(
     {"NL", "NM", "NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"}
 )
 
+# Compact-key aliases after _normalize_level_token (spaces/hyphens stripped, upper).
+_LEVEL_ALIASES: Dict[str, str] = {
+    "IM": "IM2",
+    "INTERMEDIATE": "IM2",
+    "INTERMEDIATEMID": "IM2",
+    "INTERMEDIATEMID1": "IM1",
+    "INTERMEDIATEMID2": "IM2",
+    "INTERMEDIATEMID3": "IM3",
+    "INTERMEDIATELOW": "IL",
+    "INTERMEDIATEHIGH": "IH",
+    "ADVANCEDLOW": "AL",
+    "ADVANCED": "AL",
+    "NOVICELOW": "NL",
+    "NOVICEMID": "NM",
+    "NOVICEHIGH": "NH",
+    "NOVICE": "NH",
+}
+
+_LEVEL_PHRASE_PATTERNS: Tuple[Tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"intermediate\s*mid(?:dle)?\s*3", re.I), "IM3"),
+    (re.compile(r"intermediate\s*mid(?:dle)?\s*2", re.I), "IM2"),
+    (re.compile(r"intermediate\s*mid(?:dle)?\s*1", re.I), "IM1"),
+    (re.compile(r"intermediate\s*mid(?:dle)?", re.I), "IM2"),
+    (re.compile(r"intermediate\s*high", re.I), "IH"),
+    (re.compile(r"intermediate\s*low", re.I), "IL"),
+    (re.compile(r"advanced\s*low", re.I), "AL"),
+    (re.compile(r"novice\s*high", re.I), "NH"),
+    (re.compile(r"novice\s*mid(?:dle)?", re.I), "NM"),
+    (re.compile(r"novice\s*low", re.I), "NL"),
+)
+
+_LEVEL_TOKEN_RE = re.compile(
+    r"(?<![A-Z0-9])(NL|NM|NH|IL|IM3|IM2|IM1|IM|IH|AL)(?![A-Z0-9])",
+    re.I,
+)
+
+ANSWER_LEVEL_MISSING_LABEL = "등급 미표시"
+
 
 def _failure(
     *,
@@ -68,6 +106,7 @@ def _failure(
         "keyword_drill": [],
         "practice_mission": "",
         "answer_level": "",
+        "answer_level_missing": False,
         "error_category": category,
         "error_message": message,
     }
@@ -82,10 +121,12 @@ def _ok_payload(
     keyword_drill: List[str],
     practice_mission: str,
     answer_level: str = "",
+    answer_level_missing: bool = False,
 ) -> Dict[str, Any]:
     return {
         "ok": True,
         "answer_level": answer_level,
+        "answer_level_missing": bool(answer_level_missing),
         "summary": summary,
         "strength": strength,
         "correction_focus": correction_focus,
@@ -102,10 +143,51 @@ def _coerce_str(val: Any) -> str:
     return str(val or "").strip()
 
 
+def _normalize_level_token(raw: str) -> str:
+    return re.sub(r"[\s\-_]+", "", str(raw or "").strip().upper())
+
+
+def _extract_answer_level_token_from_text(text: str) -> str:
+    """Find first OPIc level token in free text (summary etc.); no invented grades."""
+    if not text:
+        return ""
+    for match in _LEVEL_TOKEN_RE.finditer(text):
+        token = _normalize_level_token(match.group(1))
+        if token == "IM":
+            return "IM2"
+        if token in _ALLOWED_ANSWER_LEVELS:
+            return token
+    return ""
+
+
 def _coerce_answer_level(val: Any) -> str:
-    raw = _coerce_str(val).upper().replace(" ", "")
-    if raw in _ALLOWED_ANSWER_LEVELS:
-        return raw
+    raw = _coerce_str(val)
+    if not raw:
+        return ""
+    compact = _normalize_level_token(raw)
+    if compact in _ALLOWED_ANSWER_LEVELS:
+        return compact
+    alias = _LEVEL_ALIASES.get(compact)
+    if alias:
+        return alias
+    for pattern, level in _LEVEL_PHRASE_PATTERNS:
+        if pattern.search(raw):
+            return level
+    return _extract_answer_level_token_from_text(raw)
+
+
+def _fallback_answer_level_from_feedback(norm: Dict[str, Any]) -> str:
+    """Recover level only from model-produced feedback text fields."""
+    for key in (
+        "summary",
+        "strength",
+        "correction_focus",
+        "better_expression",
+        "practice_mission",
+    ):
+        found = _extract_answer_level_token_from_text(_coerce_str(norm.get(key)))
+        if found:
+            return found
     return ""
 
 
@@ -369,6 +451,19 @@ def _apply_ok_field_fallbacks(norm: Dict[str, Any], answer: Dict[str, Any]) -> N
         drills = _fallback_keyword_drill_from_topic(answer)
     norm["keyword_drill"] = drills
 
+    level = _coerce_str(norm.get("answer_level"))
+    if not level:
+        recovered = _fallback_answer_level_from_feedback(norm)
+        if recovered:
+            norm["answer_level"] = recovered
+            norm["answer_level_missing"] = False
+        else:
+            norm["answer_level"] = ""
+            norm["answer_level_missing"] = True
+    else:
+        norm["answer_level"] = _coerce_answer_level(level)
+        norm["answer_level_missing"] = not bool(norm["answer_level"])
+
 
 def analyze_topic_practice_v2_answer(answer: dict) -> dict:
     """
@@ -428,7 +523,13 @@ def analyze_topic_practice_v2_answer(answer: dict) -> dict:
         norm = _normalize_success(parsed)
         _apply_ok_field_fallbacks(norm, answer)
         try:
-            logger.info("[TOPIC_V2_FEEDBACK] success")
+            level = _coerce_str(norm.get("answer_level")) or "—"
+            missing = bool(norm.get("answer_level_missing"))
+            logger.info(
+                "[TOPIC_V2_FEEDBACK] success answer_level=%s missing=%s",
+                level,
+                missing,
+            )
         except Exception:
             pass
         return _stringify_result(norm)
@@ -457,9 +558,16 @@ def _stringify_result(d: Dict[str, Any]) -> dict:
     raw_drill = d.get("keyword_drill")
     drill_list = _coerce_keyword_drill(raw_drill)
 
+    missing_raw = d.get("answer_level_missing")
+    if isinstance(missing_raw, bool):
+        answer_level_missing = missing_raw
+    else:
+        answer_level_missing = str(missing_raw).lower() in ("true", "1", "yes")
+
     return {
         "ok": ok,
         "answer_level": _coerce_answer_level(d.get("answer_level")),
+        "answer_level_missing": answer_level_missing,
         "summary": _coerce_str(d.get("summary")),
         "strength": _coerce_str(d.get("strength")),
         "correction_focus": _coerce_str(d.get("correction_focus")),

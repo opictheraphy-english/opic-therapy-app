@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import unittest
 
-from components.exam_feedback_screen import build_feedback_keyword_chips_html
+from components.exam_feedback_screen import (
+    build_feedback_keyword_chips_html,
+    build_feedback_summary_html,
+)
 from services.topic_practice_v2_analysis import (
     TOPIC_V2_KEYWORD_DRILL_EMPTY_MESSAGE,
     _FALLBACK_UPGRADE_SAMPLE,
     _apply_ok_field_fallbacks,
+    _coerce_answer_level,
+    _extract_answer_level_token_from_text,
     _fallback_keyword_drill_from_topic,
     _fallback_upgrade_sample_from_answer,
     _normalize_success,
@@ -108,6 +113,68 @@ class TopicV2FeedbackFallbackTests(unittest.TestCase):
         self.assertIn("because", html)
         self.assertIn("actually", html)
         self.assertNotIn(TOPIC_V2_KEYWORD_DRILL_EMPTY_MESSAGE, html)
+
+    def test_coerce_answer_level_aliases(self) -> None:
+        self.assertEqual(_coerce_answer_level("im2"), "IM2")
+        self.assertEqual(_coerce_answer_level("IM 2"), "IM2")
+        self.assertEqual(_coerce_answer_level(" AL "), "AL")
+        self.assertEqual(_coerce_answer_level("IM"), "IM2")
+        self.assertEqual(_coerce_answer_level("Intermediate Mid"), "IM2")
+        self.assertEqual(_coerce_answer_level("intermediate high"), "IH")
+        self.assertEqual(_coerce_answer_level("IM4"), "")
+
+    def test_extract_level_from_summary_text(self) -> None:
+        self.assertEqual(
+            _extract_answer_level_token_from_text("전반적으로 IM3 수준의 답변입니다."),
+            "IM3",
+        )
+        self.assertEqual(
+            _extract_answer_level_token_from_text("Shows IM level connected speech."),
+            "IM2",
+        )
+
+    def test_apply_ok_field_fallbacks_recovers_level_from_summary(self) -> None:
+        norm = _normalize_success(
+            {
+                "answer_level": "",
+                "summary": "문장 연결이 좋고 IM2에 가깝습니다.",
+                "strength": "ok",
+                "correction_focus": "ok",
+                "better_expression": "ok",
+                "upgrade_sample": "Sample.",
+                "keyword_drill": ["because"],
+                "practice_mission": "ok",
+            }
+        )
+        _apply_ok_field_fallbacks(norm, {})
+        self.assertEqual(norm["answer_level"], "IM2")
+        self.assertFalse(norm.get("answer_level_missing"))
+
+    def test_apply_ok_field_fallbacks_marks_missing_when_no_level(self) -> None:
+        norm = _normalize_success(
+            {
+                "answer_level": "",
+                "summary": "문법과 흐름이 자연스럽습니다.",
+                "strength": "ok",
+                "correction_focus": "ok",
+                "better_expression": "ok",
+                "upgrade_sample": "Sample.",
+                "keyword_drill": ["because"],
+                "practice_mission": "ok",
+            }
+        )
+        _apply_ok_field_fallbacks(norm, {})
+        self.assertEqual(norm["answer_level"], "")
+        self.assertTrue(norm.get("answer_level_missing"))
+
+    def test_summary_html_shows_missing_level_hint(self) -> None:
+        html = build_feedback_summary_html(
+            "요약입니다.",
+            answer_level="",
+            answer_level_missing=True,
+        )
+        self.assertIn("등급 미표시", html)
+        self.assertIn("재요청 시 표시될 수 있어요", html)
 
 
 if __name__ == "__main__":

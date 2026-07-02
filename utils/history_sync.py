@@ -96,6 +96,12 @@ def _save_once(
         st.session_state[guard_key] = False
     else:
         logger.info("[HISTORY_SYNC] saved %s/%s", practice_type, subtype)
+        try:
+            from utils.home_stats import invalidate_home_stats_cache
+
+            invalidate_home_stats_cache(st.session_state)
+        except Exception:
+            pass
 
 
 def save_mock_v2_report(result: Dict[str, Any], *, sig: str) -> None:

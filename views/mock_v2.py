@@ -626,6 +626,10 @@ def _normalize_mock_v2_stt(stt_result: Any) -> Dict[str, Any]:
         }
     if isinstance(stt_result, dict):
         out = dict(stt_result)
+        if out.get("rejected_as_no_speech"):
+            out["transcript"] = ""
+            out["raw_transcript"] = ""
+            return out
         text = str(
             out.get("transcript") or out.get("text") or out.get("raw_transcript") or ""
         ).strip()
@@ -653,6 +657,7 @@ def _compute_mock_v2_statuses(
     raw_transcript: str,
 ) -> Dict[str, Any]:
     from services.api_retry_policy import is_retryable_error
+    from services.stt_service import is_stt_no_speech_result
 
     text = (transcript or "").strip() or (raw_transcript or "").strip()
     wc = int(count_english_words(text))
@@ -662,6 +667,14 @@ def _compute_mock_v2_statuses(
         return {
             "stt_status": "stt_skipped_no_audio",
             "status": "recording_failed",
+            "student_answer": "",
+            "word_count": 0,
+        }
+
+    if is_stt_no_speech_result(stt_result):
+        return {
+            "stt_status": "insufficient_response",
+            "status": "insufficient_response",
             "student_answer": "",
             "word_count": 0,
         }
@@ -742,6 +755,8 @@ def _run_mock_v2_stt(
     question_text: str,
     audio_bytes: bytes,
     mime_type: str,
+    *,
+    duration_seconds: float | None = None,
 ) -> Dict[str, Any]:
     from services.stt_service import transcribe_answer_audio
 
@@ -762,6 +777,7 @@ def _run_mock_v2_stt(
         question_text=question_text,
         mode="mock_v2",
         question_id=question_id,
+        duration_seconds=duration_seconds,
     )
 
 
@@ -907,6 +923,7 @@ def _commit_mock_v2_recording_impl(
         str(q.get("question_text") or ""),
         blob,
         resolved_mime,
+        duration_seconds=_resolve_mock_v2_duration(mic_result, blob, resolved_mime) or None,
     )
     row = _build_mock_v2_answer_row(
         q,

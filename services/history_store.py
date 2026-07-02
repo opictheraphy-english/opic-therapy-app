@@ -184,6 +184,44 @@ def list_history(
     return data if isinstance(data, list) else []
 
 
+def list_history_stats_rows(
+    *,
+    page_size: int = 200,
+    max_rows: int = 5000,
+) -> Optional[List[Dict[str, Any]]]:
+    """Return lightweight rows for home-dashboard stats (includes ``content``).
+
+    Paginates until ``max_rows`` or no more data. Returns ``None`` on auth /
+    network failure (distinct from an empty list).
+    """
+    rows: List[Dict[str, Any]] = []
+    offset = 0
+    page_size = max(1, int(page_size))
+    max_rows = max(1, int(max_rows))
+    while len(rows) < max_rows:
+        limit = min(page_size, max_rows - len(rows))
+        params: Dict[str, str] = {
+            "select": "created_at,practice_type,subtype,overall_level,content",
+            "order": "created_at.desc",
+            "limit": str(limit),
+            "offset": str(offset),
+        }
+        resp = _request("GET", params=params)
+        if resp is None:
+            return None if not rows else rows
+        try:
+            batch = resp.json()
+        except Exception:
+            return None if not rows else rows
+        if not isinstance(batch, list) or not batch:
+            break
+        rows.extend(batch)
+        if len(batch) < limit:
+            break
+        offset += len(batch)
+    return rows
+
+
 def get_history_record(record_id: str) -> Optional[Dict[str, Any]]:
     """Return a single history row (including ``content``) owned by the user."""
     if not record_id:

@@ -101,6 +101,7 @@ def build_feedback_summary_html(
     *,
     accent: str = "teal",
     answer_level: str = "",
+    answer_level_missing: bool = False,
 ) -> str:
     """Emphasized one-line summary card (accent-tinted background + border)."""
     accent_key = html.escape(_normalize_accent(accent))
@@ -111,6 +112,15 @@ def build_feedback_summary_html(
     if level:
         pill = f'<span class="tq-feedback-summary-level-pill">{level}</span>'
         scope = '<p class="tq-feedback-summary-scope">이 답변 기준</p>'
+    elif answer_level_missing:
+        from services.topic_practice_v2_analysis import ANSWER_LEVEL_MISSING_LABEL
+
+        hint = html.escape(ANSWER_LEVEL_MISSING_LABEL)
+        pill = (
+            f'<span class="tq-feedback-summary-level-pill '
+            f'tq-feedback-summary-level-pill--missing">{hint}</span>'
+        )
+        scope = '<p class="tq-feedback-summary-scope">재요청 시 표시될 수 있어요</p>'
     return (
         f'<div class="tq-feedback-summary tq-feedback-summary--{accent_key}" '
         f'role="region" aria-label="한 줄 총평">'
@@ -227,12 +237,14 @@ def render_feedback_summary(
     *,
     accent: str = "teal",
     answer_level: str = "",
+    answer_level_missing: bool = False,
 ) -> None:
     st.markdown(
         build_feedback_summary_html(
             summary,
             accent=accent,
             answer_level=answer_level,
+            answer_level_missing=answer_level_missing,
         ),
         unsafe_allow_html=True,
     )

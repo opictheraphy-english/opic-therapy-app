@@ -15,6 +15,9 @@ Options:
   python3 tools/check_openai_mock_v2_report.py --sample ih
   python3 tools/check_openai_mock_v2_report.py --sample al
   python3 tools/check_openai_mock_v2_report.py --sample both
+  python3 tools/check_openai_mock_v2_report.py --sample real_ih
+  python3 tools/check_openai_mock_v2_report.py --sample im_low
+  python3 tools/check_openai_mock_v2_report.py --sample calibration
   python3 tools/check_openai_mock_v2_report.py --sample al --skip-gemini
 
 Requires: repo root on PYTHONPATH (script adds it). Keys read ONLY from env vars
@@ -308,6 +311,115 @@ def _al_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     ]
     durations = [72, 58, 50, 68, 62, 48, 78, 52, 46, 70, 50, 52, 54, 110, 105]
     return _rows_from_texts(questions, texts, durations)
+
+
+def _real_ih_q14_san_diego_transcript() -> str:
+    """~230-word comparison answer: paragraph form, connectors, light fillers/STT repeats."""
+    return _t(
+        "Okay, so I want to talk about my neighborhood when I was younger and how it has uh has changed now.",
+        "When I was a child, I lived in La Jolla, which is a coastal area in San Diego, and honestly it felt like a quiet college town.",
+        "Most people were retirees or UCSD students, and we spent lazy afternoons at the beach or in small local shops.",
+        "There were not many tall buildings, parking was easy, and um the rent was pretty affordable for middle-class families.",
+        "However, over the past ten years, the neighborhood has has uh has changed a lot because tech companies moved in nearby.",
+        "Companies like Qualcomm and other startups opened offices, so young professionals relocated from New York and San Francisco.",
+        "As a result, rent went up sharply, and some old bakeries were replaced by fancy coffee places and brunch spots.",
+        "For example, a two-bedroom apartment that cost around fifteen hundred dollars before now costs more than twenty-five hundred.",
+        "The streets feel busier, traffic is worse during rush hour, but there are also more restaurants, concerts, and weekend events.",
+        "So overall, I think my neighborhood became more vibrant and convenient, but longtime residents sometimes struggle with the higher cost of living.",
+        "Even though I enjoy the new energy, I miss how peaceful it used to feel when I was growing up there.",
+    )
+
+
+def _real_ih_san_diego_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """15Q IH calibration: solid IH baseline with San Diego-style Q14 (~110s, ~230 words, fillers)."""
+    rows = _ih_answers(questions)
+    q14_idx = next(i for i, q in enumerate(questions) if q.get("opic_type") == "Comparison")
+    transcript = _real_ih_q14_san_diego_transcript()
+    duration = 110.0
+    rows[q14_idx] = {
+        **rows[q14_idx],
+        "transcript": transcript,
+        "student_answer": transcript,
+        "duration_seconds": duration,
+        "wpm": round(len(transcript.split()) / max(duration / 60.0, 0.1), 1),
+    }
+    return rows
+
+
+def _im_low_regression_answers(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Short list-like answers with repetition — should stay at IM or below (no IH/AL inflation)."""
+    texts = [
+        "My name Minho. I work office. I live Seoul.",
+        "I like TV. Drama good. Funny show.",
+        "Watch TV night. Sometimes wife. Friday too.",
+        "Last movie cinema. Friends. Fun.",
+        "Park nice. Trees green. Walk there.",
+        "Go park walk. Sometimes read.",
+        "Last park wife. Picnic. Happy.",
+        "Music pop. Like melody. Radio.",
+        "Listen subway. Home too. Earphones.",
+        "Concert friend. Music loud. Good night.",
+        "Hotel room. Quiet please. Breakfast?",
+        "Wrong food. Allergy chicken. Fix please.",
+        "Trip city. Subway good. Budget?",
+        "Before small town. Now busy. Many people.",
+        "City problem traffic. Bad air. Too many cars.",
+    ]
+    durations = [18, 16, 14, 15, 12, 11, 14, 13, 12, 15, 12, 13, 12, 14, 13]
+    return _rows_from_texts(questions, texts, durations)
+
+
+_LEVEL_ORDER = ("NL", "NM", "NH", "IL", "IM1", "IM2", "IM3", "IH", "AL")
+
+
+def _normalize_level_token(level: str) -> str:
+    token = str(level or "").strip().upper().replace(" ", "")
+    if token in _LEVEL_ORDER:
+        return token
+    if "응답" in str(level) or "부족" in str(level):
+        return "INSUFFICIENT"
+    return token or "UNKNOWN"
+
+
+def _level_index(level: str) -> Optional[int]:
+    token = _normalize_level_token(level)
+    if token in _LEVEL_ORDER:
+        return _LEVEL_ORDER.index(token)
+    return None
+
+
+def _validate_real_ih_level(level: str) -> Tuple[bool, str]:
+    """Expect IH ±1 (IM3..AL), not IM2 or below."""
+    idx = _level_index(level)
+    if idx is None:
+        return False, f"unrecognized level {level!r}"
+    im3 = _LEVEL_ORDER.index("IM3")
+    al = _LEVEL_ORDER.index("AL")
+    ok = im3 <= idx <= al
+    detail = f"got {_normalize_level_token(level)} (index {idx}); want IM3–AL band"
+    return ok, detail
+
+
+def _validate_im_low_level(level: str) -> Tuple[bool, str]:
+    """Low-quality list answers should not inflate to IH/AL."""
+    idx = _level_index(level)
+    if idx is None:
+        return False, f"unrecognized level {level!r}"
+    im3 = _LEVEL_ORDER.index("IM3")
+    ok = idx <= im3
+    detail = f"got {_normalize_level_token(level)} (index {idx}); want IM3 or below"
+    return ok, detail
+
+
+def _print_calibration_gate(sample_name: str, overall_level: str) -> None:
+    if sample_name == "real_ih_15q":
+        ok, detail = _validate_real_ih_level(overall_level)
+        mark = "PASS" if ok else "FAIL"
+        print(f"\n  [calibration gate] real_ih: {mark} — {detail}")
+    elif sample_name == "im_low_15q":
+        ok, detail = _validate_im_low_level(overall_level)
+        mark = "PASS" if ok else "FAIL"
+        print(f"\n  [calibration gate] im_low regression: {mark} — {detail}")
 
 
 def _rows_from_texts(
@@ -856,6 +968,7 @@ def _print_detail_block(r: MeasureResult) -> None:
         f"est_cost_usd={r.est_cost_usd:.4f} (rough)"
     )
     print(f"overall_level: {r.overall_level or '—'}")
+    _print_calibration_gate(r.sample_name, r.overall_level)
     print(
         f"question_feedback chars: avg={r.q_feedback_chars.avg} min={r.q_feedback_chars.min} "
         f"max={r.q_feedback_chars.max} (n={r.q_feedback_chars.count})"
@@ -944,22 +1057,36 @@ def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Mock V2 report model comparison diagnostic")
     p.add_argument(
         "--sample",
-        choices=("ih", "al", "both"),
+        choices=("ih", "al", "both", "real_ih", "im_low", "calibration"),
         default="both",
-        help="Synthetic dataset: IH baseline, AL challenge (long Q14/Q15), or both",
+        help=(
+            "Synthetic dataset: IH baseline, AL challenge, real-IH San Diego Q14, "
+            "IM-low regression, calibration (real_ih+im_low), or both (ih+al)"
+        ),
     )
     p.add_argument("--skip-gemini", action="store_true", help="Skip Gemini baseline (OpenAI-only)")
     return p.parse_args()
 
 
+def _collect_samples(
+    sample: str, questions: List[Dict[str, Any]]
+) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    samples: List[Tuple[str, List[Dict[str, Any]]]] = []
+    if sample in ("ih", "both"):
+        samples.append(("ih_15q", _ih_answers(questions)))
+    if sample in ("al", "both"):
+        samples.append(("al_challenge_15q", _al_answers(questions)))
+    if sample in ("real_ih", "calibration"):
+        samples.append(("real_ih_15q", _real_ih_san_diego_answers(questions)))
+    if sample in ("im_low", "calibration"):
+        samples.append(("im_low_15q", _im_low_regression_answers(questions)))
+    return samples
+
+
 def main() -> int:
     args = _parse_args()
     questions = _question_bank()
-    samples: List[Tuple[str, List[Dict[str, Any]]]] = []
-    if args.sample in ("ih", "both"):
-        samples.append(("ih_15q", _ih_answers(questions)))
-    if args.sample in ("al", "both"):
-        samples.append(("al_challenge_15q", _al_answers(questions)))
+    samples = _collect_samples(args.sample, questions)
 
     print("Mock V2 final report — model comparison (gpt-5-nano vs gpt-5.4-mini vs Gemini)")
     print(f"  gemini_key={'set' if get_gemini_api_key() else 'MISSING'}")

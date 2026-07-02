@@ -15,8 +15,8 @@ from __future__ import annotations
 # Do not change output schema unless report UI is updated together.
 # Level thresholds: edit services/mini_mock_v2_level_rules.py only.
 
-RUBRIC_VERSION = "mini_v2_rubric_2026_05_beta_06_unified"
-LIGHT_RUBRIC_VERSION = "mini_v2_rubric_2026_05_light_beta_06_unified"
+RUBRIC_VERSION = "mini_v2_rubric_2026_06_ih_al_recalibration"
+LIGHT_RUBRIC_VERSION = "mini_v2_rubric_2026_06_light_ih_al_recalibration"
 
 
 def build_mini_mock_v2_rubric_prompt() -> str:
@@ -34,11 +34,13 @@ SHARED EVALUATION CALIBRATION (single source of truth, version {LEVEL_RULE_VERSI
 
 The JSON above is authoritative for: level anchors, the six score axes (score_axes),
 speech-rate bands (speech_rate_90s), question-type guidance, decision_guidance,
-anchor_usage, roleplay_gate, structure_gate, relevance_gate, and
-advanced_function_gate. Follow it exactly. Do NOT restate or override any band
-numbers, axis meanings, or gates with your own assumptions. Classify by FUNCTION /
-text type first; word counts only corroborate (anchor_usage). IH vs AL follows
-advanced_function_gate (time-frame control + sustained paragraph discourse).
+anchor_usage, roleplay_gate, structure_gate, relevance_gate,
+advanced_function_gate, delivery_quality_guidance, and level_anti_deflation_guidance.
+Follow it exactly. Do NOT restate or override any band numbers, axis meanings, or
+gates with your own assumptions. Classify by FUNCTION / text type first; word/sentence
+anchors are typical reference only (anchor_usage). IH vs AL follows
+advanced_function_gate (roleplay complication only when Q3 is roleplay) and
+delivery_quality_guidance. Do not deflate paragraph IH answers with minor fillers.
 
 TEXT-FIRST EVALUATION ONLY:
 - You receive STT transcript text in student_answer fields, not audio.
@@ -63,8 +65,8 @@ Apply score_axis_philosophy: accuracy alone never raises the level.
 
 LEVEL DECISION:
 - Follow decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
-  and advanced_function_gate in the JSON exactly. Classify by FUNCTION / text type first;
-  word counts only corroborate. IH vs AL follows advanced_function_gate.
+  advanced_function_gate, delivery_quality_guidance, and level_anti_deflation_guidance
+  in the JSON exactly. Classify by FUNCTION / text type first; anchors corroborate only.
 - If ALL THREE answers are very short, empty, OR non-answers (question echo / off-topic
   per relevance_gate), set overall_level = "응답 부족".
 - total_words_anchor / sentence_count_anchor in the JSON are for Q1–Q3 combined (mini mock scope).
@@ -133,9 +135,10 @@ SHARED EVALUATION CALIBRATION (single source of truth — follow exactly; not ha
 
 The JSON above is authoritative for level anchors, the six score_axes, speech_rate_90s
 bands, question_type_guidance, decision_guidance, anchor_usage, roleplay_gate,
-structure_gate, relevance_gate, and advanced_function_gate. Classify by FUNCTION /
-text type first; word counts only corroborate. IH vs AL follows
-advanced_function_gate (past+present narration + sustained paragraph discourse).
+structure_gate, relevance_gate, advanced_function_gate, delivery_quality_guidance,
+and level_anti_deflation_guidance. Classify by FUNCTION / text type first; anchors
+are typical reference only. IH vs AL follows advanced_function_gate (complication
+only on roleplay Q3) and delivery_quality_guidance.
 
 Rules:
 - Text only. No pronunciation, intonation, stress, or linking scores.
@@ -157,8 +160,8 @@ Apply score_axis_philosophy and all gates: accuracy alone never raises the level
 weak structure/relevance caps at IM3; a non-answer (relevance_gate) cannot reach IM1+.
 
 Per-answer metrics (filler_hits, connector_count, repetition_hint) are supporting signals only.
-Speech rate: use speech_rate_90s and wpm_rules in the JSON — 90s word bands drive
-response_amount and act as a downward-only level cap.
+Speech rate: use speech_rate_90s and wpm_rules in the JSON — low bands cap downward;
+high WPM with organized discourse supports IH/AL per delivery_quality_guidance (never WPM alone).
 
 Feedback style examples (Korean):
 {feedback_examples}

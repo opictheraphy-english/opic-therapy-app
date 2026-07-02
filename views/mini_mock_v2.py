@@ -520,6 +520,17 @@ def _compute_mini_v2_statuses(
         }
 
     recording_status = "recorded"
+    from services.stt_service import is_stt_no_speech_result
+
+    if is_stt_no_speech_result(stt_result):
+        return {
+            "recording_status": recording_status,
+            "stt_status": "insufficient_response",
+            "status": "insufficient_response",
+            "student_answer": "",
+            "word_count": 0,
+        }
+
     if text:
         stt_status = "transcript_ready"
         status = "saved" if word_count >= _MIN_ANSWER_MIN_WORDS else "insufficient_response"
@@ -834,6 +845,11 @@ def _normalize_mini_v2_stt_result(stt_result: Any) -> Dict[str, Any]:
         }
     if isinstance(stt_result, dict):
         out = dict(stt_result)
+        if out.get("rejected_as_no_speech"):
+            out["transcript"] = ""
+            out["raw_transcript"] = ""
+            out["text"] = ""
+            return out
         text = str(
             out.get("transcript")
             or out.get("text")
@@ -863,8 +879,10 @@ def _run_mini_v2_stt(
     q_idx: int,
     audio_bytes: bytes,
     mime_type: str,
+    *,
+    duration_seconds: float | None = None,
 ) -> Dict[str, Any]:
-    """Call STT when audio exists — never skipped for short/zero duration."""
+    """Call STT when audio exists; short clips are rejected inside stt_service."""
     from services.stt_service import transcribe_answer_audio
 
     idx = max(0, min(_QUESTION_COUNT - 1, int(q_idx)))
@@ -877,10 +895,11 @@ def _run_mini_v2_stt(
 
     try:
         logger.info(
-            "[MINI_V2_STT_ATTEMPT] q=%s audio_len=%s mime_type=%s",
+            "[MINI_V2_STT_ATTEMPT] q=%s audio_len=%s mime_type=%s duration=%s",
             idx + 1,
             audio_len,
             resolved_mime,
+            duration_seconds,
         )
     except Exception:
         pass
@@ -905,6 +924,7 @@ def _run_mini_v2_stt(
         question_text=question_text,
         mode="mini_mock_v2",
         question_id=question_id,
+        duration_seconds=duration_seconds,
     )
 
 
@@ -1160,7 +1180,13 @@ def _commit_mini_v2_recording_answer_impl(
         return False
 
     _save_v2_audio_blob(idx, blob, resolved_mime)
-    stt_result = _run_mini_v2_stt(idx, blob, resolved_mime)
+    dur, _dur_method = _resolve_mini_v2_duration(mic_result, blob, resolved_mime)
+    stt_result = _run_mini_v2_stt(
+        idx,
+        blob,
+        resolved_mime,
+        duration_seconds=dur if dur > 0 else None,
+    )
     row = _build_mini_v2_row_from_stt(
         idx,
         audio_bytes=blob,

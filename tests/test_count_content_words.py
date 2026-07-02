@@ -67,6 +67,9 @@ class TestTopicV2FeedbackSummary(unittest.TestCase):
     def test_coerce_answer_level_rejects_invalid(self):
         self.assertEqual(_coerce_answer_level("IH"), "IH")
         self.assertEqual(_coerce_answer_level("  al "), "AL")
+        self.assertEqual(_coerce_answer_level("IM"), "IM2")
+        self.assertEqual(_coerce_answer_level("IM 2"), "IM2")
+        self.assertEqual(_coerce_answer_level("Intermediate Mid"), "IM2")
         self.assertEqual(_coerce_answer_level("IM4"), "")
         self.assertEqual(_coerce_answer_level(""), "")
 

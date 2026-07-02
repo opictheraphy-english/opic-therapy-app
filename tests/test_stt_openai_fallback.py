@@ -32,7 +32,8 @@ class SttOpenAiHelperTests(unittest.TestCase):
 
 
 class SttOpenAiFallbackTests(unittest.TestCase):
-    _AUDIO = b"\x00" * 2048
+    _AUDIO = b"\x00" * 15_000
+    _DURATION = 45.0
 
     @patch("services.stt_service._invoke_openai_stt_model")
     @patch("services.stt_service._invoke_stt_model")
@@ -58,6 +59,7 @@ class SttOpenAiFallbackTests(unittest.TestCase):
             mode="topic_v2",
             question_id="q1",
             api_key="gemini-key",
+            duration_seconds=self._DURATION,
         )
 
         self.assertTrue(result["ok"])
@@ -87,6 +89,7 @@ class SttOpenAiFallbackTests(unittest.TestCase):
             mode="topic_v2",
             question_id="q1",
             api_key="gemini-key",
+            duration_seconds=self._DURATION,
         )
 
         self.assertFalse(result["ok"])
@@ -112,6 +115,7 @@ class SttOpenAiFallbackTests(unittest.TestCase):
                 mode="topic_v2",
                 question_id="q2",
                 api_key=None,
+                duration_seconds=self._DURATION,
             )
 
         self.assertTrue(result["ok"])

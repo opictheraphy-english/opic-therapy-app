@@ -2515,6 +2515,195 @@ _PORTAL_CHEVRON_SVG = (
     '<polyline points="9 6 15 12 9 18"></polyline></svg>'
 )
 
+_LEARN_HERO_ARROW_SVG = (
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+    'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" '
+    'stroke-linejoin="round" aria-hidden="true">'
+    '<polyline points="9 6 15 12 9 18"></polyline></svg>'
+)
+
+
+def _normalize_learn_html(html_block: str) -> str:
+    return "".join(line.strip() for line in html_block.splitlines() if line.strip())
+
+
+def _portal_target_level_label() -> str:
+    try:
+        level = int(
+            st.session_state.get("difficulty")
+            or st.session_state.get("settings", {}).get("difficulty")
+            or 5
+        )
+    except (TypeError, ValueError):
+        level = 5
+    return f"목표 Lv.{level}"
+
+
+def _render_learn_portal_header() -> None:
+    pill = html.escape(_portal_target_level_label())
+    block = (
+        f'<header class="learn-portal-header" role="banner">'
+        f'<div class="learn-portal-header-left">'
+        f'<div class="learn-portal-title">학습하기</div>'
+        f'<div class="learn-portal-subtitle">오늘은 어떤 방식으로 연습할까요?</div>'
+        f"</div>"
+        f'<span class="learn-portal-target-pill">{pill}</span>'
+        f"</header>"
+    )
+    st.markdown(_normalize_learn_html(block), unsafe_allow_html=True)
+
+
+def _learn_icon_html(icon_key: str, *, tile_class: str = "learn-grid-icon") -> str:
+    from views.topic_icons import TOPIC_ICONS
+
+    icon_svg = TOPIC_ICONS.get(icon_key, TOPIC_ICONS["circle"])
+    return f'<span class="{tile_class}" aria-hidden="true">{icon_svg}</span>'
+
+
+def _render_learn_hero_card_html() -> None:
+    icon = _learn_icon_html("clipboard-check", tile_class="learn-hero-icon")
+    block = (
+        f'<div class="learn-hero-card" role="region" aria-label="실전 모의고사">'
+        f'<div class="learn-hero-card-left">'
+        f"{icon}"
+        f'<div class="learn-hero-card-text">'
+        f'<div class="learn-hero-card-title">실전 모의고사</div>'
+        f'<div class="learn-hero-card-sub">15문항 · 실제 시험 흐름 · 최종 리포트</div>'
+        f"</div></div>"
+        f'<span class="learn-hero-card-arrow">{_LEARN_HERO_ARROW_SVG}</span>'
+        f"</div>"
+    )
+    st.markdown(_normalize_learn_html(block), unsafe_allow_html=True)
+
+
+def _render_learn_grid_card_html(
+    *,
+    variant: str,
+    aria_label: str,
+    title: str,
+    subtitle: str,
+    icon_key: str,
+    badge: str = "",
+    badge_tone: str = "",
+) -> str:
+    badge_html = ""
+    if badge:
+        tone = html.escape(badge_tone or "teal")
+        badge_html = (
+            f'<span class="learn-grid-badge learn-grid-badge--{tone}">'
+            f"{html.escape(badge)}</span>"
+        )
+    icon = _learn_icon_html(icon_key)
+    return _normalize_learn_html(
+        f'<div class="learn-grid-card learn-grid-card--{html.escape(variant)}" '
+        f'role="region" aria-label="{html.escape(aria_label)}">'
+        f'<div class="learn-grid-card-top">{icon}{badge_html}</div>'
+        f'<div class="learn-grid-card-title">{html.escape(title)}</div>'
+        f'<div class="learn-grid-card-sub">{html.escape(subtitle)}</div>'
+        f"</div>"
+    )
+
+
+def _render_learn_grid_cell(
+    col,
+    *,
+    card_html: str,
+    button_key: str,
+    button_label: str,
+    on_click,
+) -> None:
+    with col:
+        st.markdown(card_html, unsafe_allow_html=True)
+        if st.button(button_label, key=button_key, use_container_width=True):
+            on_click()
+            st.rerun()
+
+
+def _start_mock_v2_from_portal(mx: dict) -> None:
+    from views.mock_v2 import begin_mock_v2_session
+
+    begin_mock_v2_session()
+    st.session_state["mock_mode"] = "mock_v2"
+    st.session_state["practice_portal_selected"] = True
+    _sync_portal_mode_to_mx(mx, "mock_v2")
+    _clear_reset_practice_query_param()
+    try:
+        logger.info("[MOCK_V2_SET_AS_MAIN] source=learning_portal mock_mode=mock_v2")
+    except Exception:
+        pass
+
+
+def _start_mini_mock_from_portal(mx: dict) -> None:
+    from views.mini_mock_v2 import ACTIVE_LEARNING_MODE_MINI_V2, begin_mini_mock_v2_session
+
+    begin_mini_mock_v2_session(mx)
+    _sync_portal_mode_to_mx(mx, "mini_mock")
+    _set_mock_page(mx, "MINI_MOCK")
+    _clear_reset_practice_query_param()
+    try:
+        logger.info(
+            "[MINI_MOCK_V2] portal_start mode=%s page=MINI_MOCK legacy_bypassed=True",
+            ACTIVE_LEARNING_MODE_MINI_V2,
+        )
+    except Exception:
+        pass
+
+
+def _start_topic_v2_from_portal(mx: dict) -> None:
+    from views.topic_practice_v2 import MOCK_MODE_TOPIC_V2, clear_topic_v2_session
+
+    clear_topic_v2_session()
+    st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
+    st.session_state["practice_portal_selected"] = True
+    st.session_state["mock_page"] = "TOPIC_V2"
+    _sync_portal_mode_to_mx(mx, MOCK_MODE_TOPIC_V2)
+    _set_mock_page(mx, "TOPIC_V2")
+    _clear_reset_practice_query_param()
+    try:
+        logger.info("[TOPIC_PRACTICE_V2] portal_start mode=%s page=TOPIC_V2", MOCK_MODE_TOPIC_V2)
+    except Exception:
+        pass
+
+
+def _start_keyword_from_portal(mx: dict) -> None:
+    from views.topic_practice_v2 import (
+        ENTRY_SOURCE_PORTAL_KEYWORD,
+        MOCK_MODE_TOPIC_V2,
+        clear_topic_v2_session,
+    )
+
+    clear_topic_v2_session()
+    st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
+    st.session_state["practice_portal_selected"] = True
+    st.session_state["mock_page"] = "TOPIC_V2"
+    _sync_portal_mode_to_mx(mx, MOCK_MODE_TOPIC_V2)
+    _set_mock_page(mx, "TOPIC_V2")
+    st.session_state["topic_v2_entry_source"] = ENTRY_SOURCE_PORTAL_KEYWORD
+    st.session_state["topic_v2_page"] = "practice"
+    st.session_state["topic_v2_step"] = "select_keyword_set"
+    _clear_reset_practice_query_param()
+    try:
+        logger.info(
+            "[KEYWORD_CONSTRAINT] portal_start mode=%s page=TOPIC_V2 step=select_keyword_set",
+            MOCK_MODE_TOPIC_V2,
+        )
+    except Exception:
+        pass
+
+
+def _start_script_coaching_from_portal(mx: dict) -> None:
+    from views.script_coaching import clear_script_coaching_session
+
+    clear_script_coaching_session()
+    st.session_state["mock_mode"] = "script_coaching"
+    st.session_state["practice_portal_selected"] = True
+    _sync_portal_mode_to_mx(mx, "script_coaching")
+    _clear_reset_practice_query_param()
+    try:
+        logger.info("[SCRIPT_COACHING] portal_start mode=script_coaching")
+    except Exception:
+        pass
+
 
 def _render_portal_card_html(
     *,
@@ -2556,250 +2745,86 @@ def _render_portal_card_html(
 
 
 def render_learning_portal(mx: dict) -> None:
-    """Learning portal — real mock, mini mock, topic practice (coaching hidden for launch)."""
+    """Learning portal — grid layout aligned with home dashboard design."""
     _maybe_reset_practice_from_url()
     mx = mock_session()
 
     render_top_bar("학습하기", back_href="?nav=HOME", eyebrow="학습하기")
-    st.markdown('<div class="mx-landing-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-
     st.markdown(
-        """
-        <section class="mx-mode-intro" role="region" aria-label="학습하기">
-          <h2 class="mx-mode-title">오늘은 어떤 방식으로 연습할까요?</h2>
-          <p class="mx-mode-subtitle">실전처럼 풀어보거나, 빠른 진단·주제 연습으로 답변 습관을 다듬을 수 있어요.</p>
-        </section>
-        """,
+        '<div class="mx-landing-marker learn-portal-screen" aria-hidden="true"></div>',
         unsafe_allow_html=True,
     )
 
-    _render_portal_sample_report_section(mx)
+    _render_learn_portal_header()
 
-    st.markdown(
-        """
-        <section class="mx-portal-practice-intro" role="region" aria-label="연습 방식 선택">
-          <h3 class="mx-portal-section-title">연습 방식 선택</h3>
-        </section>
-        """,
-        unsafe_allow_html=True,
+    st.markdown('<div class="learn-portal-hero-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _render_learn_hero_card_html()
+    if st.button("시작 →", key="learn_hero_mock", use_container_width=True):
+        _start_mock_v2_from_portal(mx)
+        st.rerun()
+
+    st.markdown('<div class="learn-portal-grid-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
+    row1_a, row1_b = st.columns(2, gap="small")
+    _render_learn_grid_cell(
+        row1_a,
+        card_html=_render_learn_grid_card_html(
+            variant="mini",
+            aria_label="5분 진단",
+            title="5분 진단",
+            subtitle="3문항으로 내 레벨 빠르게",
+            icon_key="stopwatch",
+            badge="처음이라면",
+            badge_tone="amber",
+        ),
+        button_key="learn_card_mini",
+        button_label="시작 →",
+        on_click=lambda: _start_mini_mock_from_portal(mx),
     )
-    st.markdown(
-        '<div class="mx-portal-practice-marker" aria-hidden="true"></div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="mx-portal-cards-marker" aria-hidden="true"></div>',
-        unsafe_allow_html=True,
-    )
-
-    c1, c2 = st.columns(2)
-    with c1:
-        _render_portal_card_html(
-            variant="real-mock",
-            aria_label="실전 모의고사",
-            title="실전 모의고사",
-            sub="15문항 실전 흐름 + AI 최종 리포트",
-            icon="clipboard-check",
-            badge="추천",
-            badge_tone="teal",
-        )
-        if st.button(
-            "실전 모의고사 시작",
-            use_container_width=True,
-            key="portal_start_real_mock",
-        ):
-            from views.mock_v2 import begin_mock_v2_session
-
-            begin_mock_v2_session()
-            st.session_state["mock_mode"] = "mock_v2"
-            st.session_state["practice_portal_selected"] = True
-            _sync_portal_mode_to_mx(mx, "mock_v2")
-            _clear_reset_practice_query_param()
-            try:
-                logger.info(
-                    "[MOCK_V2_SET_AS_MAIN] source=learning_portal mock_mode=mock_v2"
-                )
-            except Exception:
-                pass
-            st.rerun()
-    with c2:
-        _render_portal_card_html(
-            variant="mini-mock",
-            aria_label="5분 진단 미니 모의고사",
-            title="5분 진단 미니 모의고사",
-            sub="묘사·경험·롤플 3문항 빠른 진단",
-            icon="stopwatch",
-            badge="추천 · 약 5분",
-            badge_tone="blue",
-        )
-        if st.button(
-            "5분 진단 시작",
-            use_container_width=True,
-            key="portal_start_mini_mock",
-        ):
-            from views.mini_mock_v2 import (
-                ACTIVE_LEARNING_MODE_MINI_V2,
-                begin_mini_mock_v2_session,
-            )
-
-            begin_mini_mock_v2_session(mx)
-            _sync_portal_mode_to_mx(mx, "mini_mock")
-            _set_mock_page(mx, "MINI_MOCK")
-            _clear_reset_practice_query_param()
-            try:
-                logger.info(
-                    "[MINI_MOCK_V2] portal_start mode=%s page=MINI_MOCK legacy_bypassed=True",
-                    ACTIVE_LEARNING_MODE_MINI_V2,
-                )
-            except Exception:
-                pass
-            st.rerun()
-
-    c3, c4 = st.columns(2)
-    with c3:
-        _render_portal_card_html(
+    _render_learn_grid_cell(
+        row1_b,
+        card_html=_render_learn_grid_card_html(
             variant="topic",
-            aria_label="주제별 답변 연습",
-            title="주제별 답변 연습",
-            sub="원하는 주제 3문항씩 + 주제별 리포트",
-            icon="list-search",
-        )
-        if st.button(
-            "주제별 연습 시작",
-            use_container_width=True,
-            key="portal_start_topic_practice",
-        ):
-            from views.topic_practice_v2 import MOCK_MODE_TOPIC_V2, clear_topic_v2_session
+            aria_label="주제별 연습",
+            title="주제별 연습",
+            subtitle="내 주제 3문항 + AI 피드백",
+            icon_key="list-search",
+            badge="매일 추천",
+            badge_tone="teal",
+        ),
+        button_key="learn_card_topic",
+        button_label="시작 →",
+        on_click=lambda: _start_topic_v2_from_portal(mx),
+    )
 
-            clear_topic_v2_session()
-            st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
-            st.session_state["practice_portal_selected"] = True
-            st.session_state["mock_page"] = "TOPIC_V2"
-            _sync_portal_mode_to_mx(mx, MOCK_MODE_TOPIC_V2)
-            _set_mock_page(mx, "TOPIC_V2")
-            _clear_reset_practice_query_param()
-            try:
-                logger.info("[TOPIC_PRACTICE_V2] portal_start mode=%s page=TOPIC_V2", MOCK_MODE_TOPIC_V2)
-            except Exception:
-                pass
-            st.rerun()
-    with c4:
-        _render_portal_card_html(
+    row2_a, row2_b = st.columns(2, gap="small")
+    _render_learn_grid_cell(
+        row2_a,
+        card_html=_render_learn_grid_card_html(
+            variant="keyword",
+            aria_label="키워드 표현",
+            title="키워드 표현",
+            subtitle="목표 표현 넣어 말하기",
+            icon_key="vocabulary",
+        ),
+        button_key="learn_card_keyword",
+        button_label="시작 →",
+        on_click=lambda: _start_keyword_from_portal(mx),
+    )
+    _render_learn_grid_cell(
+        row2_b,
+        card_html=_render_learn_grid_card_html(
             variant="script",
             aria_label="스크립트 첨삭",
             title="스크립트 첨삭",
-            sub="내가 쓴 답변을 등급별로 진단",
-            icon="pencil-check",
-        )
-        if st.button(
-            "스크립트 첨삭 시작",
-            use_container_width=True,
-            key="portal_start_script_coaching",
-        ):
-            from views.script_coaching import clear_script_coaching_session
-
-            clear_script_coaching_session()
-            st.session_state["mock_mode"] = "script_coaching"
-            st.session_state["practice_portal_selected"] = True
-            _sync_portal_mode_to_mx(mx, "script_coaching")
-            _clear_reset_practice_query_param()
-            try:
-                logger.info("[SCRIPT_COACHING] portal_start mode=script_coaching")
-            except Exception:
-                pass
-            st.rerun()
-
-    c5, _ = st.columns([1, 1])
-    with c5:
-        _render_portal_card_html(
-            variant="keyword",
-            aria_label="키워드 표현 연습",
-            title="키워드 표현 연습",
-            sub="목표 표현 쓰고 금지 표현 피하기",
-            icon="vocabulary",
-        )
-        if st.button(
-            "키워드 표현 연습 시작",
-            use_container_width=True,
-            key="portal_start_keyword_constraint",
-        ):
-            from views.topic_practice_v2 import (
-                ENTRY_SOURCE_PORTAL_KEYWORD,
-                MOCK_MODE_TOPIC_V2,
-                clear_topic_v2_session,
-            )
-
-            clear_topic_v2_session()
-            st.session_state["mock_mode"] = MOCK_MODE_TOPIC_V2
-            st.session_state["practice_portal_selected"] = True
-            st.session_state["mock_page"] = "TOPIC_V2"
-            _sync_portal_mode_to_mx(mx, MOCK_MODE_TOPIC_V2)
-            _set_mock_page(mx, "TOPIC_V2")
-            st.session_state["topic_v2_entry_source"] = ENTRY_SOURCE_PORTAL_KEYWORD
-            st.session_state["topic_v2_page"] = "practice"
-            st.session_state["topic_v2_step"] = "select_keyword_set"
-            _clear_reset_practice_query_param()
-            try:
-                logger.info(
-                    "[KEYWORD_CONSTRAINT] portal_start mode=%s page=TOPIC_V2 step=select_keyword_set",
-                    MOCK_MODE_TOPIC_V2,
-                )
-            except Exception:
-                pass
-            st.rerun()
+            subtitle="내 문장 진단 + 업그레이드",
+            icon_key="pencil-check",
+        ),
+        button_key="learn_card_script",
+        button_label="시작 →",
+        on_click=lambda: _start_script_coaching_from_portal(mx),
+    )
 
     _render_dev_portal_debug(mx)
-
-
-def _render_portal_sample_report_section(mx: dict) -> None:
-    """Sample final report preview — synthetic data only, no Gemini."""
-    from services.final_report_demo import (
-        build_demo_sample_pdf_bytes,
-        open_demo_final_report,
-    )
-    from utils.exam_state import has_resumable_exam
-
-    st.markdown(
-        """
-        <section class="mx-portal-sample-section" aria-label="리포트 샘플">
-          <section class="continue-card continue-card--start mx-mode-card mx-sample-report-card"
-                   role="region" aria-label="리포트 샘플 카드">
-            <div class="cc-eyebrow">리포트 샘플 먼저 보기</div>
-            <div class="cc-title">모의고사 후 받는 최종 리포트를 미리 확인해 보세요</div>
-            <div class="cc-meta">모의고사를 끝내면 어떤 식으로 최종 리포트가 나오는지 미리 확인해 보세요.<br/>
-              샘플 리포트는 데모 데이터로 만들어져서 AI 사용량이 차감되지 않습니다.</div>
-          </section>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    if has_resumable_exam(mx) and not mx.get("_final_report_demo"):
-        st.caption(
-            "진행 중인 모의고사가 있어도 샘플을 볼 수 있어요. "
-            "학습하기로 돌아가면 이어서 풀 수 있습니다."
-        )
-
-    pdf_bytes = build_demo_sample_pdf_bytes()
-    b_view, b_pdf = st.columns(2)
-    with b_view:
-        if st.button(
-            "샘플 리포트 보기",
-            type="primary",
-            use_container_width=True,
-            key="portal_sample_report_view",
-        ):
-            open_demo_final_report(mx)
-            st.rerun()
-    with b_pdf:
-        if pdf_bytes:
-            st.download_button(
-                label="샘플 PDF 다운로드",
-                data=pdf_bytes,
-                file_name="opic_final_report_sample.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                key="portal_sample_report_pdf",
-            )
 
 
 def render_mode_selector(mx: dict) -> None:

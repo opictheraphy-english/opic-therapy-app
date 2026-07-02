@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Tuple
 
-LEVEL_RULE_VERSION = "shared_level_rules_2026_05_beta_08_honest_deflection"
+LEVEL_RULE_VERSION = "shared_level_rules_2026_06_ih_al_recalibration"
 
 # ---------------------------------------------------------------------------
 # DURATION / WPM CONTEXT
@@ -74,9 +74,10 @@ MINI_MOCK_V2_WPM_RULES: Dict[str, str] = {
         "the app blends a rule score (65%) with your estimate (35%)."
     ),
     "overall_level_cap": (
-        "Do not assign a level above speech_rate_level from quantity alone; "
-        "quality (roleplay, structure, grammar, relevance) can still lower the level. "
-        "A high speech rate never raises the level by itself."
+        "LOW words_normalized_90s may cap the level downward — never raise on quantity alone. "
+        "When duration/wpm are available: high WPM (e.g. 110+) WITH organized paragraph "
+        "discourse, varied connectors, and clear development is supporting evidence for "
+        "IH/AL — combine with delivery_quality_guidance; WPM alone never raises the level."
     ),
     "do_not_penalize_unavailable": (
         "If wpm_available is false, use total_word_count only; do not mark insufficient for missing WPM."
@@ -143,8 +144,13 @@ MINI_MOCK_V2_LEVEL_RULES: Dict[str, Dict[str, Any]] = {
         "sentence_count_anchor": {"min": 12, "max": 16, "typical": 13},
         "anchor_scope": "mini_mock_q1_q3_combined",
         "summary": (
-            "Paragraph form; around 100–120 words and 12+ sentences; organized, relevant, extended; "
-            "connectors used well; solid Q3 roleplay; vocabulary beyond only like/good/many/very."
+            "Organized paragraph discourse: clear opening, connected supporting details, "
+            "logical order, natural closing; varied connectors (because, so, however, for example); "
+            "vocabulary beyond only like/good/many/very. Some fillers (um, uh) and occasional "
+            "backtracking or light STT repetition (e.g. 'has has uh has') are acceptable at IH — "
+            "do NOT downgrade to IM2/IM3 for minor fillers when paragraph structure and relevance "
+            "are strong. Typical reference (soft, not hard gate): ~100–120 words in mini-mock "
+            "3Q combined scope, or a single strong paragraph answer in topic practice."
         ),
     },
     "AL": {
@@ -153,8 +159,16 @@ MINI_MOCK_V2_LEVEL_RULES: Dict[str, Dict[str, Any]] = {
         "sentence_count_anchor": {"min": 18, "typical": 20},
         "anchor_scope": "mini_mock_q1_q3_combined",
         "summary": (
-            "Strong paragraph; 150+ words and ~20 sentences; flexible, detailed, organized; "
-            "attempts native-like or advanced expressions. Do not assign AL easily in 3-question mini."
+            "Assign AL when the criteria below are met; do not withhold AL for an answer that "
+            "meets them. AL delivery profile (observe in transcript + payload wpm/duration): "
+            "(a) fast, natural delivery — high WPM (e.g. 110+) supports AL when combined with "
+            "organized discourse (never WPM alone); "
+            "(b) sentence variety — not monotonous; complex sentences linked with varied connectors; "
+            "(c) minimal backtracking and filler loops — speech flows without heavy self-correction "
+            "chains (light um/uh is fine; stutter loops are not); "
+            "(d) attempts advanced/native-like vocabulary naturally; "
+            "(e) controlled narration across past AND present time frames when the task requires it. "
+            "Typical reference (soft, not hard gate): 150+ words in mini-mock 3Q combined scope."
         ),
     },
 }
@@ -186,7 +200,9 @@ SHARED_SCORE_AXES: Dict[str, str] = {
     "naturalness": (
         "Conversational tone, connector variety, repetition control, sentence "
         "flow, and whether the answer sounds memorized/robotic — TRANSCRIPT "
-        "ONLY. Never evaluate pronunciation, intonation, stress, or linking."
+        "ONLY. Observe fillers (um, uh), light backtracking, and STT stutter "
+        "repeats in the transcript; minor fillers support IH, heavy loops cap "
+        "below IH. Never evaluate pronunciation, intonation, stress, or linking."
     ),
 }
 
@@ -206,6 +222,9 @@ SHARED_SCORE_AXIS_PHILOSOPHY: Tuple[str, ...] = (
     "corroboration only (see anchor_usage). Tense / time-frame control is not merely "
     "the grammar axis: narrating across past and present is a FUNCTION that gates "
     "Advanced (AL) — see advanced_function_gate.",
+    "Transcript-only: use payload wpm / duration_seconds / words_normalized_90s when "
+    "present. High WPM plus organized paragraph discourse supports IH/AL; never "
+    "promote on WPM alone. Read fillers and backtracking from the transcript text.",
 )
 
 SHARED_QUESTION_TYPE_GUIDANCE: Dict[str, str] = {
@@ -265,17 +284,22 @@ MINI_MOCK_V2_LEVEL_DECISION_GUIDANCE: Tuple[str, ...] = (
     "total_word_count, total_sentence_count, words_normalized_90s, total_duration_seconds "
     "if available, checked against the anchors. NEVER promote to IH/AL on counts alone.",
     "3. Check quality: relevance, structure, grammar, vocabulary, naturalness, roleplay.",
-    "4. ADVANCED FUNCTION GATE for IH vs AL: AL requires controlled narration across "
-    "past AND present time frames AND discourse the speaker can SUSTAIN (not merely "
-    "attempt); present-only description or attempt-only performance caps at IH "
-    "(see advanced_function_gate).",
-    "5. Do not assign IM3/IH if Q3 roleplay fails badly (see ROLEPLAY_GATE).",
+    "4. ADVANCED FUNCTION GATE for IH vs AL — apply advanced_function_gate. "
+    "Complication (roleplay problem-solving) is required ONLY when the item or "
+    "exam set includes a roleplay question; single non-roleplay answers (topic practice "
+    "description/comparison/experience) reach AL via tense control + sustained paragraph "
+    "discourse + delivery_quality_guidance without a roleplay complication.",
+    "5. Do not assign IM3/IH if Q3 roleplay fails badly in a mini/mock set that "
+    "includes roleplay (see ROLEPLAY_GATE).",
     "6. Do not assign IH/AL if structure or relevance is weak (see STRUCTURE_GATE).",
     "7. IL–IM2: prioritize complete sentence production over advanced vocabulary — "
     "but only for answers that genuinely address the question.",
     "8. IM3–IH: require connector use, longer sentence patterns, paragraph-like development.",
-    "9. AL: sustained detail, organization, flexibility, multi-time-frame narration, and "
-    "more native-like expressions — rare in mini mock.",
+    "9. AL: sustained detail, organization, flexibility, delivery quality, and "
+    "multi-time-frame narration when the task requires it — see levels.AL summary "
+    "and delivery_quality_guidance.",
+    "10. ANTI-DEFLATION: see level_anti_deflation_guidance — do not cap a clear "
+    "paragraph answer with minor fillers at IM2/IM3.",
 )
 
 MINI_MOCK_V2_ROLEPLAY_GATE: str = (
@@ -341,36 +365,59 @@ HONEST_DEFLECTION_GUIDANCE: str = (
 )
 
 ADVANCED_FUNCTION_GATE: str = (
-    "ADVANCED FUNCTION GATE (the ACTFL Intermediate->Advanced discriminator — this "
-    "decides IH vs AL, not word count): real OPIc separates Advanced from "
-    "Intermediate by FUNCTIONS the speaker can sustain, not by length. Apply three "
-    "checks before assigning IH or AL: "
-    "(1) TIME FRAMES — Advanced speakers narrate and describe across major time "
-    "frames (past AND present, ideally future/hypothetical) with controlled tense. "
-    "A sample that only describes in the present tense, or whose past narration "
-    "collapses, has NOT shown the Advanced function: cap at IM3/IH and do NOT assign "
-    "AL no matter how many words. Tense control here is a FUNCTION, not just the "
-    "grammar accuracy axis. "
-    "(2) SUSTAIN vs ATTEMPT — IH = the speaker ATTEMPTS paragraph-level / advanced "
-    "tasks (narration, comparison, opinion) but cannot fully SUSTAIN them: breaks "
-    "down, shortens, or drops into lists/sentences. AL = the speaker SUSTAINS "
-    "organized paragraph-level discourse CONSISTENTLY across the sample. One strong "
-    "answer among weak ones is IH-evidence, not AL. "
-    "(3) COMPLICATION — handling an unexpected situation / problem-solving roleplay "
-    "(see roleplay guidance) is Advanced evidence; avoiding or failing it caps at "
-    "Intermediate. "
-    "Summary: AL requires sustained, multi-time-frame, paragraph-level performance; "
-    "if any of the three is missing, IH is the ceiling."
+    "ADVANCED FUNCTION GATE (ACTFL Intermediate→Advanced — decides IH vs AL, not word count). "
+    "Apply in two modes depending on scope: "
+    "MODE A — SINGLE NON-ROLEPLAY ANSWER (topic practice one question; description / routine / "
+    "experience / comparison / news_issue without a roleplay prompt): "
+    "AL when the speaker SUSTAINS organized paragraph discourse AND shows controlled tense "
+    "across the time frames the question needs (e.g. comparison → past+present; description "
+    "may be present-focused) AND meets delivery_quality_guidance (varied sentences, connectors, "
+    "limited backtracking loops). Do NOT require a roleplay complication in this mode. "
+    "MODE B — EXAM OR ITEM INCLUDES ROLEPLAY: all universal checks below PLUS complication "
+    "on the roleplay item — weak roleplay caps the SET per ROLEPLAY_GATE, not every item. "
+    "UNIVERSAL IH vs AL checks (both modes): "
+    "(1) TIME FRAMES — narrate/describe across the major time frames the TASK requires with "
+    "controlled tense; present-only when past is required, or past narration that collapses, "
+    "caps below AL. "
+    "(2) SUSTAIN vs ATTEMPT — IH = ATTEMPTS paragraph-level advanced tasks but cannot fully "
+    "SUSTAIN (breaks into lists/short sentences). AL = SUSTAINS paragraph discourse consistently. "
+    "(3) COMPLICATION — ONLY in MODE B (roleplay / problem-solving prompts): handling the "
+    "unexpected situation smoothly is Advanced evidence; avoiding or failing it on that item "
+    "caps that item and may cap the overall exam per ROLEPLAY_GATE — do NOT apply (3) to "
+    "non-roleplay description/comparison items. "
+    "Summary: AL = sustained paragraph + delivery quality + required time frames for the task; "
+    "complication is roleplay-scoped, not a universal third leg for every answer."
+)
+
+DELIVERY_QUALITY_GUIDANCE: str = (
+    "DELIVERY QUALITY (transcript + payload metrics — IH/AL discriminator): "
+    "Use wpm, duration_seconds, and words_normalized_90s from the payload when present. "
+    "High WPM (e.g. 110+) WITH organized paragraph structure, varied connectors, and clear "
+    "development supports IH or AL — never promote on WPM alone. "
+    "From the transcript, observe: filler density (um, uh), backtracking/self-repair loops, "
+    "and STT stutter repeats (e.g. 'has has uh has'). Light fillers and occasional repairs "
+    "are compatible with IH; heavy loops or list-like monotone caps below IH. "
+    "AL profile: faster natural flow, sentence variety, varied connectors, limited backtracking, "
+    "advanced vocabulary attempts, and sustained paragraph form."
+)
+
+LEVEL_ANTI_DEFLATION_GUIDANCE: str = (
+    "LEVEL ANTI-DEFLATION: A well-organized paragraph answer with natural connector use and "
+    "minor fillers (um, uh) is IH — do not deflate it to IM2/IM3. Reserve IM2/IM3 for "
+    "sentence-level breakdowns, heavy repetition, list-like non-paragraph discourse, or "
+    "answers that do not sustain development. Assign AL when AL criteria are met; do not "
+    "withhold AL solely because the sample is short or from a mini mock."
 )
 
 ANCHOR_USAGE_NOTE: str = (
-    "ANCHOR USAGE: total_words_anchor and sentence_count_anchor are CORROBORATING "
-    "RANGES, not pass/fail thresholds. Decide the level from FUNCTION and text type "
-    "first (what tasks the sample sustains — see decision_guidance and "
-    "advanced_function_gate); then use the word/sentence anchors only as a sanity "
-    "check. A long answer that does not show the level's FUNCTION does not earn that "
-    "level; a slightly shorter answer that clearly sustains the function is not "
-    "blocked by the count. Never promote to IH/AL on hitting a word anchor alone."
+    "ANCHOR USAGE: total_words_anchor and sentence_count_anchor are TYPICAL REFERENCE "
+    "RANGES ONLY — never hard pass/fail gates. Decide level from FUNCTION, text type, and "
+    "delivery quality first (decision_guidance, advanced_function_gate, "
+    "delivery_quality_guidance). Use word/sentence counts only as corroboration. "
+    "If function and quality clearly match IH or AL but counts are modestly below the "
+    "anchor (e.g. a single strong 90-second paragraph), do NOT downgrade solely for "
+    "count shortfall. A long answer without the level's function does not earn that level. "
+    "Never promote to IH/AL on hitting a word anchor alone."
 )
 
 MOCK_V2_USABLE_ANSWER_GATE: Dict[str, Any] = {
@@ -396,8 +443,8 @@ MINI_MOCK_V2_VOCABULARY_RULES: Dict[str, str] = {
         "reward specific natural alternatives."
     ),
     "AL": (
-        "AL: Attempt flexible, precise, or native-like expressions; natural spoken English preferred — "
-        "not forced academic vocabulary."
+        "AL: Flexible, precise, or native-like expressions in natural spoken English — "
+        "not forced academic vocabulary; fast organized delivery per delivery_quality_guidance."
     ),
 }
 
@@ -449,6 +496,8 @@ SHARED_STRUCTURE_GATE = STRUCTURE_GATE
 SHARED_RELEVANCE_GATE = RELEVANCE_GATE
 SHARED_HONEST_DEFLECTION_GUIDANCE = HONEST_DEFLECTION_GUIDANCE
 SHARED_ADVANCED_FUNCTION_GATE = ADVANCED_FUNCTION_GATE
+SHARED_DELIVERY_QUALITY_GUIDANCE = DELIVERY_QUALITY_GUIDANCE
+SHARED_LEVEL_ANTI_DEFLATION_GUIDANCE = LEVEL_ANTI_DEFLATION_GUIDANCE
 SHARED_ANCHOR_USAGE_NOTE = ANCHOR_USAGE_NOTE
 SHARED_VOCABULARY_RULES = MINI_MOCK_V2_VOCABULARY_RULES
 SHARED_CONNECTOR_RULES = MINI_MOCK_V2_CONNECTOR_RULES
@@ -490,6 +539,8 @@ def format_level_rules_for_prompt() -> str:
         "relevance_gate": RELEVANCE_GATE,
         "honest_deflection_guidance": HONEST_DEFLECTION_GUIDANCE,
         "advanced_function_gate": ADVANCED_FUNCTION_GATE,
+        "delivery_quality_guidance": DELIVERY_QUALITY_GUIDANCE,
+        "level_anti_deflation_guidance": LEVEL_ANTI_DEFLATION_GUIDANCE,
         "mock_v2_usable_answer_gate": MOCK_V2_USABLE_ANSWER_GATE,
         "vocabulary_rules": MINI_MOCK_V2_VOCABULARY_RULES,
         "connector_rules": MINI_MOCK_V2_CONNECTOR_RULES,

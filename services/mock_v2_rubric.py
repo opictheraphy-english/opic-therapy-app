@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "mock_v2_rubric_2026_05_v2_unified"
+RUBRIC_VERSION = "mock_v2_rubric_2026_06_ih_al_recalibration"
 
 
 def build_mock_v2_rubric_prompt() -> str:
@@ -29,19 +29,25 @@ The JSON above is authoritative — IDENTICAL to the calibration used by the
 3-question mini mock and single-question topic practice. Follow it exactly for:
 level anchors, the six score_axes, speech_rate_90s bands, question_type_guidance,
 decision_guidance, anchor_usage, roleplay_gate, structure_gate, relevance_gate,
-advanced_function_gate, and mock_v2_usable_answer_gate.
+advanced_function_gate, delivery_quality_guidance, level_anti_deflation_guidance,
+and mock_v2_usable_answer_gate.
 Do NOT restate or override band numbers, axis meanings, or gates.
 
 LEVEL IS FUNCTIONAL, NOT A WORD COUNT: classify by FUNCTION / text type first
-(see decision_guidance + anchor_usage); word counts only corroborate. IH vs AL is
-decided by advanced_function_gate — AL needs controlled narration across past AND
-present time frames AND sustained (not merely attempted) paragraph discourse;
-present-only or attempt-only performance caps at IH regardless of length.
+(see decision_guidance + anchor_usage); word/sentence anchors are typical reference only.
+IH vs AL follows advanced_function_gate and delivery_quality_guidance — roleplay
+complication applies only when the exam includes roleplay items; single comparison/
+description items reach AL via sustained paragraph discourse, required time frames,
+and delivery quality. Apply level_anti_deflation_guidance: do not deflate organized
+paragraph answers with minor fillers to IM2/IM3.
 
 TEXT-FIRST EVALUATION ONLY:
 - You receive STT transcript text in student_answer fields, not audio.
 - Evaluate ONLY what appears in the transcript (plus supporting metrics: word_count,
-  wpm when wpm_available is true).
+  wpm, duration_seconds when present).
+- Observe fillers, backtracking, and STT stutter repeats in the transcript per
+  delivery_quality_guidance. High WPM with organized discourse supports IH/AL when
+  combined with quality — never promote on WPM alone.
 - Do NOT score or infer pronunciation, intonation, stress rhythm, or linking.
 
 This is a full 15-question practice mock (Intro + topic combos + roleplay + advanced items).

@@ -67,6 +67,24 @@ _MIME_TO_FILENAME_EXT: Dict[str, str] = {
 
 MIN_ENGLISH_WORDS_FOR_TRANSCRIPT = 5
 
+# --- Short-audio / hallucination guards (aligned with utils/speech_recording) ---
+VERY_SMALL_SPEECH_AUDIO_BYTES = 12_000
+MIN_DURATION_FOR_STT_SEC = 1.5
+SHORT_AUDIO_HALLUCINATION_DURATION_SEC = 3.0
+SHORT_AUDIO_LONG_TRANSCRIPT_MIN_WORDS = 15
+MAX_PLAUSIBLE_WORDS_PER_SEC = 5.0
+
+STT_NO_SPEECH_USER_MESSAGE = (
+    "답변이 너무 짧거나 인식되지 않았어요. 다시 녹음해 주세요."
+)
+STT_NO_SPEECH_CATEGORIES = frozenset(
+    {
+        "no_speech",
+        "audio_too_short",
+        "hallucination_rejected",
+    }
+)
+
 _NO_SPEECH_EXACT = frozenset(
     {
         "(no speech)",
@@ -111,20 +129,23 @@ def _build_stt_prompt(question_text: str, language_hint: str) -> str:
     q_block = ""
     if (question_text or "").strip():
         q_block = (
-            f"\nExam question (context only — do not answer it):\n"
+            f"\nExam question (context only — NEVER answer, complete, or paraphrase it):\n"
             f"{question_text.strip()}\n"
         )
     return (
         "Transcribe the attached audio only."
         f"{q_block}\n"
         "Rules:\n"
-        "- Transcribe only what was spoken.\n"
+        "- Transcribe only what was actually spoken in the audio.\n"
+        "- Do NOT answer the exam question, invent a response, or continue the question.\n"
         "- Do not correct grammar.\n"
         "- Do not rewrite or improve the answer.\n"
         "- Do not add scores, feedback, or commentary.\n"
         "- Preserve filler words (um, uh, like) when you hear them.\n"
         f"- Prefer {hint} when the speaker uses that language.\n"
-        "- If no speech is detected, output exactly: (no speech)\n\n"
+        "- If the clip is silent, near-silent, or too short to contain intelligible speech, "
+        "output exactly: (no speech)\n"
+        "- When in doubt whether speech is present, output exactly: (no speech)\n\n"
         "Output only the transcript text, nothing else."
     )
 
@@ -199,6 +220,135 @@ def looks_like_repetition_hallucination(text: str) -> bool:
         if grams and grams.most_common(1)[0][1] >= _HALLU_NGRAM_MIN_REPEAT:
             return True
     return False
+
+
+def _words_per_second(word_count: int, duration_seconds: float | None) -> float | None:
+    if duration_seconds is None:
+        return None
+    try:
+        dur = float(duration_seconds)
+    except (TypeError, ValueError):
+        return None
+    if dur <= 0 or word_count <= 0:
+        return None
+    return word_count / dur
+
+
+def looks_like_stt_hallucination(
+    text: str,
+    *,
+    duration_seconds: float | None = None,
+    audio_len: int = 0,
+) -> tuple[bool, str]:
+    """Return (is_hallucination, reason_code) for post-STT transcript checks."""
+    transcript = (text or "").strip()
+    if not transcript:
+        return False, ""
+
+    word_count = count_english_words(transcript)
+
+    if looks_like_repetition_hallucination(transcript):
+        return True, "repetition_loop"
+
+    wps = _words_per_second(word_count, duration_seconds)
+    if wps is not None and wps > MAX_PLAUSIBLE_WORDS_PER_SEC:
+        return True, "words_per_second"
+
+    if duration_seconds is not None:
+        try:
+            dur = float(duration_seconds)
+        except (TypeError, ValueError):
+            dur = 0.0
+        if (
+            0 < dur < SHORT_AUDIO_HALLUCINATION_DURATION_SEC
+            and word_count > SHORT_AUDIO_LONG_TRANSCRIPT_MIN_WORDS
+        ):
+            return True, "short_audio_long_transcript"
+
+    return False, ""
+
+
+def _resolve_duration_seconds(
+    audio_bytes: bytes,
+    mime_type: str,
+    duration_seconds: float | None,
+) -> tuple[float | None, str]:
+    """Best-effort duration: caller value first, then byte sniff."""
+    if duration_seconds is not None:
+        try:
+            dur = float(duration_seconds)
+        except (TypeError, ValueError):
+            dur = 0.0
+        if dur > 0:
+            return dur, "caller"
+
+    blob = bytes(audio_bytes) if audio_bytes else b""
+    if not blob:
+        return None, "unknown"
+
+    try:
+        from services.evaluation.eval_audio import compute_audio_duration_seconds
+
+        est, method = compute_audio_duration_seconds(blob, mime_type or "")
+        if est and float(est) > 0:
+            return float(est), method or "estimated"
+    except Exception:
+        logger.debug("[STT_DURATION] estimate failed", exc_info=True)
+    return None, "unknown"
+
+
+def _is_audio_too_short_for_stt(
+    audio_len: int,
+    duration_seconds: float | None,
+) -> tuple[bool, str]:
+    """True when audio is too small to safely run STT (pre-API guard)."""
+    if audio_len > 0 and audio_len < VERY_SMALL_SPEECH_AUDIO_BYTES:
+        return True, "audio_bytes_below_threshold"
+    if duration_seconds is not None:
+        try:
+            dur = float(duration_seconds)
+        except (TypeError, ValueError):
+            dur = 0.0
+        if 0 < dur < MIN_DURATION_FOR_STT_SEC:
+            return True, "duration_below_threshold"
+    return False, ""
+
+
+def _stt_no_speech_result(
+    *,
+    reason: str,
+    detail: str = "",
+    provider: str = "gemini",
+    model_used: str = "",
+    attempts: int = 0,
+) -> Dict[str, Any]:
+    """STT skipped or rejected — empty transcript, never gradable as a fake answer."""
+    return {
+        "ok": True,
+        "transcript": "",
+        "raw_transcript": "",
+        "text": "",
+        "language": "unknown",
+        "confidence": None,
+        "word_count": 0,
+        "error_category": reason,
+        "error_message": detail or reason,
+        "user_message": STT_NO_SPEECH_USER_MESSAGE,
+        "rejected_as_no_speech": True,
+        "provider": provider,
+        "model_used": model_used,
+        "attempts": attempts,
+        "retry_exhausted": False,
+    }
+
+
+def is_stt_no_speech_result(stt: Dict[str, Any] | None) -> bool:
+    if not isinstance(stt, dict):
+        return False
+    if stt.get("rejected_as_no_speech"):
+        return True
+    cat = str(stt.get("error_category") or "").strip().lower()
+    return cat in STT_NO_SPEECH_CATEGORIES
 
 
 def _flatten_transcript_whitespace(text: str) -> str:
@@ -329,6 +479,7 @@ def _build_stt_success_from_raw(
     attempts: int,
     elapsed: float,
     audio_len: int,
+    duration_seconds: float | None = None,
 ) -> Optional[Dict[str, Any]]:
     """Normalize raw STT text; return success dict or None if unusable."""
     raw = (raw_transcript or "").strip()
@@ -336,20 +487,42 @@ def _build_stt_success_from_raw(
         return None
     transcript = _normalize_transcript(raw)
     if not transcript:
-        transcript = raw
-    if transcript and looks_like_repetition_hallucination(transcript):
+        return _stt_no_speech_result(
+            reason="no_speech",
+            detail="normalized_no_speech_marker",
+            provider=provider,
+            model_used=model_used,
+            attempts=attempts,
+        )
+
+    is_hallu, hallu_reason = looks_like_stt_hallucination(
+        transcript,
+        duration_seconds=duration_seconds,
+        audio_len=audio_len,
+    )
+    if is_hallu:
         try:
             logger.warning(
-                "[STT_HALLUCINATION] repetition/low-diversity detected "
-                "provider=%s model=%s words=%s audio_len=%s -> insufficient",
+                "[STT_HALLUCINATION] reason=%s provider=%s model=%s words=%s "
+                "duration=%s audio_len=%s wps=%s -> rejected",
+                hallu_reason,
                 provider,
                 model_used,
                 count_english_words(transcript),
+                duration_seconds,
                 audio_len,
+                _words_per_second(count_english_words(transcript), duration_seconds),
             )
         except Exception:
             pass
-        transcript = ""
+        return _stt_no_speech_result(
+            reason="hallucination_rejected",
+            detail=hallu_reason,
+            provider=provider,
+            model_used=model_used,
+            attempts=attempts,
+        )
+
     result = _stt_success_result(
         transcript=transcript,
         raw_transcript=raw,
@@ -384,6 +557,7 @@ def _invoke_openai_stt_model(
     mime_type: str,
     language_hint: str,
     question_text: str,
+    duration_seconds: float | None = None,
 ) -> Tuple[Optional[str], str, str]:
     """Single OpenAI Whisper transcription. Returns (raw_text, error_category, message)."""
     from services.gemini_json_client import classify_openai_exception, _is_openai_auth_skip_error
@@ -402,17 +576,28 @@ def _invoke_openai_stt_model(
     buf = io.BytesIO(audio_bytes)
     buf.name = f"answer.{ext}"
     lang = _whisper_language_code(language_hint)
-    prompt = (question_text or "").strip()[:500] or None
+    # Do not pass question text as Whisper prompt — short/silent clips can echo it.
+    prompt = None
+    if duration_seconds is not None:
+        try:
+            dur = float(duration_seconds)
+        except (TypeError, ValueError):
+            dur = 0.0
+        if dur >= SHORT_AUDIO_HALLUCINATION_DURATION_SEC:
+            q_prompt = (question_text or "").strip()[:500]
+            prompt = q_prompt or None
 
     try:
         client = OpenAI(api_key=api_key, timeout=float(OPENAI_STT_TIMEOUT_SEC))
-        response = client.audio.transcriptions.create(
-            model=OPENAI_STT_MODEL,
-            file=buf,
-            language=lang,
-            prompt=prompt,
-            response_format="text",
-        )
+        kwargs: Dict[str, Any] = {
+            "model": OPENAI_STT_MODEL,
+            "file": buf,
+            "language": lang,
+            "response_format": "text",
+        }
+        if prompt:
+            kwargs["prompt"] = prompt
+        response = client.audio.transcriptions.create(**kwargs)
     except Exception as exc:
         if _is_openai_auth_skip_error(exc):
             return None, "openai_skipped", str(exc)[:240]
@@ -438,6 +623,7 @@ def _run_openai_stt_fallback(
     question_id: str,
     gemini_attempts: int,
     t0: float,
+    duration_seconds: float | None = None,
 ) -> Optional[Dict[str, Any]]:
     """Try OpenAI Whisper once after the Gemini STT chain fails."""
     try:
@@ -461,6 +647,7 @@ def _run_openai_stt_fallback(
         mime_type=mime_type,
         language_hint=language_hint,
         question_text=question_text,
+        duration_seconds=duration_seconds,
     )
     elapsed = time.perf_counter() - t0
 
@@ -472,6 +659,7 @@ def _run_openai_stt_fallback(
             attempts=gemini_attempts + 1,
             elapsed=elapsed,
             audio_len=audio_len,
+            duration_seconds=duration_seconds,
         )
         if result:
             try:
@@ -519,6 +707,8 @@ def _run_openai_stt_fallback(
 
 
 def derive_stt_status(stt: Dict[str, Any]) -> str:
+    if is_stt_no_speech_result(stt):
+        return "insufficient_response"
     if not stt.get("ok"):
         cat = str(stt.get("error_category") or "")
         if is_retryable_error(cat) or stt.get("retry_exhausted"):
@@ -551,7 +741,9 @@ def merge_stt_into_answer_result(
     out["stt_status"] = stt_status
     out["raw_transcript"] = raw_transcript
     out["stt_error_category"] = str(stt.get("error_category") or "")
-    out["stt_error_message"] = str(stt.get("error_message") or "")
+    out["stt_error_message"] = str(
+        stt.get("user_message") or stt.get("error_message") or ""
+    )
     out["stt_word_count"] = int(
         stt.get("word_count") if stt.get("word_count") is not None else count_english_words(transcript)
     )
@@ -596,6 +788,7 @@ def _transcribe_answer_audio_impl(
     mode: str,
     question_id: str,
     api_key: str | None,
+    duration_seconds: float | None = None,
 ) -> Dict[str, Any]:
     """Core STT retry loop. Runs in a background worker thread.
 
@@ -610,17 +803,25 @@ def _transcribe_answer_audio_impl(
         audio_len = len(audio_bytes) if audio_bytes else 0
     except Exception:
         audio_len = 0
+
+    resolved_duration, duration_method = _resolve_duration_seconds(
+        audio_bytes if audio_bytes else b"",
+        mime_type,
+        duration_seconds,
+    )
+
     try:
         logger.info(
-            "[STT_INPUT] audio_len=%s mime_type=%s language_hint=%s mode=%s question_id=%s",
+            "[STT_INPUT] audio_len=%s duration_seconds=%s duration_method=%s "
+            "mime_type=%s language_hint=%s mode=%s question_id=%s",
             audio_len,
+            resolved_duration,
+            duration_method,
             mime_type,
             language_hint,
             mode,
             question_id,
         )
-        if 0 < audio_len < 1000:
-            logger.warning("[STT_AUDIO_TOO_SMALL] audio_len=%s mode=%s", audio_len, mode)
     except Exception:
         pass
 
@@ -628,6 +829,25 @@ def _transcribe_answer_audio_impl(
         empty["error_category"] = "empty_audio"
         empty["error_message"] = "empty_audio_bytes"
         return empty
+
+    too_short, short_reason = _is_audio_too_short_for_stt(audio_len, resolved_duration)
+    if too_short:
+        try:
+            logger.info(
+                "[STT_SKIP_TOO_SHORT] reason=%s audio_len=%s duration=%s mode=%s question_id=%s",
+                short_reason,
+                audio_len,
+                resolved_duration,
+                mode,
+                question_id,
+            )
+        except Exception:
+            pass
+        return _stt_no_speech_result(
+            reason="audio_too_short",
+            detail=short_reason,
+            provider=provider,
+        )
 
     if not api_key:
         from utils.secrets import get_gemini_api_key
@@ -684,6 +904,7 @@ def _transcribe_answer_audio_impl(
                         attempts=attempt_num,
                         elapsed=elapsed,
                         audio_len=audio_len,
+                        duration_seconds=resolved_duration,
                     )
                     if result:
                         return result
@@ -746,6 +967,7 @@ def _transcribe_answer_audio_impl(
         question_id=question_id,
         gemini_attempts=attempt_num,
         t0=t0,
+        duration_seconds=resolved_duration,
     )
     if fallback is not None:
         return fallback
@@ -813,6 +1035,7 @@ def transcribe_answer_audio(
     mode: str = "",
     question_id: str = "",
     api_key: str | None = None,
+    duration_seconds: float | None = None,
 ) -> Dict[str, Any]:
     """Transcribe answer audio via Gemini with retry and model fallback.
 
@@ -822,9 +1045,8 @@ def transcribe_answer_audio(
     On wrapper timeout the answer is returned as stt_pending (retryable),
     so the exam continues uninterrupted and STT can be retried later.
 
-    The function signature and return-dict shape are unchanged, so all
-    existing call sites (views/_run_*_stt, utils/apply_stt_to_*_saved_row)
-    work without modification.
+    ``duration_seconds`` (from mic metadata or byte sniff) enables short-audio
+    guards that skip STT before the API and reject implausible transcripts after.
     """
     provider = "gemini"
     wrapper_timeout_sec = stt_wrapper_timeout_sec(mode)
@@ -838,6 +1060,7 @@ def transcribe_answer_audio(
         mode=mode,
         question_id=question_id,
         api_key=api_key,
+        duration_seconds=duration_seconds,
     )
     try:
         return future.result(timeout=wrapper_timeout_sec)

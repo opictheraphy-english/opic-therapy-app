@@ -62,6 +62,7 @@ class BuildSttSuccessFromRawTests(unittest.TestCase):
             attempts=1,
             elapsed=1.0,
             audio_len=4096,
+            duration_seconds=30.0,
         )
         self.assertIsNotNone(result)
         assert result is not None

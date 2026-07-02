@@ -1674,6 +1674,11 @@ def _normalize_topic_v2_stt(stt_result: Any) -> Dict[str, Any]:
         }
     if isinstance(stt_result, dict):
         out = dict(stt_result)
+        if out.get("rejected_as_no_speech"):
+            out["transcript"] = ""
+            out["raw_transcript"] = ""
+            out["text"] = ""
+            return out
         text = str(
             out.get("transcript") or out.get("text") or out.get("raw_transcript") or ""
         ).strip()
@@ -1701,6 +1706,7 @@ def _compute_topic_v2_statuses(
     raw_transcript: str,
 ) -> Dict[str, Any]:
     from services.api_retry_policy import is_retryable_error
+    from services.stt_service import is_stt_no_speech_result
 
     text = (transcript or "").strip() or (raw_transcript or "").strip()
     wc = int(count_english_words(text))
@@ -1716,6 +1722,15 @@ def _compute_topic_v2_statuses(
         }
 
     recording_status = "recorded"
+    if is_stt_no_speech_result(stt_result):
+        return {
+            "recording_status": recording_status,
+            "stt_status": "insufficient_response",
+            "status": "insufficient_response",
+            "student_answer": "",
+            "word_count": 0,
+        }
+
     if text:
         return {
             "recording_status": recording_status,
@@ -1839,7 +1854,15 @@ def _upsert_topic_v2_answer(row: Dict[str, Any]) -> None:
         pass
 
 
-def _run_topic_v2_stt(topic: str, q_idx: int, question_text: str, audio_bytes: bytes, mime_type: str) -> Dict[str, Any]:
+def _run_topic_v2_stt(
+    topic: str,
+    q_idx: int,
+    question_text: str,
+    audio_bytes: bytes,
+    mime_type: str,
+    *,
+    duration_seconds: float | None = None,
+) -> Dict[str, Any]:
     from services.stt_service import transcribe_answer_audio
 
     blob = bytes(audio_bytes) if audio_bytes else b""
@@ -1847,11 +1870,12 @@ def _run_topic_v2_stt(topic: str, q_idx: int, question_text: str, audio_bytes: b
     qid = f"topic_v2_{topic}_q{int(q_idx)}"
     try:
         logger.info(
-            "[TOPIC_V2_STT] topic=%s q=%s audio_len=%s mime=%s",
+            "[TOPIC_V2_STT] topic=%s q=%s audio_len=%s mime=%s duration=%s",
             topic,
             q_idx,
             len(blob),
             resolved_mime,
+            duration_seconds,
         )
     except Exception:
         pass
@@ -1870,6 +1894,7 @@ def _run_topic_v2_stt(topic: str, q_idx: int, question_text: str, audio_bytes: b
         question_text=question_text,
         mode="topic_practice_v2",
         question_id=qid,
+        duration_seconds=duration_seconds,
     )
 
 
@@ -1942,7 +1967,14 @@ def _commit_topic_v2_recording_impl(
         except Exception:
             pass
         return
-    stt_result = _run_topic_v2_stt(topic, q_idx, q_en, blob, resolved_mime)
+    stt_result = _run_topic_v2_stt(
+        topic,
+        q_idx,
+        q_en,
+        blob,
+        resolved_mime,
+        duration_seconds=_duration_from_mic_result(mic_result),
+    )
     cur_q = st.session_state.get(_KEY_CURRENT_Q)
     opic = str(cur_q.get("opic_type") or "") if isinstance(cur_q, dict) else ""
     row = _build_topic_v2_row_from_mic(
@@ -2068,7 +2100,14 @@ def _retry_topic_v2_stt_for_current(topic: str, q_idx: int) -> bool:
         return False
     st.session_state[_TOPIC_V2_STT_IN_FLIGHT] = True
     try:
-        stt_result = _run_topic_v2_stt(topic, q_idx, q_en, audio_bytes, mime_type)
+        stt_result = _run_topic_v2_stt(
+            topic,
+            q_idx,
+            q_en,
+            audio_bytes,
+            mime_type,
+            duration_seconds=float(last.get("duration_seconds") or 0.0) or None,
+        )
         opic = str(last.get("opic_type") or "").strip()
         row = _build_topic_v2_row_from_mic(
             topic,
@@ -3334,6 +3373,7 @@ def _stash_topic_v2_feedback_for_q(q_idx: int, result: Dict[str, Any]) -> None:
         entry.update(
             {
                 "answer_level": result.get("answer_level"),
+                "answer_level_missing": result.get("answer_level_missing"),
                 "summary": result.get("summary"),
                 "strength": result.get("strength"),
                 "correction_focus": result.get("correction_focus"),
@@ -3354,6 +3394,30 @@ def _topic_v2_short_feedback_for_q(q_idx: int) -> Optional[Dict[str, Any]]:
         if isinstance(fb, dict) and fb.get("ok"):
             return fb
     return None
+
+
+def _aggregate_topic_v2_overall_level(results: List[Dict[str, Any]]) -> Optional[str]:
+    """Mode of per-question answer_level tokens; ties → higher level."""
+    _LEVEL_ORDER = ("NL", "NM", "NH", "IL", "IM1", "IM2", "IM3", "IH", "AL")
+    _VALID = frozenset(_LEVEL_ORDER)
+    levels: List[str] = []
+    for row in results:
+        fb = row.get("short_feedback")
+        if not isinstance(fb, dict):
+            continue
+        token = str(fb.get("answer_level") or "").strip().upper()
+        if token in _VALID:
+            levels.append(token)
+    if not levels:
+        return None
+    counts: Dict[str, int] = {}
+    for lv in levels:
+        counts[lv] = counts.get(lv, 0) + 1
+    max_count = max(counts.values())
+    tied = [lv for lv, n in counts.items() if n == max_count]
+    if len(tied) == 1:
+        return tied[0]
+    return max(tied, key=lambda x: _LEVEL_ORDER.index(x))
 
 
 def build_topic_v2_history_payload(topic_id: str) -> Dict[str, Any]:
@@ -3394,8 +3458,10 @@ def build_topic_v2_history_payload(topic_id: str) -> Dict[str, Any]:
         summary = f"{title} 주제 3문항 연습을 완료했어요."
 
     saved_n = sum(1 for r in results if str(r.get("transcript") or "").strip())
+    # overall_level is derived for new saves only; existing DB rows are not backfilled.
+    overall_level = _aggregate_topic_v2_overall_level(results)
 
-    return {
+    payload: Dict[str, Any] = {
         "ok": True,
         "report_source": "topic_practice_v2",
         "topic_id": tid,
@@ -3405,6 +3471,9 @@ def build_topic_v2_history_payload(topic_id: str) -> Dict[str, Any]:
         "results": results,
         "answers_count": saved_n,
     }
+    if overall_level:
+        payload["overall_level"] = overall_level
+    return payload
 
 
 def _maybe_persist_topic_v2_history(topic_id: str) -> None:
@@ -3740,8 +3809,14 @@ def _render_feedback_ui() -> None:
     mission = _topic_v2_fb_text(fb, "practice_mission", _FB_FALLBACK_PRACTICE_MISSION)
     kwords = _topic_v2_fb_keywords(fb)
     answer_level = str(fb.get("answer_level") or "").strip()
+    answer_level_missing = bool(fb.get("answer_level_missing"))
 
-    render_feedback_summary(summary, accent=accent, answer_level=answer_level)
+    render_feedback_summary(
+        summary,
+        accent=accent,
+        answer_level=answer_level,
+        answer_level_missing=answer_level_missing,
+    )
 
     fb_c1, fb_c2 = st.columns(2)
     with fb_c1:
