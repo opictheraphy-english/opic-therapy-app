@@ -355,11 +355,14 @@ def _polish_transcript_light(text: str) -> str:
     return out.strip()
 
 
-def _upgrade_sample_from_transcript(text: str, *, max_sentences: int = 4) -> str:
+def _upgrade_sample_from_transcript(text: str, *, max_sentences: int = 8) -> str:
+    """Fallback polish — preserve full transcript (cap only at max_sentences)."""
     polished = _polish_transcript_light(text)
     sentences = _split_transcript_sentences(polished)
     if not sentences:
         return polished
+    if len(sentences) <= max_sentences:
+        return " ".join(sentences).strip()
     return " ".join(sentences[:max_sentences]).strip()
 
 

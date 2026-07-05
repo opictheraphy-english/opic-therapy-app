@@ -148,27 +148,35 @@ def build_exam_answer_card_top_html(*, accent: str = "teal") -> str:
     )
 
 
-def build_exam_question_shell_html(
-    *,
-    title: Optional[str] = None,
-    eyebrow: Optional[str] = None,
-    progress_html: str,
-    badge_label: str,
+def build_exam_question_card_html(
     question_en: str,
     question_ko: str = "",
-    accent: str = "teal",
-    chip_icon: Optional[str] = None,
 ) -> str:
-    """Full question shell HTML (marker + header + question card)."""
-    accent_key = _normalize_accent(accent)
-    accent_esc = html.escape(accent_key)
-    badge = html.escape(str(badge_label or "").strip())
+    """Question card only (for avatar beside-card layout)."""
     en = html.escape(str(question_en or ""))
     ko_raw = str(question_ko or "").strip()
     ko_block = (
         f'<p class="tq-question-ko">{html.escape(ko_raw)}</p>' if ko_raw else ""
     )
+    return (
+        f'<div class="mx-question-card tq-card">'
+        f'<p class="mx-question-topic tq-question">{en}</p>'
+        f"{ko_block}"
+        f"</div>"
+    )
 
+
+def build_exam_question_header_html(
+    *,
+    title: Optional[str] = None,
+    progress_html: str,
+    badge_label: str = "",
+    accent: str = "teal",
+    chip_icon: Optional[str] = None,
+    include_screen_marker: bool = True,
+) -> str:
+    """Screen marker + optional topic chip + progress strip (no question card)."""
+    accent_esc = html.escape(_normalize_accent(accent))
     title_s = str(title or "").strip()
     topic_header = ""
     if title_s:
@@ -182,20 +190,39 @@ def build_exam_question_shell_html(
             f"</div>"
             f"</div>"
         )
-
     progress_block = str(progress_html or "").strip()
     if not progress_block:
+        badge = html.escape(str(badge_label or "").strip())
         progress_block = build_progress_segments_html(1, 1, badge_label=badge)
-
-    return (
+    marker = (
         '<div class="tq-screen-marker" aria-hidden="true"></div>'
-        f"{topic_header}"
-        f"{progress_block}"
-        f'<div class="mx-question-card tq-card">'
-        f'<p class="mx-question-topic tq-question">{en}</p>'
-        f"{ko_block}"
-        f"</div>"
+        if include_screen_marker
+        else ""
     )
+    return marker + topic_header + progress_block
+
+
+def build_exam_question_shell_html(
+    *,
+    title: Optional[str] = None,
+    eyebrow: Optional[str] = None,
+    progress_html: str,
+    badge_label: str,
+    question_en: str,
+    question_ko: str = "",
+    accent: str = "teal",
+    chip_icon: Optional[str] = None,
+) -> str:
+    """Full question shell HTML (marker + header + question card)."""
+    header = build_exam_question_header_html(
+        title=title,
+        progress_html=progress_html,
+        badge_label=badge_label,
+        accent=accent,
+        chip_icon=chip_icon,
+        include_screen_marker=True,
+    )
+    return header + build_exam_question_card_html(question_en, question_ko)
 
 
 def render_exam_question_shell(

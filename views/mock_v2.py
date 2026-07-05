@@ -18,11 +18,16 @@ from components.answer_countdown_timer import (
 )
 from components.audio_player import render_exam_question_audio_player
 from components.exam_question_screen import (
+    build_exam_answer_card_top_html,
+    build_exam_question_card_html,
+    build_exam_question_header_html,
     build_progress_segments_html,
     opic_type_badge_label,
-    render_exam_answer_card_top,
-    render_exam_question_shell,
     render_exam_wave_mic_observer,
+)
+from components.examiner_avatar import (
+    render_practice_examiner_question_sections,
+    render_practice_examiner_saved_beside,
 )
 from components.exam_saved_screen import render_saved_transcript
 from components.feedback_loading_card import render_feedback_loading_card
@@ -1227,20 +1232,29 @@ def _render_mock_v2_question() -> None:
         eyebrow="실전 모의고사",
     )
 
-    render_exam_question_shell(
-        eyebrow="실전 모의고사",
-        progress_html=build_progress_segments_html(
-            qnum,
-            _QUESTION_COUNT,
+    audio_id = mock_v2_question_audio_id(q)
+    has_tts = bool(audio_id and load_question_mp3_bytes(audio_id))
+    progress_html = build_progress_segments_html(
+        qnum,
+        _QUESTION_COUNT,
+        badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
+    )
+    render_practice_examiner_question_sections(
+        st.session_state,
+        flow="mock_v2",
+        header_html=build_exam_question_header_html(
+            progress_html=progress_html,
             badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
         ),
-        badge_label=opic_type_badge_label(str(q.get("opic_type") or "")),
-        question_en=str(q.get("question_text") or ""),
-        question_ko=str(q.get("ko_helper") or ""),
-        accent="teal",
+        question_card_html=build_exam_question_card_html(
+            str(q.get("question_text") or ""),
+            str(q.get("ko_helper") or ""),
+        ),
+        answer_card_html=build_exam_answer_card_top_html(accent="teal"),
+        has_tts=has_tts,
+        size=100,
     )
     _render_mock_v2_question_listen(q, qnum)
-    render_exam_answer_card_top(accent="teal")
     render_answer_countdown_timer(
         timer_id=timer_id,
         accent="teal",
@@ -1298,14 +1312,22 @@ def _render_mock_v2_saved() -> None:
     answer_id = str(saved_row.get("answer_id") or "")
     audio_bytes, mime_type = _get_mock_v2_audio_blob(answer_id)
 
-    st.markdown("##### 내 녹음 다시 듣기")
-    if audio_bytes:
-        try:
-            st.audio(audio_bytes, format=mime_type or _DEFAULT_MIME)
-        except Exception:
-            st.audio(audio_bytes)
-    else:
-        st.caption("녹음 파일이 없습니다.")
+    av_col, replay_col = st.columns([0.12, 0.88], gap="small")
+    with av_col:
+        render_practice_examiner_saved_beside(
+            st.session_state,
+            flow="mock_v2",
+            size=90,
+        )
+    with replay_col:
+        st.markdown("##### 내 녹음 다시 듣기")
+        if audio_bytes:
+            try:
+                st.audio(audio_bytes, format=mime_type or _DEFAULT_MIME)
+            except Exception:
+                st.audio(audio_bytes)
+        else:
+            st.caption("녹음 파일이 없습니다.")
 
     transcript = str(
         saved_row.get("student_answer")

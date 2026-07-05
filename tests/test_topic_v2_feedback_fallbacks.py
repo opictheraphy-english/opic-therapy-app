@@ -21,6 +21,17 @@ from services.topic_practice_v2_analysis import (
 
 
 class TopicV2FeedbackFallbackTests(unittest.TestCase):
+    def test_upgrade_sample_from_transcript_preserves_short_answer(self) -> None:
+        from services.topic_practice_v2_analysis import _upgrade_sample_from_transcript
+
+        transcript = (
+            "I like to go to the cafe. I like coffee very much. "
+            "I go there every week. I read books there."
+        )
+        sample = _upgrade_sample_from_transcript(transcript)
+        self.assertEqual(sample.count("."), 4)
+        self.assertIn("enjoy", sample.lower())
+
     def test_apply_ok_field_fallbacks_upgrade_sample_from_transcript(self) -> None:
         norm = _normalize_success(
             {

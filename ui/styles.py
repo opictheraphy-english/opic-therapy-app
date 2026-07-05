@@ -6571,6 +6571,161 @@ GLOBAL_CSS = """
     [data-testid="stMain"]:has(.tq-screen-marker) .tq-wave-slot--coral .tq-wave-bar {
       background: #993C1D;
     }
+
+    /* ── Examiner avatar (SVG + CSS; prefix examiner-avatar-) ── */
+    .tq-examiner-beside-row,
+    .tq-examiner-avatar-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 0 0 10px 0;
+    }
+    .tq-examiner-beside-row--recording {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+    .tq-examiner-beside-row__body,
+    .tq-examiner-avatar-row__body {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .examiner-avatar-slot {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .examiner-avatar-slot:empty {
+      width: 0;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .examiner-avatar-host {
+      width: var(--ea-size, 100px);
+      height: var(--ea-size, 100px);
+      flex-shrink: 0;
+    }
+    .examiner-avatar {
+      width: 100%;
+      height: 100%;
+    }
+    .examiner-avatar-svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .examiner-avatar-frame {
+      filter: drop-shadow(0 1px 4px rgba(11, 61, 49, 0.12));
+    }
+    .examiner-avatar-eye-open {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: examiner-avatar-eye-open 3.6s ease-in-out infinite;
+    }
+    .examiner-avatar-eye-highlight {
+      pointer-events: none;
+    }
+    .examiner-avatar-eye-closed {
+      opacity: 0;
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: examiner-avatar-eye-closed 3.6s ease-in-out infinite;
+    }
+    .examiner-avatar-eye--l .examiner-avatar-eye-open,
+    .examiner-avatar-eye--l .examiner-avatar-eye-closed {
+      animation-delay: 0.05s;
+    }
+    .examiner-avatar-eye--r .examiner-avatar-eye-open,
+    .examiner-avatar-eye--r .examiner-avatar-eye-closed {
+      animation-delay: 0.18s;
+    }
+    @keyframes examiner-avatar-eye-open {
+      0%, 42%, 58%, 100% { opacity: 1; transform: scaleY(1); }
+      50% { opacity: 0; transform: scaleY(0.15); }
+    }
+    @keyframes examiner-avatar-eye-closed {
+      0%, 42%, 58%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+    .examiner-avatar-mouth-shape {
+      display: none;
+    }
+    .examiner-avatar-mouth--closed {
+      display: block;
+    }
+    .examiner-avatar[data-mode="speaking"] .examiner-avatar-mouth--closed {
+      display: block;
+      animation: examiner-avatar-mouth-closed 0.45s steps(1) infinite;
+    }
+    .examiner-avatar[data-mode="speaking"] .examiner-avatar-mouth--half {
+      display: block;
+      animation: examiner-avatar-mouth-half 0.45s steps(1) infinite;
+    }
+    .examiner-avatar[data-mode="speaking"] .examiner-avatar-mouth--open {
+      display: block;
+      animation: examiner-avatar-mouth-open 0.45s steps(1) infinite;
+    }
+    @keyframes examiner-avatar-mouth-closed {
+      0%, 66% { opacity: 1; }
+      67%, 100% { opacity: 0; }
+    }
+    @keyframes examiner-avatar-mouth-half {
+      0%, 32% { opacity: 0; }
+      33%, 66% { opacity: 1; }
+      67%, 100% { opacity: 0; }
+    }
+    @keyframes examiner-avatar-mouth-open {
+      0%, 66% { opacity: 0; }
+      67%, 100% { opacity: 1; }
+    }
+    .examiner-avatar-head,
+    .examiner-avatar-hair,
+    .examiner-avatar-face {
+      transform-box: fill-box;
+    }
+    .examiner-avatar[data-mode="listening"] .examiner-avatar-head,
+    .examiner-avatar[data-mode="listening"] .examiner-avatar-hair,
+    .examiner-avatar[data-mode="listening"] .examiner-avatar-face {
+      transform-origin: 50px 52px;
+      animation: examiner-avatar-listen-tilt 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes examiner-avatar-listen-tilt {
+      0% { transform: rotate(-2deg); }
+      100% { transform: rotate(2deg); }
+    }
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-head,
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-hair,
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-face {
+      transform-origin: 50px 52px;
+      animation: examiner-avatar-nod 0.25s ease-in-out 6 forwards;
+    }
+    @keyframes examiner-avatar-nod {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-mouth--closed,
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-mouth--half,
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-mouth--open {
+      display: none;
+    }
+    .examiner-avatar[data-mode="nodding"] .examiner-avatar-mouth--smile {
+      display: block;
+    }
+    @media (max-width: 520px) {
+      .tq-examiner-beside-row,
+      .tq-examiner-avatar-row {
+        gap: 8px;
+      }
+      .tq-examiner-beside-row--question {
+        flex-wrap: wrap;
+      }
+      .examiner-avatar-host {
+        --ea-size: 84px;
+      }
+    }
+
     [data-testid="stMain"]:has(.tq-screen-marker)
       div[data-testid="stElementContainer"]:has(.tq-answer-card-top) {
       margin-bottom: 0 !important;

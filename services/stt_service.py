@@ -72,7 +72,18 @@ VERY_SMALL_SPEECH_AUDIO_BYTES = 12_000
 MIN_DURATION_FOR_STT_SEC = 1.5
 SHORT_AUDIO_HALLUCINATION_DURATION_SEC = 3.0
 SHORT_AUDIO_LONG_TRANSCRIPT_MIN_WORDS = 15
-MAX_PLAUSIBLE_WORDS_PER_SEC = 5.0
+
+
+def _max_plausible_words_per_sec() -> float:
+    raw = (os.getenv("STT_WPS_LIMIT") or "6.5").strip()
+    try:
+        val = float(raw)
+    except (TypeError, ValueError):
+        val = 6.5
+    return max(val, 1.0)
+
+
+MAX_PLAUSIBLE_WORDS_PER_SEC = _max_plausible_words_per_sec()
 
 STT_NO_SPEECH_USER_MESSAGE = (
     "답변이 너무 짧거나 인식되지 않았어요. 다시 녹음해 주세요."
@@ -251,7 +262,7 @@ def looks_like_stt_hallucination(
         return True, "repetition_loop"
 
     wps = _words_per_second(word_count, duration_seconds)
-    if wps is not None and wps > MAX_PLAUSIBLE_WORDS_PER_SEC:
+    if wps is not None and wps > _max_plausible_words_per_sec():
         return True, "words_per_second"
 
     if duration_seconds is not None:
@@ -273,27 +284,63 @@ def _resolve_duration_seconds(
     mime_type: str,
     duration_seconds: float | None,
 ) -> tuple[float | None, str]:
-    """Best-effort duration: caller value first, then byte sniff."""
+    """Best-effort duration: mic/caller first, then header sniff; log legacy vs chosen."""
+    blob = bytes(audio_bytes) if audio_bytes else b""
+    caller: float | None = None
     if duration_seconds is not None:
         try:
             dur = float(duration_seconds)
         except (TypeError, ValueError):
             dur = 0.0
         if dur > 0:
-            return dur, "caller"
+            caller = dur
 
-    blob = bytes(audio_bytes) if audio_bytes else b""
-    if not blob:
-        return None, "unknown"
+    sniffed: float | None = None
+    sniff_method = "unknown"
+    legacy_est = round(len(blob) / 32_000.0, 3) if blob else 0.0
+
+    if blob:
+        try:
+            from services.evaluation.eval_audio import compute_audio_duration_seconds
+
+            est, method = compute_audio_duration_seconds(blob, mime_type or "")
+            if est and float(est) > 0:
+                sniffed = float(est)
+                sniff_method = method or "estimated"
+        except Exception:
+            logger.debug("[STT_DURATION] estimate failed", exc_info=True)
+
+    chosen: float | None = None
+    chosen_method = "unknown"
+
+    if caller is not None and sniff_method in ("wave", "pydub") and sniffed:
+        chosen = max(caller, sniffed)
+        chosen_method = "caller_header_max"
+    elif caller is not None:
+        chosen = caller
+        chosen_method = "caller"
+    elif sniffed:
+        chosen = sniffed
+        chosen_method = sniff_method
 
     try:
-        from services.evaluation.eval_audio import compute_audio_duration_seconds
-
-        est, method = compute_audio_duration_seconds(blob, mime_type or "")
-        if est and float(est) > 0:
-            return float(est), method or "estimated"
+        logger.info(
+            "[STT_DURATION] audio_len=%s mime=%s caller=%s legacy_est=%.3f "
+            "sniffed=%s sniff_method=%s chosen=%s chosen_method=%s",
+            len(blob),
+            mime_type or "—",
+            caller,
+            legacy_est,
+            sniffed,
+            sniff_method,
+            chosen,
+            chosen_method,
+        )
     except Exception:
-        logger.debug("[STT_DURATION] estimate failed", exc_info=True)
+        pass
+
+    if chosen is not None and chosen > 0:
+        return chosen, chosen_method
     return None, "unknown"
 
 
@@ -471,6 +518,73 @@ def _whisper_language_code(language_hint: str) -> Optional[str]:
     return base if len(base) == 2 else None
 
 
+def _try_wps_whisper_overrule(
+    gemini_transcript: str,
+    *,
+    audio_bytes: bytes,
+    mime_type: str,
+    language_hint: str,
+    question_text: str,
+    duration_seconds: float | None,
+    gemini_word_count: int,
+) -> Optional[str]:
+    """
+    When WPS guard fires, re-transcribe with Whisper once.
+    If Whisper word count >= 50% of Gemini, treat as real speech and keep Gemini text.
+    """
+    if not audio_bytes:
+        return None
+    raw_whisper, err_cat, _err_msg = _invoke_openai_stt_model(
+        audio_bytes=audio_bytes,
+        mime_type=mime_type,
+        language_hint=language_hint,
+        question_text=question_text,
+        duration_seconds=duration_seconds,
+    )
+    if not raw_whisper:
+        try:
+            logger.info(
+                "[STT_HALLUCINATION_OVERRULE] skipped whisper_empty err=%s",
+                err_cat,
+            )
+        except Exception:
+            pass
+        return None
+
+    whisper_norm = _normalize_transcript(raw_whisper)
+    whisper_wc = count_english_words(whisper_norm)
+    if whisper_wc <= 0:
+        return None
+
+    threshold = max(1, int(gemini_word_count * 0.5))
+    if whisper_wc < threshold:
+        try:
+            logger.warning(
+                "[STT_HALLUCINATION_OVERRULE] rejected gemini_words=%s "
+                "whisper_words=%s threshold=%s duration=%s",
+                gemini_word_count,
+                whisper_wc,
+                threshold,
+                duration_seconds,
+            )
+        except Exception:
+            pass
+        return None
+
+    try:
+        logger.warning(
+            "[STT_HALLUCINATION_OVERRULED] gemini_words=%s whisper_words=%s "
+            "duration=%s audio_len=%s -> accepting gemini transcript",
+            gemini_word_count,
+            whisper_wc,
+            duration_seconds,
+            len(audio_bytes),
+        )
+    except Exception:
+        pass
+    return gemini_transcript
+
+
 def _build_stt_success_from_raw(
     raw_transcript: str,
     *,
@@ -480,6 +594,10 @@ def _build_stt_success_from_raw(
     elapsed: float,
     audio_len: int,
     duration_seconds: float | None = None,
+    audio_bytes: bytes | None = None,
+    mime_type: str = "",
+    language_hint: str = "en",
+    question_text: str = "",
 ) -> Optional[Dict[str, Any]]:
     """Normalize raw STT text; return success dict or None if unusable."""
     raw = (raw_transcript or "").strip()
@@ -500,6 +618,21 @@ def _build_stt_success_from_raw(
         duration_seconds=duration_seconds,
         audio_len=audio_len,
     )
+    if is_hallu and hallu_reason == "words_per_second" and audio_bytes:
+        overruled = _try_wps_whisper_overrule(
+            transcript,
+            audio_bytes=audio_bytes,
+            mime_type=mime_type,
+            language_hint=language_hint,
+            question_text=question_text,
+            duration_seconds=duration_seconds,
+            gemini_word_count=count_english_words(transcript),
+        )
+        if overruled:
+            transcript = overruled
+            is_hallu = False
+            hallu_reason = ""
+
     if is_hallu:
         try:
             logger.warning(
@@ -660,6 +793,10 @@ def _run_openai_stt_fallback(
             elapsed=elapsed,
             audio_len=audio_len,
             duration_seconds=duration_seconds,
+            audio_bytes=audio_bytes,
+            mime_type=mime_type,
+            language_hint=language_hint,
+            question_text=question_text,
         )
         if result:
             try:
@@ -905,6 +1042,10 @@ def _transcribe_answer_audio_impl(
                         elapsed=elapsed,
                         audio_len=audio_len,
                         duration_seconds=resolved_duration,
+                        audio_bytes=audio_bytes,
+                        mime_type=mime_type,
+                        language_hint=language_hint,
+                        question_text=question_text,
                     )
                     if result:
                         return result

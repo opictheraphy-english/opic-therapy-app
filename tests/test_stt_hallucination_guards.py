@@ -78,6 +78,26 @@ class SttHallucinationDetectionTests(unittest.TestCase):
         self.assertTrue(is_hallu)
         self.assertEqual(reason, "words_per_second")
 
+    def test_production_case_webm_duration_not_rejected(self) -> None:
+        """91 words @ ~570KB webm — old 32KB/s gave 17.8s/5.1wps false reject."""
+        from services.evaluation.eval_audio import compute_audio_duration_seconds
+
+        audio_len = int(17.8 * 32_000)  # production-like byte size
+        blob = b"\x1a\x45\xdf\xa3" + (b"\x00" * (audio_len - 4))
+        dur, method = compute_audio_duration_seconds(blob, "audio/webm")
+        self.assertEqual(method, "fallback_bytes")
+        self.assertGreater(dur, 40.0)
+        text = _diverse_words(91)
+        is_hallu, reason = stt_service.looks_like_stt_hallucination(
+            text,
+            duration_seconds=dur,
+        )
+        self.assertFalse(is_hallu, f"unexpected reject reason={reason} dur={dur}")
+
+    def test_wps_limit_env_override(self) -> None:
+        with patch.dict("os.environ", {"STT_WPS_LIMIT": "10"}):
+            self.assertEqual(stt_service._max_plausible_words_per_sec(), 10.0)
+
     def test_short_audio_long_transcript_rejected(self) -> None:
         text = _diverse_words(20)
         is_hallu, reason = stt_service.looks_like_stt_hallucination(
@@ -132,6 +152,52 @@ class SttHallucinationDetectionTests(unittest.TestCase):
         self.assertFalse(result.get("rejected_as_no_speech"))
         self.assertEqual(result.get("word_count"), 80)
         self.assertEqual(stt_service.derive_stt_status(result), "transcript_ready")
+
+    @patch("services.stt_service._invoke_openai_stt_model")
+    def test_wps_guard_whisper_overrule_accepts(self, mock_whisper: MagicMock) -> None:
+        gemini_text = _diverse_words(91)
+        whisper_text = _diverse_words(80)
+        mock_whisper.return_value = (whisper_text, "", "")
+        blob = b"\x1a\x45\xdf\xa3" + (b"\x00" * (int(17.8 * 32_000) - 4))
+        # Force WPS trip at 6.5 limit even if byte sniff would be longer.
+        result = stt_service._build_stt_success_from_raw(
+            gemini_text,
+            model_used="gemini-test",
+            provider="gemini",
+            attempts=1,
+            elapsed=0.5,
+            audio_len=len(blob),
+            duration_seconds=10.0,
+            audio_bytes=blob,
+            mime_type="audio/webm",
+            language_hint="en",
+            question_text="Tell me about your hobby.",
+        )
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertFalse(result.get("rejected_as_no_speech"))
+        self.assertEqual(result.get("word_count"), 91)
+        mock_whisper.assert_called_once()
+
+    @patch("services.stt_service._invoke_openai_stt_model")
+    def test_wps_guard_whisper_short_confirms_rejection(self, mock_whisper: MagicMock) -> None:
+        gemini_text = _diverse_words(30)
+        mock_whisper.return_value = ("hello", "", "")
+        result = stt_service._build_stt_success_from_raw(
+            gemini_text,
+            model_used="gemini-test",
+            provider="gemini",
+            attempts=1,
+            elapsed=0.5,
+            audio_len=20_000,
+            duration_seconds=1.0,
+            audio_bytes=b"\x00" * 20_000,
+            mime_type="audio/webm",
+        )
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertTrue(result.get("rejected_as_no_speech"))
+        self.assertEqual(result.get("error_category"), "hallucination_rejected")
 
 
 class SttWhisperPromptTests(unittest.TestCase):

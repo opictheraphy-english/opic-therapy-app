@@ -21,11 +21,16 @@ from components.answer_countdown_timer import (
     render_answer_countdown_timer,
 )
 from components.exam_question_screen import (
+    build_exam_answer_card_top_html,
+    build_exam_question_card_html,
+    build_exam_question_header_html,
     build_progress_segments_html,
     opic_type_badge_label,
-    render_exam_answer_card_top,
-    render_exam_question_shell,
     render_exam_wave_mic_observer,
+)
+from components.examiner_avatar import (
+    render_practice_examiner_question_sections,
+    render_practice_examiner_saved_beside,
 )
 from components.exam_saved_screen import render_saved_transcript
 from components.feedback_loading_card import render_feedback_loading_card
@@ -1530,19 +1535,25 @@ def _render_question_step(q_idx: int) -> None:
     )
 
     question = _question_at(q_idx)
-    render_exam_question_shell(
-        eyebrow="5분 모의고사",
-        progress_html=build_progress_segments_html(
-            q_idx + 1,
-            _QUESTION_COUNT,
-            badge_label=opic_type_badge_label(str(question.get("opic_type") or "")),
-        ),
-        badge_label=str(question.get("type_label") or ""),
-        question_en=str(question.get("question_en") or ""),
-        question_ko=str(question.get("question_ko") or ""),
-        accent="teal",
+    progress_html = build_progress_segments_html(
+        q_idx + 1,
+        _QUESTION_COUNT,
+        badge_label=opic_type_badge_label(str(question.get("opic_type") or "")),
     )
-    render_exam_answer_card_top(accent="teal")
+    render_practice_examiner_question_sections(
+        st.session_state,
+        flow="mini_mock_v2",
+        header_html=build_exam_question_header_html(
+            progress_html=progress_html,
+            badge_label=str(question.get("type_label") or ""),
+        ),
+        question_card_html=build_exam_question_card_html(
+            str(question.get("question_en") or ""),
+            str(question.get("question_ko") or ""),
+        ),
+        answer_card_html=build_exam_answer_card_top_html(accent="teal"),
+        size=100,
+    )
     timer_id = build_answer_timer_id("mini_v2", str(q_idx))
     render_answer_countdown_timer(
         timer_id=timer_id,
@@ -1650,20 +1661,28 @@ def _render_v2_saved_status_card(
 
 def _render_v2_saved_audio_preview(q_idx: int, saved_row: Optional[Dict[str, Any]]) -> None:
     audio_bytes, mime_type = _get_v2_audio_blob(q_idx)
-    st.markdown("##### 내 녹음 다시 듣기")
-    if audio_bytes:
-        try:
-            st.audio(audio_bytes, format=mime_type or "audio/webm")
-        except Exception:
-            logger.debug(
-                "[MINI_V2_AUDIO_PLAYBACK] failed q=%s audio_len=%s",
-                q_idx + 1,
-                len(audio_bytes),
-                exc_info=True,
-            )
-            st.caption("녹음 파일을 다시 들을 수 없습니다.")
-    else:
-        st.warning("녹음 파일이 저장되지 않았어요.")
+    av_col, replay_col = st.columns([0.12, 0.88], gap="small")
+    with av_col:
+        render_practice_examiner_saved_beside(
+            st.session_state,
+            flow="mini_mock_v2",
+            size=90,
+        )
+    with replay_col:
+        st.markdown("##### 내 녹음 다시 듣기")
+        if audio_bytes:
+            try:
+                st.audio(audio_bytes, format=mime_type or "audio/webm")
+            except Exception:
+                logger.debug(
+                    "[MINI_V2_AUDIO_PLAYBACK] failed q=%s audio_len=%s",
+                    q_idx + 1,
+                    len(audio_bytes),
+                    exc_info=True,
+                )
+                st.caption("녹음 파일을 다시 들을 수 없습니다.")
+        else:
+            st.warning("녹음 파일이 저장되지 않았어요.")
 
 
 def _render_v2_saved_transcript_preview(saved_row: Optional[Dict[str, Any]]) -> None:

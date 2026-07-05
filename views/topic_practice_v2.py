@@ -39,6 +39,10 @@ from components.exam_saved_screen import (
     render_saved_status,
     render_saved_transcript,
 )
+from components.examiner_avatar import (
+    render_practice_examiner_question_sections,
+    render_practice_examiner_saved_beside,
+)
 from components.navigation import navigate_to
 from components.recovery_card import (
     ANALYSIS_RECOVERY_EYEBROW,
@@ -2858,6 +2862,38 @@ def _keyword_constraint_constraints_html(bank_row: Dict[str, Any]) -> str:
     )
 
 
+def _render_topic_question_header_html(
+    *,
+    topic_id: str,
+    q: Dict[str, str],
+    q_idx: int,
+    total_questions: int,
+) -> str:
+    badge = _opic_type_badge_label(str(q.get("opic_type") or ""))
+    return build_topic_practice_header_html(
+        topic_id,
+        q_idx,
+        total_questions=total_questions,
+        include_screen_marker=True,
+        chip_title=_practice_chip_title(topic_id),
+        badge_label=badge,
+    )
+
+
+def _render_topic_question_card_html(q: Dict[str, str]) -> str:
+    en = html.escape(str(q.get("en") or ""))
+    ko_raw = str(q.get("ko") or "").strip()
+    ko_block = (
+        f'<p class="tq-question-ko">{html.escape(ko_raw)}</p>' if ko_raw else ""
+    )
+    return (
+        f'<div class="mx-question-card tq-card">'
+        f'<p class="mx-question-topic tq-question">{en}</p>'
+        f"{ko_block}"
+        f"</div>"
+    )
+
+
 def _render_topic_question_shell_html(
     *,
     topic_id: str,
@@ -3036,28 +3072,43 @@ def _render_question() -> None:
         back_key="topic_v2_question",
         eyebrow=_practice_eyebrow("질문"),
     )
-    st.markdown(
-        _render_topic_question_shell_html(
-            topic_id=topic_id,
-            q=q,
-            q_idx=q_idx,
-            total_questions=len(qs),
-        ),
-        unsafe_allow_html=True,
-    )
 
     bank_row = _bank_question_at_index(q_idx)
-    if _is_keyword_constraint_mode():
-        kc_html = _keyword_constraint_constraints_html(bank_row)
-        if kc_html:
-            st.markdown(kc_html, unsafe_allow_html=True)
-
     if _is_advanced_mode() or _is_keyword_constraint_mode():
         question_id = str(
             bank_row.get("audio_id") or bank_row.get("id") or ""
         ).strip()
     else:
         question_id = str(bank_row.get("id") or "").strip()
+    has_tts = False
+    if question_id:
+        mp3_path = _QUESTION_AUDIO_DIR / f"{question_id}.mp3"
+        try:
+            has_tts = mp3_path.is_file() and mp3_path.stat().st_size >= 64
+        except OSError:
+            has_tts = False
+
+    avatar_flow = "keyword_constraint" if _is_keyword_constraint_mode() else "topic_v2"
+    render_practice_examiner_question_sections(
+        st.session_state,
+        flow=avatar_flow,
+        header_html=_render_topic_question_header_html(
+            topic_id=topic_id,
+            q=q,
+            q_idx=q_idx,
+            total_questions=len(qs),
+        ),
+        question_card_html=_render_topic_question_card_html(q),
+        answer_card_html=_render_topic_answer_card_top_html(topic_id),
+        has_tts=has_tts,
+        size=100,
+    )
+
+    if _is_keyword_constraint_mode():
+        kc_html = _keyword_constraint_constraints_html(bank_row)
+        if kc_html:
+            st.markdown(kc_html, unsafe_allow_html=True)
+
     if question_id:
         mp3_path = _QUESTION_AUDIO_DIR / f"{question_id}.mp3"
         if mp3_path.is_file():
@@ -3076,7 +3127,6 @@ def _render_question() -> None:
                     accent=topic_accent,
                 )
 
-    st.markdown(_render_topic_answer_card_top_html(topic_id), unsafe_allow_html=True)
     topic_accent = str(_topic_visual_for_id(topic_id).get("accent") or "teal")
     timer_id = build_answer_timer_id("topic_v2", topic_id, str(q_idx))
     render_answer_countdown_timer(
@@ -3148,6 +3198,7 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
         back_href="?nav=MOCK",
         eyebrow=_practice_eyebrow("저장"),
     )
+    avatar_flow = "keyword_constraint" if _is_keyword_constraint_mode() else "topic_v2"
     st.markdown(
         build_topic_practice_header_html(
             topic,
@@ -3176,15 +3227,23 @@ def _render_saved_normal(topic: str, q_idx: int) -> None:
     )
 
     if has_audio:
-        render_saved_recording_header(accent=accent)
-        render_recording_playback_player(
-            ab,
-            audio_mime or "audio/webm",
-            f"topic_{topic}_{q_idx}",
-            accent=accent,
-            label="",
-            show_progress=True,
-        )
+        av_col, replay_col = st.columns([0.12, 0.88], gap="small")
+        with av_col:
+            render_practice_examiner_saved_beside(
+                st.session_state,
+                flow=avatar_flow,
+                size=90,
+            )
+        with replay_col:
+            render_saved_recording_header(accent=accent)
+            render_recording_playback_player(
+                ab,
+                audio_mime or "audio/webm",
+                f"topic_{topic}_{q_idx}",
+                accent=accent,
+                label="",
+                show_progress=True,
+            )
     elif is_manual:
         st.caption("텍스트 답변으로 저장되었습니다.")
 

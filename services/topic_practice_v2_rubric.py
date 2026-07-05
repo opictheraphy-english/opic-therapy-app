@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-RUBRIC_VERSION = "topic_practice_v2_feedback_v10_ih_al_recalibration"
+RUBRIC_VERSION = "topic_practice_v2_feedback_v11_upgrade_sample_plus_one_level"
 
 
 def build_topic_practice_v2_feedback_rubric() -> str:
@@ -91,14 +91,28 @@ relevance(관련성) 판단 — 느슨하게 적용할 것:
   전치사가 빠졌으니 "interested in"으로. 추상적인 총평("문법을 다듬으세요")만
   쓰지 말 것. 고칠 문법 포인트가 둘 이상이면 가장 중요한 1~2개를 인용과 함께 짚는다.
   발화량 안내가 필요하면 여기에 한 문장 덧붙일 수 있다.
-- better_expression: **한국어** 설명 + **원문 영어 구절 인용**. 어휘·표현 교정 중심.
-  학생이 쓴 모호하거나 반복되는 표현을 **따옴표로 인용**하고, 더 구체적이거나
-  자연스러운 대안을 **따옴표 영어로** 제시한다. 예: 반복되는 "song" 대신 "track",
-  뭉뚱그린 "catchy and trendy" 대신 더 구체적인 형용사. 최소 1개, 가능하면
-  2개의 교정을 "원문 표현 → 대안" 형태로 보여줄 것.
-- upgrade_sample: **절대 비우지 말 것(빈 문자열 금지).** **영어만**, 반드시 학생 답을 살짝 다듬은 **2~4문장** 예시를 작성한다.
-  업그레이드 제약(반드시 지킬 것): 원문의 문장 수를 유지하고, 새 어휘는 **2개 이하**만 추가하며,
-  원문에 없던 새 문법 구조는 도입하지 않는다. (학생이 따라 말할 수 있는 수준으로만 다듬는다.)
+- better_expression: **한국어** 설명 + **원문 영어 구절 인용**. 어휘·표현 **구절 교정**만 —
+  **1~2개** 표현을 "원문 표현 → 대안" 형태로 보여준다. 반복·모호 표현을 **따옴표로 인용**하고
+  더 구체적이거나 자연스러운 대안을 **따옴표 영어**로 제시한다. **전체 답변 재작성 금지.**
+  upgrade_sample과 역할을 겹치지 말 것 — better_expression은 짧은 구절 교정만, 전체 모범 답변은
+  upgrade_sample에만 쓴다.
+- upgrade_sample: **절대 비우지 말 것(빈 문자열 금지).** **영어만** — 학생이 소리 내어 따라 말할
+  **+1 레벨 모범 답변**(전체 완결 스크립트). better_expression의 구절 나열을 이어 붙이지 말고,
+  목표 레벨 **담화 구조**로 재구성한 완결 답변을 쓴다.
+  · **사실 범위**: 학생이 실제로 말한 내용·경험 안에서만 확장한다. 학생이 언급하지 않은
+    인물·사건·장소를 **지어내지 말 것**.
+  · **목표 레벨**: 같은 JSON에서 확정한 answer_level의 **바로 위 한 단계**
+    (NL→NM, NM→NH, NH→IL, IL→IM1, IM1→IM2, IM2→IM3, IM3→IH, IH→AL; AL이면 AL 수준의
+    자연스러운 정제). 위 공용 JSON의 **levels** 앵커와 **delivery_quality_guidance**를
+    예문 스펙으로 따른다.
+  · **IH 목표** (answer_level이 IM3 등으로 IH가 목표일 때): 문단형(도입–전개–마무리),
+    because/so/however/for example/actually 등 **다양한 접속사** 연결, 단문 나열 지양, 구체적 어휘.
+  · **AL 목표** (answer_level이 IH 등으로 AL이 목표일 때): 문장 구조 다양성(복문 혼합),
+    담화 지속, 과제에 맞는 **시제 혼용**, 백트래킹 없는 매끄러운 흐름, 자연스러운 고급 표현 시도.
+  · **길이·구조**: 원문보다 **짧게 만들지 말 것**. 원문이 단문 나열이면 문장을 연결·확장해
+    목표 레벨 담화 구조로 재구성한다. **영어 4~8문장**(목표 레벨 앵커의 sentence_count 참고);
+    원문이 길면 유지·확장.
+  · **톤**: 구어체 스피킹 톤 유지 — 학술체·문어체·에세이식 연결어(Firstly, Furthermore 등) 금지.
 - keyword_drill: **영어** 짧은 단어/구 **3~6개** 배열. 외워 말하기 연습용 키워드만. 전체 스크립트 금지.
 
 answer_level (이 답변 1개에 대한 OPIc 레벨 — 학생의 최종·종합 등급이 아님):
@@ -110,12 +124,14 @@ answer_level (이 답변 1개에 대한 OPIc 레벨 — 학생의 최종·종합
 - **summary, strength, correction_focus, better_expression, practice_mission 등 다른
   텍스트 필드에는 레벨 토큰(IM2, IH, AL 등)을 절대 쓰지 말 것.** 레벨은 오직 answer_level
   필드로만 보고한다.
+- **answer_level을 먼저 확정한 뒤** upgrade_sample을 작성한다. upgrade_sample은 answer_level+1
+  목표의 모범 답변이며, better_expression 구절 목록의 단순 조합이 아니다.
 
 길이 규칙:
 - summary, strength, practice_mission: 한국어 1~2문장.
 - correction_focus: 한국어 2~3문장 (원문 인용 포함).
-- better_expression: 한국어 설명 + 인용 구절. 너무 길지 않게.
-- upgrade_sample은 **반드시** 영어 2~4문장으로 채운다. JSON에서 빈 문자열·null 금지.
+- better_expression: 한국어 설명 + 1~2개 구절 인용·대안. 전체 답변 재작성 금지.
+- upgrade_sample: **반드시** 영어 **4~8문장** 완결 답변. 원문보다 짧지 않게. JSON 빈 문자열·null 금지.
 - keyword_drill은 3~6개 짧은 항목.
 
 출력 형식: **JSON만** (마크다운 코드펜스 없음). 키는 정확히 이 여덟 개:

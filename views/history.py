@@ -13,10 +13,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
-from components.navigation import navigate_to
-from components.score_donut_bars import render_score_donut_bars_html
-from components.topbar import render_top_bar
 from components.brand_character import render_character_svg
+from components.collapsible_section import render_collapsible_section
+from components.navigation import navigate_to
 from services.history_store import get_history_record, list_history
 from services.mini_mock_v2_level_rules import SHARED_SCORE_AXES
 from utils.auth import is_authenticated
@@ -239,27 +238,49 @@ _HIST_TOPIC_SCOPED_CSS = """
 [data-testid="stMain"]:has(.hist-topic-screen) .hist-transcript-wrap {
   margin: 0;
 }
-[data-testid="stMain"]:has(.hist-topic-screen) .hist-transcript-wrap [data-testid="stExpander"] {
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-tx-head,
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-q-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   background: #ffffff;
   border: 0.5px solid rgba(17, 24, 39, 0.10);
   border-radius: 14px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  overflow: hidden;
-}
-[data-testid="stMain"]:has(.hist-topic-screen) .hist-transcript-wrap [data-testid="stExpander"] details summary {
-  font-size: 13px;
-  font-weight: 500;
-  color: #444441;
   padding: 12px 14px;
+  margin: 0 0 6px 0;
 }
-[data-testid="stMain"]:has(.hist-topic-screen) .hist-transcript-wrap [data-testid="stExpander"] details summary p {
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-tx-title,
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-q-title {
   font-size: 13px;
   font-weight: 500;
   color: #444441;
-  margin: 0;
+  line-height: 1.35;
 }
-[data-testid="stMain"]:has(.hist-topic-screen) .hist-transcript-wrap [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-tx-body,
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-q-body {
+  background: #ffffff;
+  border: 0.5px solid rgba(17, 24, 39, 0.10);
+  border-radius: 14px;
   padding: 0 14px 14px;
+  margin: 0 0 12px 0;
+}
+[data-testid="stMain"]:has(.hist-detail-screen) .hist-transcript-wrap
+  div[data-testid="stElementContainer"][class*="st-key-hist-tx_toggle"]
+  div[data-testid="stButton"] > button,
+[data-testid="stMain"]:has(.hist-detail-screen)
+  div[data-testid="stElementContainer"][class*="st-key-hist-q_toggle"]
+  div[data-testid="stButton"] > button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f6e56 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  min-height: 0 !important;
+  padding: 0.2rem 0.5rem !important;
+  margin: -4px 0 8px 0 !important;
 }
 [data-testid="stMain"]:has(.hist-topic-screen) .hist-transcript-body {
   font-size: 13px;
@@ -463,8 +484,12 @@ def _estimated_level_from_item(
     return ""
 
 
-def _inject_hist_topic_css() -> None:
+def _inject_hist_detail_css() -> None:
     st.markdown(_HIST_TOPIC_SCOPED_CSS, unsafe_allow_html=True)
+
+
+def _inject_hist_topic_css() -> None:
+    _inject_hist_detail_css()
 
 
 def _hist_white_card(label: str, body_html: str, *, tone: str) -> str:
@@ -888,6 +913,9 @@ def _render_detail(record_id: str) -> None:
     if not isinstance(content, dict):
         content = {}
 
+    st.markdown('<div class="hist-detail-screen" aria-hidden="true"></div>', unsafe_allow_html=True)
+    _inject_hist_detail_css()
+
     _render_score_breakdown(
         content.get("score_breakdown"),
         overall_level=record.get("overall_level") or content.get("overall_level"),
@@ -1071,11 +1099,21 @@ def _render_topic_practice_question(item: Dict[str, Any], idx: int) -> None:
 
     if transcript:
         st.markdown('<div class="hist-transcript-wrap">', unsafe_allow_html=True)
-        with st.expander("내 답변", expanded=False):
+
+        def _transcript_body() -> None:
             st.markdown(
                 f'<p class="hist-transcript-body">{html.escape(transcript)}</p>',
                 unsafe_allow_html=True,
             )
+
+        render_collapsible_section(
+            "내 답변",
+            f"topic_q{idx}_answer",
+            _transcript_body,
+            css_scope="hist-tx",
+            toggle_open_label="펼치기",
+            toggle_close_label="접기",
+        )
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.markdown(
@@ -1153,7 +1191,6 @@ def _render_topic_practice_results(content: Dict[str, Any]) -> None:
     if not isinstance(results, list) or not results:
         return
 
-    _inject_hist_topic_css()
     st.markdown(
         '<div class="hist-topic-screen" aria-hidden="true"></div>'
         '<div class="hist-topic-wrap">',
@@ -1183,7 +1220,10 @@ def _render_per_question(content: Dict[str, Any], practice_type: str = "") -> No
         preview = _truncate_preview(_question_text_from_item(item), 48)
         level = str(item.get("level") or item.get("overall_level") or "").strip()
         label = f"Q{idx}" + (f" · {preview}" if preview else "")
-        with st.expander(label + (f"  [{level}]" if level else "")):
+        if level:
+            label = f"{label}  [{level}]"
+
+        def _mock_question_body() -> None:
             q_text = _question_text_from_item(item)
             if q_text:
                 st.markdown(
@@ -1192,12 +1232,12 @@ def _render_per_question(content: Dict[str, Any], practice_type: str = "") -> No
                     f"{html.escape(q_text)}</div>",
                     unsafe_allow_html=True,
                 )
-            transcript = _transcript_from_item(item)
-            if transcript:
+            item_transcript = _transcript_from_item(item)
+            if item_transcript:
                 st.markdown(
                     f'<div class="ds-muted" style="font-size:12px;margin-bottom:4px;">내 답변</div>'
                     f'<div style="color:#334155;font-size:13px;line-height:1.6;white-space:pre-wrap;">'
-                    f"{html.escape(transcript)}</div>",
+                    f"{html.escape(item_transcript)}</div>",
                     unsafe_allow_html=True,
                 )
             fb = str(
@@ -1209,3 +1249,12 @@ def _render_per_question(content: Dict[str, Any], practice_type: str = "") -> No
                     f'<div style="color:#334155;font-size:13px;line-height:1.6;">{html.escape(fb)}</div>',
                     unsafe_allow_html=True,
                 )
+
+        render_collapsible_section(
+            label,
+            f"mock_q{idx}",
+            _mock_question_body,
+            css_scope="hist-q",
+            toggle_open_label="펼치기",
+            toggle_close_label="접기",
+        )
