@@ -29,7 +29,6 @@ from services.new_final_report_data import (
     build_mock_v2_final_bundle,
     merge_report_into_aggregates,
 )
-from ui.styles import inject_global_css
 from utils.home_stats import resolve_target_level
 
 try:
@@ -156,7 +155,6 @@ def render_new_final_report(
     on_retry_stt: Optional[Callable[[int], bool]] = None,
 ) -> None:
     """Render Mock V2 AI report — premium layout (data pipeline unchanged)."""
-    inject_global_css()
     st.markdown(m2fr_screen_marker_html(), unsafe_allow_html=True)
 
     if is_demo or st.session_state.get("_final_report_demo"):
