@@ -16,6 +16,8 @@ import streamlit as st
 from components.brand_character import render_character_svg
 from components.collapsible_section import render_collapsible_section
 from components.navigation import navigate_to
+from components.score_donut_bars import render_score_donut_bars_html
+from components.topbar import render_top_bar
 from services.history_store import get_history_record, list_history
 from services.mini_mock_v2_level_rules import SHARED_SCORE_AXES
 from utils.auth import is_authenticated

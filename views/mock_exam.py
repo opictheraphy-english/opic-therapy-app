@@ -2522,7 +2522,6 @@ _LEARN_HERO_ARROW_SVG = (
     '<polyline points="9 6 15 12 9 18"></polyline></svg>'
 )
 
-
 def _normalize_learn_html(html_block: str) -> str:
     return "".join(line.strip() for line in html_block.splitlines() if line.strip())
 
@@ -2539,13 +2538,52 @@ def _portal_target_level_label() -> str:
     return f"목표 Lv.{level}"
 
 
+def _portal_difficulty_chip_label() -> str:
+    try:
+        level = int(
+            st.session_state.get("difficulty")
+            or st.session_state.get("settings", {}).get("difficulty")
+            or 5
+        )
+    except (TypeError, ValueError):
+        level = 5
+    return f"난이도 {level}-{level}"
+
+
+def _portal_progress_subtitle() -> str:
+    ss = st.session_state
+    if not (ss.get("user_authenticated") and not ss.get("is_guest")):
+        return "실전처럼, 또는 가볍게"
+    from utils.home_stats import get_cached_home_stats, resolve_target_level
+
+    stats = get_cached_home_stats(ss)
+    if not stats:
+        return "실전처럼, 또는 가볍게"
+    estimated = stats.get("estimated_level")
+    if not estimated:
+        return "실전처럼, 또는 가볍게"
+    target = str(stats.get("target_level") or resolve_target_level(ss))
+    gap = int(stats.get("level_gap") or 0)
+    if gap <= 0:
+        return f"{estimated} → {target} · 목표 달성"
+    if gap == 1:
+        return f"{estimated} → {target} · 한 계단 남았어요"
+    if gap == 2:
+        return f"{estimated} → {target} · 두 계단 남았어요"
+    return f"{estimated} → {target} · {gap}계단 남았어요"
+
+
 def _render_learn_portal_header() -> None:
     pill = html.escape(_portal_target_level_label())
+    subtitle = html.escape(_portal_progress_subtitle())
     block = (
         f'<header class="learn-portal-header" role="banner">'
         f'<div class="learn-portal-header-left">'
-        f'<div class="learn-portal-title">학습하기</div>'
-        f'<div class="learn-portal-subtitle">오늘은 어떤 방식으로 연습할까요?</div>'
+        f'<div class="learn-portal-title">'
+        f"<span>오늘은 어떤 연습을</span>"
+        f"<span>해볼까요?</span>"
+        f"</div>"
+        f'<div class="learn-portal-subtitle">{subtitle}</div>'
         f"</div>"
         f'<span class="learn-portal-target-pill">{pill}</span>'
         f"</header>"
@@ -2560,23 +2598,41 @@ def _learn_icon_html(icon_key: str, *, tile_class: str = "learn-grid-icon") -> s
     return f'<span class="{tile_class}" aria-hidden="true">{icon_svg}</span>'
 
 
-def _render_learn_hero_card_html() -> None:
-    icon = _learn_icon_html("clipboard-check", tile_class="learn-hero-icon")
-    block = (
+def _learn_hero_card_body_html() -> str:
+    return _normalize_learn_html(
         f'<div class="learn-hero-card" role="region" aria-label="실전 모의고사">'
-        f'<div class="learn-hero-card-left">'
-        f"{icon}"
-        f'<div class="learn-hero-card-text">'
+        f'<div class="learn-hero-card-copy">'
+        f'<div class="learn-hero-eyebrow">실전 코스</div>'
         f'<div class="learn-hero-card-title">실전 모의고사</div>'
         f'<div class="learn-hero-card-sub">15문항 · 실제 시험 흐름 · 최종 리포트</div>'
         f"</div></div>"
-        f'<span class="learn-hero-card-arrow">{_LEARN_HERO_ARROW_SVG}</span>'
+    )
+
+
+def _learn_hero_chips_html() -> str:
+    diff = html.escape(_portal_difficulty_chip_label())
+    return _normalize_learn_html(
+        f'<div class="learn-hero-chips" aria-hidden="true">'
+        f'<span class="learn-hero-chip">약 40분</span>'
+        f'<span class="learn-hero-chip">{diff}</span>'
+        f'<span class="learn-hero-chip">Ava 시험관</span>'
         f"</div>"
     )
-    st.markdown(_normalize_learn_html(block), unsafe_allow_html=True)
 
 
-def _render_learn_grid_card_html(
+def _render_learn_hero_card(mx: dict) -> None:
+    with st.container(key="card_learn_hero_mock", gap=None):
+        top_col, btn_col = st.columns([8, 2], gap="small")
+        with top_col:
+            st.markdown(_learn_hero_card_body_html(), unsafe_allow_html=True)
+        with btn_col:
+            if st.button(_CARD_CHEVRON, key="learn_hero_mock", use_container_width=False):
+                _start_mock_v2_from_portal(mx)
+                st.rerun()
+        st.markdown(_learn_hero_chips_html(), unsafe_allow_html=True)
+
+
+def _learn_grid_card_html(
     *,
     variant: str,
     aria_label: str,
@@ -2594,27 +2650,37 @@ def _render_learn_grid_card_html(
             f"{html.escape(badge)}</span>"
         )
     icon = _learn_icon_html(icon_key)
+    sub_lines = [html.escape(part.strip()) for part in str(subtitle).split("/") if part.strip()]
+    if len(sub_lines) >= 2:
+        sub_html = (
+            f'<span class="learn-grid-card-sub-line">{sub_lines[0]}</span>'
+            f'<span class="learn-grid-card-sub-line">{sub_lines[1]}</span>'
+        )
+    else:
+        sub_html = f'<span class="learn-grid-card-sub-line">{html.escape(subtitle)}</span>'
     return _normalize_learn_html(
         f'<div class="learn-grid-card learn-grid-card--{html.escape(variant)}" '
         f'role="region" aria-label="{html.escape(aria_label)}">'
         f'<div class="learn-grid-card-top">{icon}{badge_html}</div>'
         f'<div class="learn-grid-card-title">{html.escape(title)}</div>'
-        f'<div class="learn-grid-card-sub">{html.escape(subtitle)}</div>'
+        f'<div class="learn-grid-card-sub">{sub_html}</div>'
         f"</div>"
     )
 
 
-def _render_learn_grid_cell(
-    col,
+_CARD_CHEVRON = "›"
+
+
+def _render_learn_card_with_footer(
     *,
-    card_html: str,
+    container_key: str,
+    body_html: str,
     button_key: str,
-    button_label: str,
     on_click,
 ) -> None:
-    with col:
-        st.markdown(card_html, unsafe_allow_html=True)
-        if st.button(button_label, key=button_key, use_container_width=True):
+    with st.container(key=container_key, gap=None):
+        st.markdown(body_html, unsafe_allow_html=True)
+        if st.button(_CARD_CHEVRON, key=button_key, use_container_width=False):
             on_click()
             st.rerun()
 
@@ -2744,8 +2810,24 @@ def _render_portal_card_html(
     st.markdown(html_block, unsafe_allow_html=True)
 
 
+def _render_portal_sample_report_link(mx: dict) -> None:
+    """Bottom sample-report text link — opens synthetic demo report."""
+    from services.final_report_demo import open_demo_final_report
+
+    with st.container(key="learn_sample_block", gap=None):
+        st.markdown(
+            _normalize_learn_html(
+                '<span class="learn-sample-text">최종 리포트가 궁금하다면 </span>'
+            ),
+            unsafe_allow_html=True,
+        )
+        if st.button("샘플 미리 보기", key="learn_sample_report", use_container_width=False):
+            open_demo_final_report(mx)
+            st.rerun()
+
+
 def render_learning_portal(mx: dict) -> None:
-    """Learning portal — grid layout aligned with home dashboard design."""
+    """Learning portal — editorial layout aligned with home dashboard design."""
     _maybe_reset_practice_from_url()
     mx = mock_session()
 
@@ -2758,72 +2840,71 @@ def render_learning_portal(mx: dict) -> None:
     _render_learn_portal_header()
 
     st.markdown('<div class="learn-portal-hero-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
-    _render_learn_hero_card_html()
-    if st.button("시작 →", key="learn_hero_mock", use_container_width=True):
-        _start_mock_v2_from_portal(mx)
-        st.rerun()
+    _render_learn_hero_card(mx)
 
+    st.markdown('<div class="learn-portal-section-label">매일 연습</div>', unsafe_allow_html=True)
     st.markdown('<div class="learn-portal-grid-marker" aria-hidden="true"></div>', unsafe_allow_html=True)
     row1_a, row1_b = st.columns(2, gap="small")
-    _render_learn_grid_cell(
-        row1_a,
-        card_html=_render_learn_grid_card_html(
-            variant="mini",
-            aria_label="5분 진단",
-            title="5분 진단",
-            subtitle="3문항으로 내 레벨 빠르게",
-            icon_key="stopwatch",
-            badge="처음이라면",
-            badge_tone="amber",
-        ),
-        button_key="learn_card_mini",
-        button_label="시작 →",
-        on_click=lambda: _start_mini_mock_from_portal(mx),
-    )
-    _render_learn_grid_cell(
-        row1_b,
-        card_html=_render_learn_grid_card_html(
-            variant="topic",
-            aria_label="주제별 연습",
-            title="주제별 연습",
-            subtitle="내 주제 3문항 + AI 피드백",
-            icon_key="list-search",
-            badge="매일 추천",
-            badge_tone="teal",
-        ),
-        button_key="learn_card_topic",
-        button_label="시작 →",
-        on_click=lambda: _start_topic_v2_from_portal(mx),
-    )
+    with row1_a:
+        _render_learn_card_with_footer(
+            container_key="card_learn_topic",
+            body_html=_learn_grid_card_html(
+                variant="topic",
+                aria_label="주제별 연습",
+                title="주제별 연습",
+                subtitle="내 주제 3문항 / AI 피드백 · 10분",
+                icon_key="list-search",
+                badge="매일 추천",
+                badge_tone="teal",
+            ),
+            button_key="learn_card_topic",
+            on_click=lambda: _start_topic_v2_from_portal(mx),
+        )
+    with row1_b:
+        _render_learn_card_with_footer(
+            container_key="card_learn_mini",
+            body_html=_learn_grid_card_html(
+                variant="mini",
+                aria_label="5분 진단",
+                title="5분 진단",
+                subtitle="3문항으로 / 내 레벨 빠르게",
+                icon_key="stopwatch",
+                badge="처음이라면",
+                badge_tone="amber",
+            ),
+            button_key="learn_card_mini",
+            on_click=lambda: _start_mini_mock_from_portal(mx),
+        )
 
     row2_a, row2_b = st.columns(2, gap="small")
-    _render_learn_grid_cell(
-        row2_a,
-        card_html=_render_learn_grid_card_html(
-            variant="keyword",
-            aria_label="키워드 표현",
-            title="키워드 표현",
-            subtitle="목표 표현 넣어 말하기",
-            icon_key="vocabulary",
-        ),
-        button_key="learn_card_keyword",
-        button_label="시작 →",
-        on_click=lambda: _start_keyword_from_portal(mx),
-    )
-    _render_learn_grid_cell(
-        row2_b,
-        card_html=_render_learn_grid_card_html(
-            variant="script",
-            aria_label="스크립트 첨삭",
-            title="스크립트 첨삭",
-            subtitle="내 문장 진단 + 업그레이드",
-            icon_key="pencil-check",
-        ),
-        button_key="learn_card_script",
-        button_label="시작 →",
-        on_click=lambda: _start_script_coaching_from_portal(mx),
-    )
+    with row2_a:
+        _render_learn_card_with_footer(
+            container_key="card_learn_keyword",
+            body_html=_learn_grid_card_html(
+                variant="keyword",
+                aria_label="키워드 표현",
+                title="키워드 표현",
+                subtitle="목표 표현 넣어 / 말하기 · 5분",
+                icon_key="vocabulary",
+            ),
+            button_key="learn_card_keyword",
+            on_click=lambda: _start_keyword_from_portal(mx),
+        )
+    with row2_b:
+        _render_learn_card_with_footer(
+            container_key="card_learn_script",
+            body_html=_learn_grid_card_html(
+                variant="script",
+                aria_label="스크립트 첨삭",
+                title="스크립트 첨삭",
+                subtitle="내 문장 진단 / + 업그레이드",
+                icon_key="pencil-check",
+            ),
+            button_key="learn_card_script",
+            on_click=lambda: _start_script_coaching_from_portal(mx),
+        )
 
+    _render_portal_sample_report_link(mx)
     _render_dev_portal_debug(mx)
 
 

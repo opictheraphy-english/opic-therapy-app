@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import logging
+import os
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
@@ -165,7 +166,7 @@ def _cache_bundle(sig: tuple, bundle: Dict[str, Any]) -> Dict[str, Any]:
         try:
             pdf_out = build_exam_pdf(
                 bundle["analytics"],
-                summary_rows_for_table(bundle["results"]),
+                summary_rows_for_table(bundle["results"], omit_score_columns=True),
                 bundle["results"],
                 patient_label=(
                     "OPIc Sample Report"
@@ -416,7 +417,7 @@ def render_new_final_report(
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("문항 요약 · Summary Matrix")
-    rows = summary_rows_for_table(results)
+    rows = summary_rows_for_table(results, omit_score_columns=True)
     if rows:
         df = pd.DataFrame(rows)
 
@@ -608,33 +609,35 @@ def render_new_final_report(
                     question_text=str(r.get("question") or ""),
                 )
 
-            st.markdown("##### [E] 세부 점수")
             rs = res.get("rubric_scores") or {}
-            cols = st.columns(4)
-            order = [
-                ("fluency", "Fluency"),
-                ("grammar", "Grammar"),
-                ("lexical", "Lexical"),
-                ("logic", "Logic"),
-            ]
-            for i, (key, title) in enumerate(order):
-                v = rs.get(key, 0)
-                try:
-                    vv = float(v) / 100.0
-                except (TypeError, ValueError):
-                    vv = 0.0
-                cols[i % 4].progress(min(1.0, max(0.0, vv)), text=f"{title}: {v}")
+            has_row_scores = any(isinstance(v, (int, float)) for v in rs.values())
+            if has_row_scores:
+                st.markdown("##### [E] 세부 점수")
+                cols = st.columns(4)
+                order = [
+                    ("fluency", "Fluency"),
+                    ("grammar", "Grammar"),
+                    ("lexical", "Lexical"),
+                    ("logic", "Logic"),
+                ]
+                for i, (key, title) in enumerate(order):
+                    v = rs.get(key, 0)
+                    try:
+                        vv = float(v) / 100.0
+                    except (TypeError, ValueError):
+                        vv = 0.0
+                    cols[i % 4].progress(min(1.0, max(0.0, vv)), text=f"{title}: {v}")
 
-            sem2 = res.get("semantic_dimensions") or {}
-            for label_k, name in (
-                ("narrative_depth", "Narrative depth"),
-                ("semantic_density", "Semantic density"),
-                ("naturalness", "Naturalness"),
-                ("tense_stability", "Tense stability"),
-            ):
-                v = sem2.get(label_k)
-                if isinstance(v, (int, float)):
-                    st.progress(min(1.0, float(v) / 100.0), text=f"{name}: {v:.0f}")
+                sem2 = res.get("semantic_dimensions") or {}
+                for label_k, name in (
+                    ("narrative_depth", "Narrative depth"),
+                    ("semantic_density", "Semantic density"),
+                    ("naturalness", "Naturalness"),
+                    ("tense_stability", "Tense stability"),
+                ):
+                    v = sem2.get(label_k)
+                    if isinstance(v, (int, float)):
+                        st.progress(min(1.0, float(v) / 100.0), text=f"{name}: {v:.0f}")
 
             st.markdown("##### [F] 위험 요소 감지")
             risks = detect_risk_flags(res)
@@ -674,20 +677,23 @@ def render_new_final_report(
             "PDF 생성 기능을 사용할 수 없어요. 화면 리포트를 먼저 확인해 주세요."
         )
 
-    export_obj = {
-        "generated_at": datetime.now().isoformat(),
-        "exam_type": "mock_v2",
-        "overall": agg,
-        "mock_v2_report": report,
-        "items": results,
-    }
-    dc2.download_button(
-        "🧠 Raw Analysis 다운로드",
-        data=json.dumps(export_obj, ensure_ascii=False, indent=2).encode("utf-8"),
-        file_name="mock_v2_analysis_result.json",
-        mime="application/json",
-        use_container_width=True,
-    )
+    if os.environ.get("DEBUG_REPORT_EXPORT") == "1":
+        export_obj = {
+            "generated_at": datetime.now().isoformat(),
+            "exam_type": "mock_v2",
+            "overall": agg,
+            "mock_v2_report": report,
+            "items": results,
+        }
+        dc2.download_button(
+            "🧠 Raw Analysis 다운로드",
+            data=json.dumps(export_obj, ensure_ascii=False, indent=2).encode("utf-8"),
+            file_name="mock_v2_analysis_result.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+    else:
+        dc2.caption("Raw JSON export is available only in debug mode.")
 
     dc3.button("🔗 결과 공유하기", disabled=True, use_container_width=True)
     dc3.caption("추후: 공유 링크 · 클라우드 저장 · 강사 검수 연동 예정")

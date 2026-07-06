@@ -279,8 +279,13 @@ def strongest_weakest_topic(items: List[Dict[str, Any]]) -> Tuple[str, str]:
     if not by_topic:
         return "—", "—"
     avgs = {t: mean(v) for t, v in by_topic.items()}
+    if len(avgs) == 1:
+        only = next(iter(avgs))
+        return only, only
     mx_t = max(avgs, key=avgs.get)
     mn_t = min(avgs, key=avgs.get)
+    if mx_t == mn_t and len(set(round(v, 2) for v in avgs.values())) == 1:
+        return "—", "—"
     return mx_t, mn_t
 
 
@@ -438,7 +443,11 @@ def exam_results_summary_stats(items: List[Dict[str, Any]]) -> Dict[str, int]:
     }
 
 
-def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def summary_rows_for_table(
+    items: List[Dict[str, Any]],
+    *,
+    omit_score_columns: bool = False,
+) -> List[Dict[str, Any]]:
     rows = []
     for row in sorted(items, key=lambda x: int(x.get("q_id") or 0)):
         qid = row.get("q_id")
@@ -452,20 +461,24 @@ def summary_rows_for_table(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             (res.get("summary_speech_rehab") or res.get("semantic_feedback") or "")
             .strip()
         )[:80]
-        rows.append(
-            {
-                "Q": qid,
-                "Topic": row.get("topic") or "—",
-                "Type": row.get("type") or "—",
-                "Status": status,
-                "Est. Level": lvl,
-                "Fluency": rubric_val("fluency"),
-                "Logic": rubric_val("logic"),
-                "Grammar": rubric_val("grammar"),
-                "Overall": fg if status == "분석 완료" and fg is not None else "—",
-                "Feedback": feedback or "—",
-            }
-        )
+        entry: Dict[str, Any] = {
+            "Q": qid,
+            "Topic": row.get("topic") or "—",
+            "Type": row.get("type") or "—",
+            "Status": status,
+            "Est. Level": lvl,
+            "Feedback": feedback or "—",
+        }
+        if not omit_score_columns:
+            entry.update(
+                {
+                    "Fluency": rubric_val("fluency"),
+                    "Logic": rubric_val("logic"),
+                    "Grammar": rubric_val("grammar"),
+                    "Overall": fg if status == "분석 완료" and fg is not None else "—",
+                }
+            )
+        rows.append(entry)
     return rows
 
 

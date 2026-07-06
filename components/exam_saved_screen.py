@@ -48,11 +48,6 @@ _TRANSCRIPT_SVG = (
     "</svg>"
 )
 
-_SAVED_SECTION_ICO_STYLE = (
-    "flex-shrink:0;width:28px;height:28px;border-radius:8px;"
-    "display:inline-flex;align-items:center;justify-content:center;"
-)
-
 _EMPTY_TRANSCRIPT = "(인식된 텍스트가 아직 없어요.)"
 
 
@@ -109,8 +104,7 @@ def build_saved_transcript_html(*, transcript: str, accent: str = "teal") -> str
         f'<div class="tq-saved-section tq-saved-section--{accent_key}" role="region" '
         f'aria-label="AI가 인식한 답변">'
         f'<div class="tq-saved-section-head">'
-        f'<span class="tq-saved-section-ico tq-saved-section-ico--{accent_key}" '
-        f'style="{_SAVED_SECTION_ICO_STYLE}">'
+        f'<span class="tq-saved-section-ico tq-saved-section-ico--{accent_key}">'
         f"{_TRANSCRIPT_SVG}"
         f"</span>"
         f'<span class="tq-saved-label">AI가 인식한 답변</span>'

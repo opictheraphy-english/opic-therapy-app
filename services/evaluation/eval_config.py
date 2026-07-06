@@ -125,7 +125,8 @@ def build_topic_feedback_model_candidates() -> List[str]:
 
 # --- Levels (ordinal scale for calibration; NH band subdivided via novice_band) ---
 LEVEL_ORDER: List[str] = ["NH", "IL", "IM1", "IM2", "IM3", "IH", "AL"]
-LEVEL_COMPRESS: Dict[str, str] = {"IM1": "IM", "IM2": "IM", "IM3": "IM"}
+# IM sub-levels display as-is (IM1/IM2/IM3) — no collapse to "IM".
+LEVEL_COMPRESS: Dict[str, str] = {}
 
 # Quantity gates: duration + spoken units + words — WPM is diagnostic only (not a gate driver).
 GRADING_THRESHOLDS: Dict[str, Dict[str, float]] = {

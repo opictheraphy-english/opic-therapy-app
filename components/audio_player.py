@@ -80,20 +80,25 @@ def render_exam_question_audio_player(
           .opic-listen-wrap {{
             width: 100%;
             margin: 0 0 14px 0;
+            display: flex;
+            justify-content: flex-start;
           }}
           .opic-listen-player {{
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-radius: 999px;
-            border: 0.5px solid rgba(17, 24, 39, 0.08);
-            background: #FAFAF9;
+            justify-content: center;
+            gap: 0;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #eefaf5;
+            color: #1d9e75;
             cursor: pointer;
-            width: auto;
-            max-width: 100%;
             font: inherit;
-            text-align: left;
+            text-align: center;
           }}
           .opic-listen-player:disabled {{
             opacity: 0.55;
@@ -106,18 +111,13 @@ def render_exam_question_audio_player(
             justify-content: center;
             line-height: 0;
           }}
-          .opic-listen-label {{
-            font-size: 13px;
-            font-weight: 500;
-            color: #444441;
-            line-height: 1.3;
-            white-space: nowrap;
+          .opic-listen-ico svg {{
+            width: 16px;
+            height: 16px;
           }}
+          .opic-listen-label,
           .opic-listen-hint {{
-            font-size: 12px;
-            color: #888780;
-            line-height: 1.35;
-            white-space: nowrap;
+            display: none !important;
           }}
           .opic-listen-time {{
             display: none;

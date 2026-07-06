@@ -5,53 +5,55 @@ from __future__ import annotations
 import html
 from typing import Any, Dict, Optional
 
+from ui.design_tokens import BRAND_100, BRAND_500, TEXT_600, TEXT_900
+
 _SCORE_COLOR_LOW = "#D85A30"
 _SCORE_COLOR_MID = "#EF9F27"
-_SCORE_COLOR_HIGH = "#1D9E75"
-_TRACK_COLOR = "#F1EFE8"
-_DONUT_FILL = "#1D9E75"
+_SCORE_COLOR_HIGH = BRAND_500
+_TRACK_COLOR = BRAND_100
+_DONUT_FILL = BRAND_500
 
-_SCOPED_CSS = """
+_SCOPED_CSS = f"""
 <style>
-.sdb-card {
+.sdb-card {{
   background: #fff;
   border: 0.5px solid rgba(15, 23, 42, 0.12);
   border-radius: 14px;
   padding: 16px;
   margin: 0 0 4px;
-}
-.sdb-layout {
+}}
+.sdb-layout {{
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 18px 20px;
-}
-.sdb-donut-col {
+}}
+.sdb-donut-col {{
   flex: 0 0 92px;
   display: flex;
   justify-content: center;
-}
-.sdb-bars-col {
+}}
+.sdb-bars-col {{
   flex: 1 1 200px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-@media (max-width: 520px) {
-  .sdb-donut-col {
+}}
+@media (max-width: 520px) {{
+  .sdb-donut-col {{
     flex: 0 0 100%;
-  }
-  .sdb-bars-col {
+  }}
+  .sdb-bars-col {{
     flex: 0 0 100%;
-  }
-}
-.sdb-donut-wrap {
+  }}
+}}
+.sdb-donut-wrap {{
   position: relative;
   width: 92px;
   height: 92px;
-}
-.sdb-donut-center {
+}}
+.sdb-donut-center {{
   position: absolute;
   inset: 0;
   display: flex;
@@ -59,52 +61,52 @@ _SCOPED_CSS = """
   align-items: center;
   justify-content: center;
   pointer-events: none;
-}
-.sdb-donut-num {
+}}
+.sdb-donut-num {{
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
+  color: {TEXT_900};
   line-height: 1;
   letter-spacing: -0.02em;
-}
-.sdb-donut-level {
+}}
+.sdb-donut-level {{
   font-size: 0.72rem;
   font-weight: 700;
-  color: #64748b;
+  color: {TEXT_600};
   margin-top: 3px;
   letter-spacing: 0.02em;
-}
-.sdb-bar-row {
+}}
+.sdb-bar-row {{
   display: grid;
   grid-template-columns: minmax(4.5rem, auto) 1fr auto;
   align-items: center;
   gap: 10px;
-}
-.sdb-bar-label {
+}}
+.sdb-bar-label {{
   font-size: 0.82rem;
   font-weight: 600;
-  color: #334155;
+  color: {TEXT_900};
   white-space: nowrap;
-}
-.sdb-bar-track {
+}}
+.sdb-bar-track {{
   height: 8px;
-  background: #F1EFE8;
+  background: {BRAND_100};
   border-radius: 999px;
   overflow: hidden;
-}
-.sdb-bar-fill {
+}}
+.sdb-bar-fill {{
   height: 100%;
   border-radius: 999px;
   min-width: 0;
   transition: width 0.2s ease;
-}
-.sdb-bar-val {
+}}
+.sdb-bar-val {{
   font-size: 0.82rem;
   font-weight: 800;
   min-width: 1.75rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
+}}
 </style>
 """
 

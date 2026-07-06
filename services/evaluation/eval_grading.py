@@ -245,7 +245,7 @@ def evaluate_grading_logic(
         sem.get("grammar_score", 40.0),
     )
 
-    estimated_level = LEVEL_COMPRESS.get(merged, merged)
+    estimated_level = merged
     display = f"{estimated_level} (추정)" if merged != "NH" else "NH"
     if novice and merged in {"NH", "IL"}:
         display = f"{estimated_level} · novice {novice} (추정)"

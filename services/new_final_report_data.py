@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 from services.exam_analytics import (
-    _compress_display,
     compute_exam_aggregates,
     parse_level_to_token,
 )
@@ -94,7 +93,7 @@ def _level_display_from_report(overall_level: str) -> Tuple[str, str]:
         return "응답 부족", "NO_SPEECH"
     tok = parse_level_to_token(raw)
     if tok:
-        return _compress_display(tok), tok
+        return tok, tok
     return raw, "UNKNOWN"
 
 
@@ -149,8 +148,10 @@ def _build_result_blob(
     fb_status = str(fb.get("status") or answer.get("status") or "")
     gradable = _row_is_gradable(answer, fb_status)
 
-    rubric = breakdown_to_rubric_scores(exam_breakdown)
-    sem = breakdown_to_semantic_dimensions(exam_breakdown)
+    try:
+        naturalness = float(exam_breakdown.get("naturalness") or 50)
+    except (TypeError, ValueError):
+        naturalness = 50.0
     try:
         wpm = float(answer.get("wpm") or 0.0)
     except (TypeError, ValueError):
@@ -161,7 +162,7 @@ def _build_result_blob(
     except (TypeError, ValueError):
         duration = 0.0
     sent_est = max(1.0, round(wc / 12.0, 1)) if wc else 0.0
-    filler_est = max(0.0, min(12.0, round((100 - sem.get("naturalness", 50)) / 14.0, 1)))
+    filler_est = max(0.0, min(12.0, round((100 - naturalness) / 14.0, 1)))
 
     feedback = str(fb.get("feedback") or "").strip()
     better = str(fb.get("better_direction") or "").strip()
@@ -193,9 +194,9 @@ def _build_result_blob(
             "is_gradable": False,
         }
 
-    fg = round(sum(rubric.values()) / max(len(rubric), 1), 1)
-    lvl_tok = parse_level_to_token(overall_level) or "IM2"
-    disp = _compress_display(lvl_tok) if parse_level_to_token(overall_level) else overall_level
+    tok = parse_level_to_token(overall_level)
+    lvl_tok = tok or (str(overall_level).strip() if overall_level else "IM2")
+    disp = lvl_tok
 
     return {
         "diagnosis_status": "ok",
@@ -207,9 +208,6 @@ def _build_result_blob(
         "prescription": prescription,
         "estimated_level": lvl_tok,
         "estimated_level_display": disp,
-        "final_grade_score": fg,
-        "rubric_scores": rubric,
-        "semantic_dimensions": sem,
         "metrics": {
             "wpm": wpm,
             "sentence_count": sent_est,

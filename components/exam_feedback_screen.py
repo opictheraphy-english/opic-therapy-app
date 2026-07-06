@@ -103,33 +103,33 @@ def build_feedback_summary_html(
     answer_level: str = "",
     answer_level_missing: bool = False,
 ) -> str:
-    """Emphasized one-line summary card (accent-tinted background + border)."""
+    """Dark mini-hero one-line diagnosis card."""
     accent_key = html.escape(_normalize_accent(accent))
     text = html.escape(str(summary or "").strip())
     level = html.escape(str(answer_level or "").strip())
-    pill = ""
-    scope = ""
+    level_col = ""
     if level:
-        pill = f'<span class="tq-feedback-summary-level-pill">{level}</span>'
-        scope = '<p class="tq-feedback-summary-scope">이 답변 기준</p>'
+        level_col = (
+            f'<div class="tq-feedback-diagnosis-level">{level}</div>'
+        )
     elif answer_level_missing:
         from services.topic_practice_v2_analysis import ANSWER_LEVEL_MISSING_LABEL
 
         hint = html.escape(ANSWER_LEVEL_MISSING_LABEL)
-        pill = (
-            f'<span class="tq-feedback-summary-level-pill '
-            f'tq-feedback-summary-level-pill--missing">{hint}</span>'
+        level_col = (
+            f'<div class="tq-feedback-diagnosis-level tq-feedback-diagnosis-level--missing">'
+            f"{hint}</div>"
         )
-        scope = '<p class="tq-feedback-summary-scope">재요청 시 표시될 수 있어요</p>'
     return (
-        f'<div class="tq-feedback-summary tq-feedback-summary--{accent_key}" '
-        f'role="region" aria-label="한 줄 총평">'
-        f'<div class="tq-feedback-summary-head">'
-        f'<span class="tq-feedback-summary-label">한 줄 총평</span>'
-        f"{pill}"
+        f'<div class="tq-feedback-summary tq-feedback-summary--diagnosis '
+        f'tq-feedback-summary--{accent_key}" role="region" aria-label="한 줄 진단">'
+        f'<div class="tq-feedback-summary-inner">'
+        f'<div class="tq-feedback-diagnosis-left">'
+        f'<span class="tq-feedback-summary-label">한 줄 진단</span>'
+        f"{level_col}"
         f"</div>"
-        f"{scope}"
         f'<p class="tq-feedback-summary-text">{text}</p>'
+        f"</div>"
         f"</div>"
     )
 
@@ -146,14 +146,20 @@ def build_feedback_section_card_html(
     accent_key = html.escape(_normalize_accent(accent))
     svg = _FB_ICONS.get(icon, _FB_ICONS["circle-check"])
     filled_cls = " tq-feedback-section--filled" if filled else ""
+    highlight_cls = ""
+    highlight_pill = ""
+    if "업그레이드" in str(label):
+        highlight_cls = " tq-feedback-section--upgrade"
+        highlight_pill = '<span class="tq-feedback-highlight-pill">목표 예문</span>'
     text = html.escape(str(body or "").strip())
     return (
-        f'<div class="tq-feedback-section tq-feedback-section--{accent_key}{filled_cls}" '
+        f'<div class="tq-feedback-section tq-feedback-section--{accent_key}{filled_cls}{highlight_cls}" '
         f'role="region" aria-label="{html.escape(label)}">'
         f'<div class="tq-feedback-section-head">'
         f'<span class="tq-feedback-section-ico tq-feedback-section-ico--{accent_key}">'
         f"{svg}</span>"
         f'<span class="tq-feedback-section-label">{html.escape(label)}</span>'
+        f"{highlight_pill}"
         f"</div>"
         f'<p class="tq-feedback-section-body">{text}</p>'
         f"</div>"

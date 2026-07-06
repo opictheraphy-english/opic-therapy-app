@@ -2727,35 +2727,31 @@ def build_topic_practice_header_html(
     chip_title: Optional[str] = None,
     badge_label: str = "",
 ) -> str:
-    """Topic chip row + ``.mx-progress`` strip — question and saved screens."""
-    from components.exam_question_screen import build_progress_segments_html
-
+    """Editorial topic eyebrow + question count + progress bar."""
     visual = _topic_visual_for_id(topic_id)
-    accent = html.escape(visual["accent"])
-    icon_name = visual["icon"]
-    svg = TOPIC_ICONS.get(icon_name, TOPIC_ICONS["circle"])
     title_ko = html.escape((chip_title or visual["title_ko"]).strip() or visual["title_ko"])
     total = max(int(total_questions), 1)
     current = min(int(q_idx) + 1, total)
-    progress_html = build_progress_segments_html(
-        current,
-        total,
-        badge_label=badge_label,
-    )
+    pct = max(0, min(100, int(round((current / total) * 100))))
     marker = (
         '<div class="tq-screen-marker" aria-hidden="true"></div>'
         if include_screen_marker
         else ""
     )
+    _ = badge_label  # type pill lives on the question card
     return (
         marker
-        + '<div class="tq-header">'
-        + f'<div class="tq-topic-chip tq-topic-chip--{accent}">'
-        + f'<span class="tq-topic-chip-ico">{svg}</span>'
-        + f'<span class="tq-topic-chip-name">{title_ko}</span>'
+        + '<div class="tq-editorial-header">'
+        + '<div class="tq-editorial-header-left">'
+        + f'<div class="tq-topic-eyebrow">{title_ko}</div>'
+        + f'<div class="tq-question-count">문항 <span class="tq-count-num">{current}</span>'
+        + f' <span class="tq-count-of">/ {total}</span></div>'
         + "</div>"
         + "</div>"
-        + progress_html
+        + f'<div class="tq-progress-bar" role="progressbar" '
+        + f'aria-valuenow="{current}" aria-valuemin="1" aria-valuemax="{total}">'
+        + f'<span class="tq-progress-fill" style="width:{pct}%;"></span>'
+        + "</div>"
     )
 
 
@@ -2839,26 +2835,6 @@ def _keyword_constraint_constraints_html(bank_row: Dict[str, Any]) -> str:
         f"{_chip_list(patterns)}"
         "</div>"
         "</div>"
-        "<style>"
-        ".tq-kc-panel{display:flex;flex-direction:column;gap:10px;margin:0 0 14px 0;}"
-        ".tq-kc-combo-label{font-size:13px;font-weight:700;color:#0f766e;margin:0 0 2px 0;}"
-        ".tq-kc-block{border-radius:12px;padding:12px 14px;border:0.5px solid transparent;}"
-        ".tq-kc-block--target{background:#ecfdf5;border-color:#99f6e4;}"
-        ".tq-kc-block--banned{background:#fff7ed;border-color:#fdba74;}"
-        ".tq-kc-block--pattern{background:#f5f3ff;border-color:#c4b5fd;}"
-        ".tq-kc-label{font-size:12px;font-weight:700;margin:0 0 8px 0;color:#334155;}"
-        ".tq-kc-block--target .tq-kc-label{color:#0f766e;}"
-        ".tq-kc-block--banned .tq-kc-label{color:#c2410c;}"
-        ".tq-kc-block--pattern .tq-kc-label{color:#5b21b6;}"
-        ".tq-kc-chips{display:flex;flex-wrap:wrap;gap:6px;}"
-        ".tq-kc-chip{display:inline-block;padding:4px 10px;border-radius:999px;"
-        "font-size:13px;font-weight:600;background:rgba(255,255,255,0.72);color:#0f172a;}"
-        ".tq-kc-block--target .tq-kc-chip{color:#0f766e;}"
-        ".tq-kc-chip-ko{margin-left:5px;font-size:11px;font-weight:500;color:#94a3b8;}"
-        ".tq-kc-block--banned .tq-kc-chip{color:#c2410c;}"
-        ".tq-kc-block--pattern .tq-kc-chip{color:#5b21b6;}"
-        ".tq-kc-empty{margin:0;font-size:13px;color:#64748b;}"
-        "</style>"
     )
 
 
@@ -2881,6 +2857,12 @@ def _render_topic_question_header_html(
 
 
 def _render_topic_question_card_html(q: Dict[str, str]) -> str:
+    badge = _opic_type_badge_label(str(q.get("opic_type") or ""))
+    pill = (
+        f'<span class="tq-question-type-pill">{html.escape(badge)}</span>'
+        if badge
+        else ""
+    )
     en = html.escape(str(q.get("en") or ""))
     ko_raw = str(q.get("ko") or "").strip()
     ko_block = (
@@ -2888,6 +2870,7 @@ def _render_topic_question_card_html(q: Dict[str, str]) -> str:
     )
     return (
         f'<div class="mx-question-card tq-card">'
+        f"{pill}"
         f'<p class="mx-question-topic tq-question">{en}</p>'
         f"{ko_block}"
         f"</div>"
@@ -2901,8 +2884,12 @@ def _render_topic_question_shell_html(
     q_idx: int,
     total_questions: int,
 ) -> str:
-    visual = _topic_visual_for_id(topic_id)
     badge = _opic_type_badge_label(str(q.get("opic_type") or ""))
+    pill = (
+        f'<span class="tq-question-type-pill">{html.escape(badge)}</span>'
+        if badge
+        else ""
+    )
     en = html.escape(str(q.get("en") or ""))
     ko_raw = str(q.get("ko") or "").strip()
     ko_block = (
@@ -2919,6 +2906,7 @@ def _render_topic_question_shell_html(
     return (
         header
         + f'<div class="mx-question-card tq-card">'
+        + f"{pill}"
         + f'<p class="mx-question-topic tq-question">{en}</p>'
         f"{ko_block}"
         f"</div>"
@@ -3022,10 +3010,7 @@ def _render_topic_answer_card_top_html(topic_id: str) -> str:
     visual = _topic_visual_for_id(topic_id)
     accent = html.escape(visual["accent"])
     mic_svg = TOPIC_ICONS.get("microphone-2", TOPIC_ICONS["circle"])
-    desc = (
-        "답변 시작을 누르고 영어로 말해 보세요. "
-        "녹음이 끝나면 AI가 텍스트로 인식합니다."
-    )
+    desc = "녹음 버튼을 누르고 영어로 답해 보세요."
     return (
         f'<div class="mx-record-stage mx-record-stage--v2">'
         f'<p class="mx-record-eyebrow">답변 녹음</p>'
@@ -3856,7 +3841,6 @@ def _render_feedback_ui() -> None:
         ),
         unsafe_allow_html=True,
     )
-    render_feedback_label(accent=accent)
 
     summary = _topic_v2_fb_text(fb, "summary", _FB_FALLBACK_SUMMARY)
     strength = _topic_v2_fb_text(fb, "strength", _FB_FALLBACK_STRENGTH)

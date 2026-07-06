@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from data.opic_question_bank_v2 import (
@@ -222,19 +223,114 @@ def _resolve_topic_id(
     return random.choice(candidates)
 
 
-def _pick_row(topic_id: str, slot: str) -> Dict[str, Any]:
-    rows = _bucket(topic_id).get(slot) or []
+@dataclass
+class _QuestionDedupState:
+    used_source_ids: set[str] = field(default_factory=set)
+    used_texts: set[str] = field(default_factory=set)
+    used_topic_types: set[tuple[str, str]] = field(default_factory=set)
+
+
+def _normalize_question_text(text: str) -> str:
+    return " ".join(str(text or "").split()).strip().lower()
+
+
+def _row_opic_type(row: Dict[str, Any]) -> str:
+    return str(row.get("opic_type") or row.get("question_kind") or "").strip().lower()
+
+
+def _row_is_duplicate(topic_id: str, row: Dict[str, Any], state: _QuestionDedupState) -> bool:
+    sid = str(row.get("id") or "").strip()
+    text = _normalize_question_text(str(row.get("question_text") or row.get("question") or ""))
+    otype = _row_opic_type(row)
+    if sid and sid in state.used_source_ids:
+        return True
+    if text and text in state.used_texts:
+        return True
+    if otype and (topic_id, otype) in state.used_topic_types:
+        return True
+    return False
+
+
+def _register_row(topic_id: str, row: Dict[str, Any], state: _QuestionDedupState) -> None:
+    sid = str(row.get("id") or "").strip()
+    text = _normalize_question_text(str(row.get("question_text") or row.get("question") or ""))
+    otype = _row_opic_type(row)
+    if sid:
+        state.used_source_ids.add(sid)
+    if text:
+        state.used_texts.add(text)
+    if otype:
+        state.used_topic_types.add((topic_id, otype))
+
+
+def _register_exam_question(q: Dict[str, Any], state: _QuestionDedupState) -> None:
+    tid = str(q.get("topic_id") or "").strip() or "__session__"
+    _register_row(
+        tid,
+        {
+            "id": q.get("source_id"),
+            "question_text": q.get("question_text"),
+            "opic_type": q.get("opic_type"),
+        },
+        state,
+    )
+
+
+def _pick_row(
+    topic_id: str,
+    slot: str,
+    state: Optional[_QuestionDedupState] = None,
+) -> Dict[str, Any]:
+    rows = list(_bucket(topic_id).get(slot) or [])
     if not rows:
         raise RuntimeError(f"Topic {topic_id} has no questions for slot {slot}.")
-    return dict(random.choice(rows))
+    candidates = rows
+    if state is not None:
+        fresh = [r for r in rows if not _row_is_duplicate(topic_id, r, state)]
+        if fresh:
+            if len(fresh) < len(rows):
+                logger.info(
+                    "[MOCK_V2_QSELECT] duplicate avoided topic=%s slot=%s pool=%s fresh=%s",
+                    topic_id,
+                    slot,
+                    len(rows),
+                    len(fresh),
+                )
+            candidates = fresh
+        else:
+            logger.warning(
+                "[MOCK_V2_QSELECT] duplicate unavoidable topic=%s slot=%s pool=%s",
+                topic_id,
+                slot,
+                len(rows),
+            )
+    chosen = dict(random.choice(candidates))
+    if state is not None:
+        _register_row(topic_id, chosen, state)
+    return chosen
 
 
-def _pick_flex_row(topic_id: str, allowed_slots: Sequence[str]) -> Tuple[Dict[str, Any], str]:
+def _pick_flex_row(
+    topic_id: str,
+    allowed_slots: Sequence[str],
+    state: Optional[_QuestionDedupState] = None,
+) -> Tuple[Dict[str, Any], str]:
     available = [s for s in allowed_slots if _has_slot(topic_id, s)]
     if not available:
         raise RuntimeError(f"Topic {topic_id} has no flex slot in {allowed_slots}.")
+    if state is not None:
+        slot_fresh = [
+            s
+            for s in available
+            if any(
+                not _row_is_duplicate(topic_id, r, state)
+                for r in (_bucket(topic_id).get(s) or [])
+            )
+        ]
+        if slot_fresh:
+            available = slot_fresh
     slot = random.choice(available)
-    return _pick_row(topic_id, slot), slot
+    return _pick_row(topic_id, slot, state), slot
 
 
 def _step_label(slot: str, row: Dict[str, Any]) -> str:
@@ -317,12 +413,37 @@ def _advanced_question(
     }
 
 
-def _pick_q5_pool_row(preferred: List[str]) -> Dict[str, Any]:
+def _pick_q5_pool_row(
+    preferred: List[str],
+    state: Optional[_QuestionDedupState] = None,
+) -> Dict[str, Any]:
     pref_set = set(preferred)
     candidates = [row for row in Q5_POOL if row.get("topic_id") in pref_set]
     if not candidates:
         candidates = list(Q5_POOL)
-    return dict(random.choice(candidates))
+    if state is not None:
+        fresh = [
+            row
+            for row in candidates
+            if not _row_is_duplicate(str(row.get("topic_id") or ""), row, state)
+        ]
+        if fresh:
+            if len(fresh) < len(candidates):
+                logger.info(
+                    "[MOCK_V2_QSELECT] duplicate avoided q5_pool pool=%s fresh=%s",
+                    len(candidates),
+                    len(fresh),
+                )
+            candidates = fresh
+        else:
+            logger.warning(
+                "[MOCK_V2_QSELECT] duplicate unavoidable q5_pool pool=%s",
+                len(candidates),
+            )
+    chosen = dict(random.choice(candidates))
+    if state is not None:
+        _register_row(str(chosen.get("topic_id") or ""), chosen, state)
+    return chosen
 
 
 def _q5_pool_question(qnum: int, row: Dict[str, Any]) -> Dict[str, Any]:
@@ -344,17 +465,37 @@ def _q5_pool_question(qnum: int, row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _pick_roleplay_triplet() -> List[Dict[str, Any]]:
+def _pick_roleplay_triplet(state: Optional[_QuestionDedupState] = None) -> List[Dict[str, Any]]:
     ready: List[str] = []
     for sid in list_roleplay_set_ids():
         if len(get_roleplay_practice_set(sid)) >= 3:
             ready.append(sid)
     if not ready:
         raise RuntimeError("opic_question_bank_v2 has no complete roleplay set (q6–q8).")
-    rows = get_roleplay_practice_set(random.choice(ready))
+    random.shuffle(ready)
+    for set_id in ready:
+        rows = [dict(r) for r in get_roleplay_practice_set(set_id)]
+        if len(rows) < 3:
+            continue
+        if state is None:
+            return rows[:3]
+        if all(
+            not _row_is_duplicate(str(r.get("topic_id") or ""), r, state) for r in rows[:3]
+        ):
+            for r in rows[:3]:
+                _register_row(str(r.get("topic_id") or ""), r, state)
+            return rows[:3]
+    rows = [dict(r) for r in get_roleplay_practice_set(random.choice(ready))]
     if len(rows) < 3:
         raise RuntimeError("Selected roleplay set is incomplete.")
-    return rows
+    logger.warning(
+        "[MOCK_V2_QSELECT] duplicate unavoidable roleplay pool=%s",
+        len(ready),
+    )
+    if state is not None:
+        for r in rows[:3]:
+            _register_row(str(r.get("topic_id") or ""), r, state)
+    return rows[:3]
 
 
 def _build_mock_v2_exam_im(survey_results: dict, difficulty: int = 3) -> List[Dict[str, Any]]:
@@ -394,42 +535,44 @@ def _build_mock_v2_exam_im(survey_results: dict, difficulty: int = 3) -> List[Di
     excluded.add(t4)
 
     lev = int(difficulty) if difficulty is not None else 3
-    q5_row = _pick_q5_pool_row(preferred)
+    dedup = _QuestionDedupState()
+    q5_row = _pick_q5_pool_row(preferred, dedup)
 
     exam: List[Dict[str, Any]] = [_intro_question()]
+    _register_exam_question(exam[0], dedup)
 
-    r2 = _pick_row(t1, "q1")
+    r2 = _pick_row(t1, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             2, combo="Combo1", step=_step_label("q1", r2), topic_id=t1, row=r2, bank_slot="q1"
         )
     )
-    r3 = _pick_row(t1, "q2")
+    r3 = _pick_row(t1, "q2", dedup)
     exam.append(
         _to_mock_v2_question(
             3, combo="Combo1", step=_step_label("q2", r3), topic_id=t1, row=r3, bank_slot="q2"
         )
     )
-    r4 = _pick_row(t1, "q3")
+    r4 = _pick_row(t1, "q3", dedup)
     exam.append(
         _to_mock_v2_question(
             4, combo="Combo1", step=_step_label("q3", r4), topic_id=t1, row=r4, bank_slot="q3"
         )
     )
 
-    r5 = _pick_row(t2, "q1")
+    r5 = _pick_row(t2, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             5, combo="Combo2", step=_step_label("q1", r5), topic_id=t2, row=r5, bank_slot="q1"
         )
     )
-    r6 = _pick_row(t2, "q2")
+    r6 = _pick_row(t2, "q2", dedup)
     exam.append(
         _to_mock_v2_question(
             6, combo="Combo2", step=_step_label("q2", r6), topic_id=t2, row=r6, bank_slot="q2"
         )
     )
-    r7, slot7 = _pick_flex_row(t2, ("q3", "q4"))
+    r7, slot7 = _pick_flex_row(t2, ("q3", "q4"), dedup)
     exam.append(
         _to_mock_v2_question(
             7,
@@ -441,26 +584,26 @@ def _build_mock_v2_exam_im(survey_results: dict, difficulty: int = 3) -> List[Di
         )
     )
 
-    r8 = _pick_row(t3, "q1")
+    r8 = _pick_row(t3, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             8, combo="Combo3", step=_step_label("q1", r8), topic_id=t3, row=r8, bank_slot="q1"
         )
     )
-    r9 = _pick_row(t3, "q3")
+    r9 = _pick_row(t3, "q3", dedup)
     exam.append(
         _to_mock_v2_question(
             9, combo="Combo3", step=_step_label("q3", r9), topic_id=t3, row=r9, bank_slot="q3"
         )
     )
-    r10 = _pick_row(t3, "q4")
+    r10 = _pick_row(t3, "q4", dedup)
     exam.append(
         _to_mock_v2_question(
             10, combo="Combo3", step=_step_label("q4", r10), topic_id=t3, row=r10, bank_slot="q4"
         )
     )
 
-    rp = _pick_roleplay_triplet()
+    rp = _pick_roleplay_triplet(dedup)
     for qnum, row, slot in ((11, rp[0], "q6"), (12, rp[1], "q7"), (13, rp[2], "q8")):
         tid = str(row.get("topic_id") or "")
         exam.append(
@@ -474,7 +617,7 @@ def _build_mock_v2_exam_im(survey_results: dict, difficulty: int = 3) -> List[Di
             )
         )
 
-    r14 = _pick_row(t4, "q1")
+    r14 = _pick_row(t4, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             14,
@@ -541,41 +684,43 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
     excluded.add(t3)
 
     lev = int(difficulty) if difficulty is not None else 5
+    dedup = _QuestionDedupState()
 
     exam: List[Dict[str, Any]] = [ _intro_question() ]
+    _register_exam_question(exam[0], dedup)
 
-    r2 = _pick_row(t1, "q1")
+    r2 = _pick_row(t1, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             2, combo="Combo1", step=_step_label("q1", r2), topic_id=t1, row=r2, bank_slot="q1"
         )
     )
-    r3 = _pick_row(t1, "q2")
+    r3 = _pick_row(t1, "q2", dedup)
     exam.append(
         _to_mock_v2_question(
             3, combo="Combo1", step=_step_label("q2", r3), topic_id=t1, row=r3, bank_slot="q2"
         )
     )
-    r4 = _pick_row(t1, "q3")
+    r4 = _pick_row(t1, "q3", dedup)
     exam.append(
         _to_mock_v2_question(
             4, combo="Combo1", step=_step_label("q3", r4), topic_id=t1, row=r4, bank_slot="q3"
         )
     )
 
-    r5 = _pick_row(t2, "q1")
+    r5 = _pick_row(t2, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             5, combo="Combo2", step=_step_label("q1", r5), topic_id=t2, row=r5, bank_slot="q1"
         )
     )
-    r6 = _pick_row(t2, "q3")
+    r6 = _pick_row(t2, "q3", dedup)
     exam.append(
         _to_mock_v2_question(
             6, combo="Combo2", step=_step_label("q3", r6), topic_id=t2, row=r6, bank_slot="q3"
         )
     )
-    r7, slot7 = _pick_flex_row(t2, ("q2", "q3", "q4"))
+    r7, slot7 = _pick_flex_row(t2, ("q2", "q3", "q4"), dedup)
     exam.append(
         _to_mock_v2_question(
             7,
@@ -587,13 +732,23 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
         )
     )
 
-    r8 = _pick_row(t3, "q1")
+    r8 = _pick_row(t3, "q1", dedup)
     exam.append(
         _to_mock_v2_question(
             8, combo="Combo3", step=_step_label("q1", r8), topic_id=t3, row=r8, bank_slot="q1"
         )
     )
-    r9, slot9 = _pick_flex_row(t3, ("q2", "q3", "q4"))
+    if _has_slot(t3, "q4"):
+        flex9_slots: Tuple[str, ...] = ("q2", "q3", "q4")
+        flex10_slots: Tuple[str, ...] = ("q3", "q4")
+    else:
+        flex9_slots = tuple(s for s in ("q2", "q3", "q4") if s != "q3" and _has_slot(t3, s))
+        if not flex9_slots:
+            flex9_slots = ("q3",) if _has_slot(t3, "q3") else tuple(
+                s for s in ("q2", "q3", "q4") if _has_slot(t3, s)
+            )
+        flex10_slots = tuple(s for s in ("q3", "q4") if _has_slot(t3, s))
+    r9, slot9 = _pick_flex_row(t3, flex9_slots, dedup)
     exam.append(
         _to_mock_v2_question(
             9,
@@ -604,7 +759,7 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
             bank_slot=slot9,
         )
     )
-    r10, slot10 = _pick_flex_row(t3, ("q3", "q4"))
+    r10, slot10 = _pick_flex_row(t3, flex10_slots, dedup)
     exam.append(
         _to_mock_v2_question(
             10,
@@ -616,7 +771,7 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
         )
     )
 
-    rp = _pick_roleplay_triplet()
+    rp = _pick_roleplay_triplet(dedup)
     for qnum, row, slot in ((11, rp[0], "q6"), (12, rp[1], "q7"), (13, rp[2], "q8")):
         tid = str(row.get("topic_id") or "")
         exam.append(
@@ -644,6 +799,7 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
             question_text=str(q14.get("question") or ""),
         )
     )
+    _register_exam_question(exam[-1], dedup)
     exam.append(
         _advanced_question(
             15,
@@ -653,6 +809,7 @@ def _build_mock_v2_exam_ih_al(survey_results: dict, difficulty: int = 5) -> List
             question_text=str(q15.get("question") or ""),
         )
     )
+    _register_exam_question(exam[-1], dedup)
 
     if len(exam) != 15:
         raise RuntimeError(f"Mock V2 exam must have 15 questions, got {len(exam)}.")
