@@ -283,97 +283,33 @@ def render_structured_coaching_report(
     show_hero: bool = True,
     question_text: str = "",
 ) -> None:
-    """Student feedback sections from ``build_student_feedback`` (no LLM)."""
-    from components.smart_feedback import (
-        render_alternative_expressions,
-        render_grammar_corrections,
-    )
-    from utils.coaching_feedback import merge_alt_hits, merge_grammar_hits
+    """Student feedback sections — premium card layout (no LLM calls)."""
+    from components.exam_question_feedback_detail import render_eqfd_coaching_layers
+    from utils.feedback_text import normalize_feedback_md_html
 
     t = (transcript or "").strip()
-    student_feedback: Optional[Dict[str, Any]] = None
-    try:
-        from services.feedback.feedback_builder import build_student_feedback
-
-        student_feedback = build_student_feedback(
-            result,
-            t,
-            question_text=question_text,
-        )
-    except Exception:
-        student_feedback = None
-
-    g_hits = merge_grammar_hits(t, result)
-    a_hits = merge_alt_hits(t, result)
-    g_empty_msg: Optional[str] = None
-    a_empty_msg: Optional[str] = (
-        "눈에 띄는 평이한 표현은 적었어요. 다음엔 구체적인 형용사를 한 번 더 써 보세요."
-    )
-    struct_fb: Optional[Dict[str, Any]] = None
-    improved_ans: Optional[str] = None
-    next_missions: Optional[List[str]] = None
-    pron_comment: Optional[str] = None
-
-    if student_feedback:
-        g_hits = student_feedback.get("grammar_corrections") or g_hits
-        a_hits = student_feedback.get("expression_upgrades") or a_hits
-        g_empty_msg = student_feedback.get("grammar_empty_message") or g_empty_msg
-        a_empty_msg = student_feedback.get("expression_empty_message") or a_empty_msg
-        struct_fb = student_feedback.get("structure_feedback")
-        improved_ans = (student_feedback.get("improved_answer") or "").strip() or None
-        next_missions = student_feedback.get("next_missions")
-        pron_comment = (student_feedback.get("pronunciation_comment") or "").strip() or None
-    if g_hits:
-        g_empty_msg = None
-    if a_hits:
-        a_empty_msg = None
-
-    if show_hero:
-        render_overall_coaching_hero(
-            result,
-            qid,
-            t,
-            coach_title=(
-                student_feedback.get("coach_title") if student_feedback else None
-            ),
-            coach_body=(
-                student_feedback.get("coach_body") if student_feedback else None
-            ),
-            student_feedback=student_feedback,
-        )
-
-    _render_coach_section_header("문법 교정", "바로 고치면 좋은 표현")
-    render_grammar_corrections(
+    render_eqfd_coaching_layers(
+        result,
         t,
-        title="",
-        show_heading=False,
-        hits=g_hits,
-        empty_message=g_empty_msg or None,
+        question_text=question_text,
+        show_coach_quote=show_hero,
     )
 
-    _render_coach_section_header("표현 업그레이드", "한 단계 더 자연스럽게")
-    alt_empty = a_empty_msg
-    render_alternative_expressions(
-        t,
-        title="",
-        show_heading=False,
-        hits=a_hits,
-        empty_message=alt_empty,
+    _sum = normalize_feedback_md_html(
+        str(result.get("summary_speech_rehab") or "").strip()
     )
-
-    _render_structure_section(t, structure=struct_fb)
-    _render_improved_example_section(t, g_hits, a_hits, improved_answer=improved_ans)
-    render_pronunciation_section(result, comment_override=pron_comment)
-    _render_mission_section(t, g_hits, a_hits, missions=next_missions)
-
-    _sum = (result.get("summary_speech_rehab") or "").strip()
-    _sem = (result.get("semantic_feedback") or "").strip()
+    _sem = normalize_feedback_md_html(
+        str(result.get("semantic_feedback") or "").strip()
+    )
     long_ai = _sum if len(_sum) > 160 else ""
     if not long_ai and len(_sem) > 200:
         long_ai = _sem
     if long_ai:
         with st.expander("AI 총평 전문 보기", expanded=False):
-            st.write(long_ai)
+            st.markdown(
+                f'<div class="eqfd-box-body eqfd-box-body--green">{long_ai}</div>',
+                unsafe_allow_html=True,
+            )
 
 
 def render_strong_points_cards(
@@ -558,25 +494,18 @@ def compact_score_strip_html(result: Dict[str, Any]) -> str:
 
 
 def render_history_expander_coaching(item: Dict[str, Any]) -> None:
-    """Per-question expander: compact coaching without the top overall hero."""
-    from utils.text_utils import NO_SPEECH_EMPTY_TEXT, is_real_speech_transcript
+    """Per-question expander: premium layered feedback."""
+    from components.exam_question_feedback_detail import render_exam_question_feedback_detail
 
     result = item.get("result") or {}
     qid = item.get("q_id")
-    transcript = (result.get("transcript") or "").strip()
-    no_speech_flag = bool(result.get("no_speech_detected")) or (
-        result.get("diagnosis_status") == "no_speech"
-    )
-    transcript_is_real = (
-        bool(transcript)
-        and not no_speech_flag
-        and is_real_speech_transcript(transcript)
-    )
 
     st.markdown(compact_score_strip_html(result), unsafe_allow_html=True)
 
     if result.get("diagnosis_status") == "analysis_pending":
-        st.info(
+        from utils.feedback_text import normalize_feedback_md_html
+
+        pending_msg = normalize_feedback_md_html(
             (
                 (result.get("summary_speech_rehab") or "").strip()
                 + " "
@@ -584,44 +513,21 @@ def render_history_expander_coaching(item: Dict[str, Any]) -> None:
             ).strip()
             or "이 문항은 AI 분석이 완료되지 않았습니다. 시험은 계속 진행할 수 있어요."
         )
-        return
-
-    if result.get("diagnosis_status") == "ok" and transcript_is_real:
-        st.text_area(
-            f"Q{qid} 복원 텍스트",
-            value=transcript,
-            height=100,
-            key=f"transcript_{qid}",
-        )
-        render_structured_coaching_report(
-            result,
-            transcript,
-            int(qid or 0),
-            show_hero=True,
-            question_text=str(item.get("question") or ""),
-        )
-    elif transcript_is_real:
-        st.text_area(
-            f"Q{qid} 복원 텍스트",
-            value=transcript,
-            height=100,
-            key=f"transcript_{qid}",
-        )
-        render_structured_coaching_report(
-            result,
-            transcript,
-            int(qid or 0),
-            show_hero=True,
-            question_text=str(item.get("question") or ""),
-        )
-    else:
         st.markdown(
-            f'<div class="mx-status mx-status--warn">'
-            f'<span class="mx-status-icon">🎤</span>'
-            f'<span>{html.escape(NO_SPEECH_EMPTY_TEXT)}</span>'
+            f'<div class="eqfd-box eqfd-box--green">'
+            f'<div class="eqfd-box-label eqfd-box-label--green">Ava의 피드백</div>'
+            f'<div class="eqfd-box-body eqfd-box-body--green">{pending_msg}</div>'
             f"</div>",
             unsafe_allow_html=True,
         )
+        return
+
+    render_exam_question_feedback_detail(
+        item,
+        key_prefix=f"hist_q{qid}",
+        show_type_pill=False,
+        show_coaching=True,
+    )
 
 
 def render_grammar_and_expression_coaching(

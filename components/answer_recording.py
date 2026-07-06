@@ -252,6 +252,86 @@ def _mic_output_exists(mic_key: str) -> bool:
     return _mic_output_key(mic_key) in st.session_state
 
 
+def _inject_mic_recorder_brand_styles() -> None:
+    """Style mic iframe stop button with brand green (mock / topic live screens)."""
+    import streamlit.components.v1 as components
+
+    components.html(
+        """
+<script>
+(function () {
+  var BRAND = "#0f6e56";
+  var BRAND_HOVER = "#0b5c47";
+  var STOP_HINT = "녹음 완료";
+  function parentDoc() {
+    try {
+      if (window.parent && window.parent.document) return window.parent.document;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+  function findMicIframe(doc) {
+    try {
+      var ifr = doc.querySelector('iframe[src*="streamlit_mic_recorder"]');
+      if (ifr) return ifr;
+      var hosts = doc.querySelectorAll(
+        '[data-testid="stCustomComponentV1"], [data-testid="stCustomComponent"]'
+      );
+      for (var i = 0; i < hosts.length; i++) {
+        var inner = hosts[i].querySelector("iframe");
+        if (!inner) continue;
+        var src = inner.getAttribute("src") || "";
+        if (src.indexOf("streamlit_mic_recorder") >= 0) return inner;
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+  function styleBtn(btn, recording) {
+    if (!btn) return;
+    if (recording) {
+      btn.style.background = BRAND;
+      btn.style.color = "#ffffff";
+      btn.style.border = "1px solid " + BRAND;
+      btn.style.borderRadius = "12px";
+      btn.style.fontWeight = "500";
+      btn.style.boxShadow = "none";
+    } else {
+      btn.style.background = "#ffffff";
+      btn.style.color = BRAND;
+      btn.style.border = "1px solid " + BRAND;
+      btn.style.borderRadius = "12px";
+      btn.style.fontWeight = "500";
+      btn.style.boxShadow = "none";
+    }
+  }
+  function tick() {
+    var doc = parentDoc();
+    if (!doc) return;
+    if (!doc.querySelector(".mx-marker") && !doc.querySelector(".tq-screen-marker")) return;
+    var ifr = findMicIframe(doc);
+    if (!ifr) return;
+    var idoc = ifr.contentDocument;
+    if (!idoc) return;
+    var btn = idoc.querySelector("button");
+    if (!btn) return;
+    var label = (btn.textContent || "").trim();
+    var recording = label.indexOf(STOP_HINT) >= 0;
+    styleBtn(btn, recording);
+  }
+  tick();
+  var doc = parentDoc();
+  if (doc) {
+    var obs = new MutationObserver(tick);
+    obs.observe(doc.body, { childList: true, subtree: true, attributes: true });
+    setInterval(tick, 400);
+  }
+})();
+</script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
 def _track_real_mock_mic_stop(question_key: str, mic_key: str, audio: Any) -> bool:
     """True after streamlit_mic_recorder reports a new recording id (stop completed)."""
     mount_key = f"{question_key}_mic_id_at_mount"
@@ -456,6 +536,7 @@ def render_answer_recording_stage(
         use_container_width=True,
         just_once=True,
     )
+    _inject_mic_recorder_brand_styles()
     st.session_state[_mic_widget_invoked_key(mic_key)] = True
 
     if (

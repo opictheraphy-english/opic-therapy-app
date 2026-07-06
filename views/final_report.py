@@ -12,10 +12,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from components.collapsible_section import render_collapsible_section
-from components.coaching_experience import render_structured_coaching_report
+from components.exam_question_feedback_detail import render_exam_question_feedback_detail
 from services.exam_analytics import (
     compute_exam_aggregates,
-    detect_risk_flags,
     exam_results_summary_stats,
     result_display_status,
     result_is_no_speech_row,
@@ -24,11 +23,7 @@ from services.exam_analytics import (
 from utils.exam_state import reset_exam_state, reset_real_mock_attempt, start_new_mock_attempt
 from utils.local_profile import sync_user_progress
 from utils.streamlit_ui import clean_visible_label
-from utils.text_utils import (
-    DISCOURSE_MARKERS,
-    NO_SPEECH_EMPTY_TEXT,
-    is_real_speech_transcript,
-)
+from utils.text_utils import is_real_speech_transcript
 
 try:
     from services.pdf_report import build_exam_pdf, pdf_export_available
@@ -400,137 +395,18 @@ def render_final_report(mx: Dict[str, Any]) -> None:
         label = clean_visible_label(f"Q{qid} · {topic} · {typ}", f"Q{qid}")
 
         def _final_row_body(r: Dict[str, Any] = row, q: Any = qid) -> None:
-            res = r.get("result") or {}
-            st.markdown("##### [A] 질문 내용")
-            st.write(r.get("question") or "—")
+            def _retry_analysis() -> None:
+                from views.mock_exam import retry_stored_answer_analysis
 
-            st.markdown("##### [B] AI가 인식한 답변")
-            tx_raw = (res.get("transcript") or "").strip()
-            tx_is_real = False
-            _no_speech = result_is_no_speech_row(res)
-            _pending = (
-                not _no_speech
-                and (
-                    res.get("diagnosis_status") == "analysis_pending"
-                    or str(res.get("analysis_status") or "").lower() == "pending"
-                )
+                retry_stored_answer_analysis(mx, int(q))
+
+            render_exam_question_feedback_detail(
+                r,
+                key_prefix=f"final_q{q}",
+                on_retry_analysis=_retry_analysis,
+                show_type_pill=True,
+                show_coaching=True,
             )
-            if _no_speech:
-                st.markdown(
-                    '<div class="mono-tx" style="opacity:.9;">'
-                    "<b>응답이 충분하지 않았어요</b><br/>"
-                    "이 문항은 말소리가 충분히 인식되지 않아 문법, 표현, 구조 피드백을 제공하기 어렵습니다.<br/>"
-                    "다시 연습할 때는 최소 20~30초 이상 영어로 답변해 주세요."
-                    "</div>",
-                    unsafe_allow_html=True,
-                )
-            elif _pending:
-                st.markdown(
-                    '<div class="mono-tx" style="opacity:.9;">'
-                    "<b>AI 분석 대기 중</b><br/>"
-                    "이 문항의 답변은 저장되었지만, 분석이 아직 완료되지 않았습니다."
-                    "</div>",
-                    unsafe_allow_html=True,
-                )
-                if st.button("AI 분석 다시 시도", key=f"final_retry_analysis_q{q}"):
-                    from views.mock_exam import retry_stored_answer_analysis
-
-                    retry_stored_answer_analysis(mx, int(q))
-                    st.rerun()
-            else:
-                tx_no_speech = bool(res.get("no_speech_detected")) or (
-                    res.get("diagnosis_status") == "no_speech"
-                )
-                tx_is_real = (
-                    bool(tx_raw)
-                    and not tx_no_speech
-                    and is_real_speech_transcript(tx_raw)
-                )
-                if tx_is_real:
-                    st.markdown(
-                        f'<div class="mono-tx">{tx_raw}</div>',
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    # Trust-gate rejection: render the empty-state copy instead
-                    # of any potentially fabricated text. Never display "(없음)"
-                    # next to a content area — users read that as "the system
-                    # erased my speech".
-                    st.markdown(
-                        f'<div class="mono-tx" style="opacity:.85;">'
-                        f'🎤 {NO_SPEECH_EMPTY_TEXT}'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-
-            st.markdown("##### [C] 에이바(Ava)의 상세 피드백")
-            if _no_speech:
-                st.info(res.get("summary_speech_rehab") or "응답이 충분하지 않았어요.")
-            elif _pending:
-                st.info("AI 분석이 완료되면 이 영역에 상세 피드백이 표시됩니다.")
-            else:
-                st.info(res.get("semantic_feedback") or res.get("summary_speech_rehab") or "—")
-            sem = res.get("semantic_dimensions") or {}
-            chips = []
-            for k in ("narrative_depth", "discourse_continuity", "elaboration_quality", "spontaneity_score", "naturalness"):
-                v = sem.get(k)
-                if isinstance(v, (int, float)):
-                    chips.append(f"**{k}**: {v:.0f}")
-            if chips:
-                st.caption(" · ".join(chips))
-
-            st.markdown("##### [D] 에릭 노의 처방전")
-            st.write(res.get("prescription") or "—")
-            st.caption(
-                "개선 우선순위: 담화 연결 → 구체적 디테일 → 시제 안정성 · 추천 연결어 예시: "
-                + ", ".join(DISCOURSE_MARKERS[:5])
-            )
-
-            # [D-ii] Rule-based grammar fix + alternative-expression cards.
-            # Same component the per-question report card uses, kept here so
-            # the final report stays the single source of truth for review.
-            # Only run when the trust gate has accepted the transcript so we
-            # never "fix grammar" on hallucinated text.
-            if tx_is_real:
-                st.markdown("##### [D-ii] 코칭 피드백 (문법 · 표현 · 구조)")
-                render_structured_coaching_report(
-                    res,
-                    tx_raw,
-                    int(q or 0),
-                    show_hero=True,
-                    question_text=str(r.get("question") or ""),
-                )
-
-            st.markdown("##### [E] 세부 점수")
-            rs = res.get("rubric_scores") or {}
-            cols = st.columns(4)
-            order = [("fluency", "Fluency"), ("grammar", "Grammar"), ("lexical", "Lexical"), ("logic", "Logic")]
-            for i, (key, title) in enumerate(order):
-                v = rs.get(key, 0)
-                try:
-                    vv = float(v) / 100.0
-                except (TypeError, ValueError):
-                    vv = 0.0
-                cols[i % 4].progress(min(1.0, max(0.0, vv)), text=f"{title}: {v}")
-
-            sem2 = res.get("semantic_dimensions") or {}
-            for label_k, name in (
-                ("narrative_depth", "Narrative depth"),
-                ("semantic_density", "Semantic density"),
-                ("naturalness", "Naturalness"),
-                ("tense_stability", "Tense stability"),
-            ):
-                v = sem2.get(label_k)
-                if isinstance(v, (int, float)):
-                    st.progress(min(1.0, float(v) / 100.0), text=f"{name}: {v:.0f}")
-
-            st.markdown("##### [F] 위험 요소 감지")
-            risks = detect_risk_flags(res)
-            if risks:
-                for r in risks:
-                    st.warning(r)
-            else:
-                st.success("특이 위험 패턴이 감지되지 않았습니다.")
 
         render_collapsible_section(
             label,
