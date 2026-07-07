@@ -396,7 +396,7 @@ def _render_progress_card() -> None:
         f"</div>"
         f'<div class="home-hero-pill-col">'
         f'<div class="home-hero-pill">{pill}</div>'
-        f'<div class="home-hero-pill-sub">최근 10개 답변 기준</div>'
+        f'<div class="home-hero-pill-sub">최근 10회 연습</div>'
         f"</div></div>"
         f"{ladder}"
         f'<div class="home-hero-stats-row">'
