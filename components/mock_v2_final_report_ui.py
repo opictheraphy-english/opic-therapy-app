@@ -22,6 +22,8 @@ from services.mock_v2_report_display import (
     sorted_rubric_bars,
     today_kst_label,
 )
+from utils.home_stats import resolve_target_level
+from utils.streamlit_ui import ascii_widget_key
 
 
 _SCREEN_MARKER = "m2fr-screen-marker"
